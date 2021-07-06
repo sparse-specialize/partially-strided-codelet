@@ -1,0 +1,5 @@
+cmake-build-release
+cmake-build-debug
+build
+.clang-format
+.idea/
