@@ -6,6 +6,7 @@
 struct MemoryTrace {
   int** ip;
   int ips;
+  Codelet* c;
 };
 
 MemoryTrace generateMockTuples() {
@@ -17,9 +18,13 @@ MemoryTrace generateMockTuples() {
   // Memory Allocation - Padded to a width of 4
   int nd = tpr * (elementsPerRow) * matrixRows;
   int* d = new int[nd];
+  Codelet* c = new Codelet[elementsPerRow*matrixRows]();
   posix_memalign(reinterpret_cast<void **>(d), 32, nd);
-  for (int i = 0; i < nd; i++) {
-      d[i] = i;
+  for (int i = 0; i < elementsPerRow*matrixRows; i++) {
+    for(int j = 0; j < tpr; j++) {
+      d[i*tpr+j] = i*tpr+j;
+    }
+    c[i].ct = (d+i*3);
   }
   int** dPointer = new int*[matrixRows+1];
 
@@ -31,7 +36,8 @@ MemoryTrace generateMockTuples() {
   // Return
   MemoryTrace mt{
           dPointer,
-          matrixRows+1
+          matrixRows+1,
+          c
   };
 
   return mt;
@@ -50,6 +56,9 @@ int main() {
 
   // Compute and profile FOD compuation
   computeParallelizedFOD(mt.ip, mt.ips, d);
+
+  // Mine trace and profile
+  mineDifferences(mt.ip, mt.ips, mt.c);
 
   return 0;
 }
