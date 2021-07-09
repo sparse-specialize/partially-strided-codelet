@@ -15,8 +15,10 @@
  *
  * =====================================================================================
  */
+#include "DDT.h"
 #include "PatternMatching.h"
 
+#include <omp.h>
 #include <immintrin.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,7 +27,7 @@
 #include <iostream>
 #include <vector>
 
-int THRESHOLDS[4] = {0, 2, 100, 2};
+int THRESHOLDS[4] = { 2, 100, 2, 0 };
 const int TPD = 3;
 int ZERO_MASK = 0xF000;
 
@@ -39,15 +41,16 @@ int ZERO_MASK = 0xF000;
  *
  */
 void computeParallelizedFOD(int **ip, int ips, int *differences) {
-    auto t1 = std::chrono::steady_clock::now();
-    for (int i = 0; i < ips - 1; i++) {
-        computeFirstOrder(differences + (ip[i] - ip[0]) - (1 * i), ip[i], ip[i + 1] - ip[i]);
-    }
-    auto t2 = std::chrono::steady_clock::now();
+  auto t1 = std::chrono::steady_clock::now();
+#pragma omp parallel for
+  for (int i = 0; i < ips - 1; i++) {
+    computeFirstOrder(differences + (ip[i] - ip[0]) - (3 * i), ip[i], ip[i + 1] - ip[i]);
+  }
+  auto t2 = std::chrono::steady_clock::now();
 
-    auto timeTaken = getTimeDifference(t1, t2);
+  auto timeTaken = getTimeDifference(t1, t2);
 
-    std::cout << "FOD Time: " << timeTaken << std::endl;
+  std::cout << "FOD Time: " << timeTaken << std::endl;
 }
 
 /**
@@ -59,24 +62,24 @@ void computeParallelizedFOD(int **ip, int ips, int *differences) {
  * @param numTuples Number of tuples to process
  */
 void computeFirstOrder(int *differences, int *tuples, int numTuples) {
-    int i = 0;
-    int to = 3;// Tuple offset
+  int i = 0;
+  int to = 3; // Tuple offset
 
-    for (; i < numTuples - 7; i += 8) {
-        __m256i lhs = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(tuples + i));
-        __m256i rhs = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(tuples + i + to));
-        __m256i fod = _mm256_sub_epi32(rhs, lhs);
-        _mm256_storeu_si256(reinterpret_cast<__m256i *>(differences + i), fod);
-    }
-    for (; i < numTuples - 3; i += 4) {
-        __m128i lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(tuples + i));
-        __m128i rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(tuples + i + to));
-        __m128i fod = _mm_sub_epi32(rhs, lhs);
-        _mm_storeu_si128(reinterpret_cast<__m128i *>(differences + i), fod);
-    }
-    for (; i < numTuples; i++) {
-        differences[i] = *(tuples + i + to) - *(tuples + i);
-    }
+  for (; i < numTuples - to*4; i += 8) {
+    __m256i lhs = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(tuples + i));
+    __m256i rhs = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(tuples + i + to));
+    __m256i fod = _mm256_sub_epi32(rhs, lhs);
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(differences + i), fod);
+  }
+  for (; i < numTuples - to*2; i += 4) {
+    __m128i lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(tuples + i));
+    __m128i rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(tuples + i + to));
+    __m128i fod = _mm_sub_epi32(rhs, lhs);
+    _mm_storeu_si128(reinterpret_cast<__m128i *>(differences + i), fod);
+  }
+  for (; i < numTuples-to; i++) {
+    differences[i] = *(tuples + i + to) - *(tuples + i);
+  }
 }
 
 /**
@@ -88,22 +91,53 @@ void computeFirstOrder(int *differences, int *tuples, int numTuples) {
  * @param c Storage for codelet groupings
  *
  */
-void mineDifferences(int **ip, int ips, Codelet *c) {
-    auto t1 = std::chrono::steady_clock::now();
-    for (int i = 0; i < ips - 1; i++) {
-        auto lhscp = (ip[i] - ip[0]) / TPD;
-        auto rhscp = (ip[i + 1] - ip[0]) / TPD;
-        findCLCS(TPD, ip[i], ip[i + 1], (ip[i + 1] - ip[i]) / TPD, (ip[i + 2] - ip[i + 1]) / TPD, c + lhscp, c + rhscp);
-    }
-    auto t2 = std::chrono::steady_clock::now();
-    auto timeTaken = getTimeDifference(t1, t2);
+void mineDifferences(int **ip, int ips, DDT::Codelet *c, int* d) {
+  int tpr = 3;
+  int bnd[5] = {0,ips/4,ips/2,ips*3/4,40000};
+  auto t1 = std::chrono::steady_clock::now();
+#pragma omp parallel for
+  for (int ii = 0; ii < 4; ++ii) {
+      for (int i = bnd[ii]; i < bnd[ii + 1] - 1; i++) {
+          auto lhscp = (ip[i] - ip[0]) / TPD;
+          auto rhscp = (ip[i + 1] - ip[0]) / TPD;
+          auto lhstps = (ip[i + 1] - ip[i]) / TPD;
+          auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
+          findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp, c + rhscp, d + i * tpr - (i + 1), d + (i + 1) * tpr - (i + 2));
+      }
+  }
+  auto t2 = std::chrono::steady_clock::now();
+  auto timeTaken = getTimeDifference(t1, t2);
 
-    std::cout << "Mine Time: " << timeTaken << std::endl;
+  std::cout << "Mine Time: " << timeTaken << std::endl;
+}
+
+void printTuple(int* t, std::string&& s) {
+  std::cout << s << ": (" << t[0] << "," << t[1] << "," << t[2] << ")" << std::endl;
 }
 
 /**
+ * Determines if memory location is part of codelet
  *
- * Generate the longest common subsequence between two codelets
+ * @param c Codelet memory location associated with tuple
+ * @return True if c->pt == nullptr
+ */
+inline bool isInCodelet(DDT::Codelet* c) {
+    return c->pt != nullptr;
+}
+
+/**
+ * Determines if DDT::Codelet is origin for codelet
+ * @param c Memory location of codelet pointer
+ * @return True if codelet pointer is start of codelet
+ */
+inline bool isCodeletOrigin(DDT::Codelet* c) {
+    return c->pt == c->ct;
+}
+
+
+/**
+ *
+ * Generate the longest common subsequence between two codelet regions.
  *
  * Updates the pointers and values in lhscp and rhscp
  * to reflect the new codelet groupings.
@@ -115,77 +149,79 @@ void mineDifferences(int **ip, int ips, Codelet *c) {
  * @param rhstps Size of tuples in right pointer to iterate
  *
  */
-void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, Codelet *lhscp, Codelet *rhscp) {
-    __m128i lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp));
-    __m128i rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp));
+void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Codelet *lhscp, DDT::Codelet *rhscp, int* lhstpd, int* rhstpd) {
     __m128i thresholds = _mm_set_epi32(THRESHOLDS[3], THRESHOLDS[2], THRESHOLDS[1], THRESHOLDS[0]);
+  auto lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp));
+  auto rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp));
 
-    bool isCodelet[2] = {false, false};
+  for (int i = 0, j = 0; i < lhstps - 1 && j < rhstps - 1;) {
+    // Difference and comparison
+    __m128i sub = _mm_sub_epi32(rhs, lhs);
+    __m128i cmp = _mm_cmplt_epi32(_mm_abs_epi32(sub), thresholds);
 
-    for (int i = 0, j = 0; i < lhstps && j < rhstps;) {
-        // Difference and comparison
-        __m128i sub = _mm_sub_epi32(rhs, lhs);
-        __m128i cmp = _mm_cmplt_epi32(_mm_abs_epi32(sub), thresholds);
+    // Mask upper 8 bits that aren't used
+    uint16_t mm = _mm_movemask_epi8(cmp); 
+    mm = ~mm | 0xf000;
 
-        // Check if tuple is start of codelet
-        isCodelet[0] = lhscp[i].pt != nullptr;
-        isCodelet[1] = rhscp[i].pt != nullptr;
+    if (ZERO_MASK == mm) {
+      // @TODO: if other section could contain codelets, update this code
+      // if (isCodelet[1]) {
+      //   tuplesHaveSameFOD();
+      // }
+      //
 
-        // Mask upper 8 bits that aren't used
-        auto mm = ~_mm_movemask_epi8(cmp) | 0xF000;
+      __m128i lhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstpd + i * tpd));
+      __m128i rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstpd + j * tpd));
+      __m128i xordv = _mm_xor_si128(rhsdv, lhsdv);
 
-        if (ZERO_MASK == mm &&
-            (!isCodelet[0] || (isCodelet[0] && tuplesHaveSameFOD(lhscp[i].pt, lhstp + i * tpd, rhstp + j * tpd)))) {
+      int iStart = i;
+      int jStart = j;
+      uint16_t imm = _mm_movemask_epi8(xordv);
+      while ((i < lhstps - 1 && j < rhstps - 1) && ZERO_MASK == (imm | 0xF000)) {
+        lhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstpd + i++ * tpd));
+        rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstpd + j++ * tpd));
+        xordv = _mm_xor_si128(rhsdv, lhsdv);
+        imm = _mm_movemask_epi8(xordv);
+      }
 
-            __m128i lhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
-            __m128i rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
-            __m128i xordv = _mm_xor_si128(lhsdv, rhsdv);
-
-            // @TODO: if other section could contain codelets, update this code
-            // if (isCodelet[1]) {
-            //   tuplesHaveSameFOD();
-            // }
-
-            // @TODO: Add heuristic for partially strided
-            int iStart = i;
-            while ((i < lhstps && j < rhstps) && ZERO_MASK == (_mm_movemask_epi8(xordv) | 0xF000)) {
-                // Calculate new differences
-                lhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
-                rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
-                xordv = _mm_xor_si128(lhsdv, rhsdv);
-            }
-
-            // Adjust pointers to form codelet
-            // @TODO: Heuristic would go here
-            int sz = i - iStart;
-            if (sz == lhscp->sz) {
-                rhscp->sz = sz;
-                rhscp->pt = lhscp->ct;
-            }
-            if (!isCodelet[0]) {
-                lhscp->sz = sz;
-                lhscp->pt = lhscp->ct;
-            }
-        } else {
-            if (sub[0] > 0) {
-                // @TODO: turn into constexpr
-                if (isCodelet[0]) {
-                    i += lhscp->sz;
-                } else {
-                    i++;
-                }
-                lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
-            } else if (sub[0] < 0) {
-                // @TODO: turn into constexpr
-                if (isCodelet[1]) {
-                    i += rhscp->sz;
-                } else {
-                    j++;
-                }
-                rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
-            }
+        if (isInCodelet(lhscp+iStart) && !tuplesHaveSameFOD(lhscp[iStart].pt, lhstp + iStart * tpd, rhstp + jStart * tpd)) {
+            i += lhscp[iStart].sz;
+            continue;
         }
+
+        // Adjust pointers to form codelet
+      int sz = i - iStart;
+      if (sz != 0) {
+          if (!isInCodelet(lhscp + iStart)) {
+              lhscp[iStart].sz = sz;
+              lhscp[iStart].pt = lhscp[iStart].ct;
+          }
+          if (sz == lhscp[iStart].sz) {
+              rhscp[jStart].sz = sz;
+              rhscp[jStart].pt = lhscp[iStart].ct;
+              lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
+              rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
+          }
+      } else {
+          if (lhstp[i*tpd+2] < rhstp[j*tpd+2]) {
+              i += lhscp->sz + 1;
+              lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
+          } else if (lhstp[i*tpd+2] >= rhstp[j*tpd+2]) {
+              j += rhscp->sz + 1;
+              rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
+          }
+      }
+    } else {
+      if (lhstp[i*tpd+2] < rhstp[j*tpd+2]) {
+        // Since lhscp->sz is number of tuples in codelet not including itself
+        i += lhscp->sz + 1;
+        lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
+      } else if (lhstp[i*tpd+2] >= rhstp[j*tpd+2]) {
+        j += rhscp->sz + 1;
+        rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
+      }
     }
+  }
 }
 
 /** 
@@ -198,35 +234,36 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, Codelet *
  * @return Returns true if distance is the same, otherwise false
  */
 bool tuplesHaveSameFOD(int *lhs, int *mid, int *rhs) {
-    // Load tuples into memory
-    __m128i lhsv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhs));
-    __m128i midv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(mid));
-    __m128i rhsv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhs));
+  // Load tuples into memory
+  __m128i lhsv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhs));
+  __m128i midv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(mid));
+  __m128i rhsv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhs));
 
-    // Generate differences
-    __m128i cmp = _mm_xor_si128(
-            _mm_sub_epi32(midv, lhsv),
-            _mm_sub_epi32(rhsv, midv));
+  // Generate differences
+  __m128i cmp = _mm_xor_si128(
+      _mm_sub_epi32(midv, lhsv),
+      _mm_sub_epi32(rhsv, midv));
 
-    return ZERO_MASK == (_mm_movemask_epi8(cmp) | 0xF000);
+  uint16_t mm = _mm_movemask_epi8(cmp);
+  return ZERO_MASK == (mm | 0xF000);
 }
 
 uint32_t hsum_epi32_avx(__m128i x) {
-    __m128i hi64 = _mm_unpackhi_epi64(x, x);
-    __m128i sum64 = _mm_add_epi32(hi64, x);
-    __m128i hi32 = _mm_shuffle_epi32(sum64, _MM_SHUFFLE(2, 3, 0, 1));
-    __m128i sum32 = _mm_add_epi32(sum64, hi32);
-    return _mm_cvtsi128_si32(sum32);// movd
+  __m128i hi64 = _mm_unpackhi_epi64(x, x);
+  __m128i sum64 = _mm_add_epi32(hi64, x);
+  __m128i hi32 = _mm_shuffle_epi32(sum64, _MM_SHUFFLE(2, 3, 0, 1));
+  __m128i sum32 = _mm_add_epi32(sum64, hi32);
+  return _mm_cvtsi128_si32(sum32);// movd
 }
 
 // only needs AVX2
 uint32_t hsum_8x32(__m256i v) {
-    __m128i sum128 = _mm_add_epi32(
-            _mm256_castsi256_si128(v),
-            _mm256_extracti128_si256(v, 1));
-    return hsum_epi32_avx(sum128);
+  __m128i sum128 = _mm_add_epi32(
+      _mm256_castsi256_si128(v),
+      _mm256_extracti128_si256(v, 1));
+  return hsum_epi32_avx(sum128);
 }
 
 double getTimeDifference(std::chrono::steady_clock::time_point t1, std::chrono::steady_clock::time_point t2) {
-    return std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+  return std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
 }
