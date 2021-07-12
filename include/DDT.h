@@ -21,10 +21,18 @@
 #define DDT_DDT
 
 namespace DDT {
+  enum CodeletType {
+    TYPE_FSC,
+    TYPE_PSC1,
+    TYPE_PSC2,
+    TYPE_PSC3
+  };
+
   struct PatternDAG {
     int sz;
     int* ct;
     int* pt;
+    CodeletType t;
   };
 
   struct MemoryTrace {

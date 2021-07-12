@@ -95,7 +95,8 @@ void computeFirstOrder(int *differences, int *tuples, int numTuples) {
  *
  */
 void mineDifferences(int **ip, int ips, DDT::PatternDAG *c, int* d) {
-  int bnd[5] = {0,ips/4,ips/2,ips*3/4,40000};
+  // int bnd[9] = { 0, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000 };
+  int bnd[5] = { 0, ips/4, ips/2, ips*3/4, 40000 };
   auto t1 = std::chrono::steady_clock::now();
 #pragma omp parallel for num_threads(4)
   for (int ii = 0; ii < 4; ++ii) {
@@ -172,6 +173,9 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
       __m128i rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstpd + j * tpd));
       __m128i xordv = _mm_xor_si128(rhsdv, lhsdv);
 
+      auto odv = lhsdv; // originalDifferenceVector
+      bool hsad = true; // hasSameAdjacentDifferences
+
       int iStart = i;
       int jStart = j;
       uint16_t imm = _mm_movemask_epi8(xordv);
@@ -180,8 +184,15 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
         rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstpd + j++ * tpd));
         xordv = _mm_xor_si128(rhsdv, lhsdv);
         imm = _mm_movemask_epi8(xordv);
+
+        // Compare FOD across iteration
+        uint16_t MASK = _mm_movemask_epi8(_mm_xor_si128(odv, lhsdv));
+        hsad = hsad && ZERO_MASK == (MASK | 0xF000);
       }
 
+      DDT::CodeletType t;
+
+      // Determines codelet type
       if (isInCodelet(lhscp+iStart)) {
         uint16_t MASK = generateDifferenceMask(
             lhscp[iStart].pt, 
@@ -190,7 +201,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
             ZERO_MASK);
 
         // Checks for PSC Type 1 and PSC Type 2
-        if (MASK != PSC1_MASK && MASK != PSC2_MASK) {  
+        if (MASK == PSC1_MASK && !hsad || MASK != (FSC_MASK|PSC2_MASK)) {
           i += lhscp[iStart].sz;
           continue;
         }
@@ -202,6 +213,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
         if (!isInCodelet(lhscp + iStart)) {
           lhscp[iStart].sz = sz;
           lhscp[iStart].pt = lhscp[iStart].ct;
+          lhscp[iStart].t  = hsad ? DDT::TYPE_FSC : DDT::TYPE_PSC2;
         }
         if (sz == lhscp[iStart].sz) {
           rhscp[jStart].sz = sz;

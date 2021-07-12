@@ -60,8 +60,8 @@ void inline psc_t2_2DC(
     const int ub,
     const int cb
     ) {
-  auto ax0 = Ax + axo * 0;
-  auto ax1 = Ax + axo * 1;
+  auto ax0 = Ax + axo + axi;
+  auto ax1 = Ax + axo + axi*2;
 
   for (int i = lb; i < ub; i+=2) {
     auto r0 = _mm256_setzero_pd();
@@ -96,8 +96,8 @@ void inline psc_t2_2DC(
     _mm_storeu_pd(y+i, vlow);
 
     // Load new addresses
-    ax0 += axo;
-    ax1 += axo;
+    ax0 += axi*2;
+    ax1 += axi*2;
   }
 
   // Compute last iteration
@@ -145,8 +145,8 @@ void inline psc_t2_2D4C(
     const int ub,
     const int cb
     ) {
-  auto ax0 = Ax + axo * 0;
-  auto ax1 = Ax + axo * 1;
+  auto ax0 = Ax + axo + axi * 0;
+  auto ax1 = Ax + axo + axi * 1;
 
   __m256d xv;
   loadvx(offset, x, 0, xv);
@@ -167,8 +167,8 @@ void inline psc_t2_2D4C(
     _mm_storeu_pd(y+i, vlow);
 
     // Load new addresses
-    ax0 += axo;
-    ax1 += axo;
+    ax0 += axo*2;
+    ax1 += axo*2;
   }
 
   // Compute last iteration
