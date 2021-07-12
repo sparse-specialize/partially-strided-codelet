@@ -6,7 +6,14 @@
 #define DDT_GENERICCODELETS_H
 
 namespace DDT{
+/// FSC
+ inline double hsum_double_avx(__m256d v);
 
+ void inline psc_t2_2DC( double *y, const double *Ax, const double *x, const
+ int axi, const int  axo, const int  lb, const int ub, const int cbl,
+   const int cbu);
+
+ /// PSCT1
  void inline psc_t1_1D4C(double *y, const double *Ax, const double *x,
                          const int *offset, int lb, int ub, int lbc, int ubc);
 
