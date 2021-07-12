@@ -21,7 +21,7 @@
 #define DDT_DDT
 
 namespace DDT {
-  struct Codelet {
+  struct PatternDAG {
     int sz;
     int* ct;
     int* pt;
@@ -38,7 +38,7 @@ namespace DDT {
 
   struct GlobalObject {
     MemoryTrace mt;
-    Codelet* c;
+    PatternDAG* c;
     int* d;
   };
 

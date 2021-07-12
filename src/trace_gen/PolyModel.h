@@ -11,6 +11,7 @@
 #include "Trace.h"
 
 namespace sparse_avx{
+
  struct Expr{
   std::string name;
   Expr(std::string n);

@@ -91,7 +91,7 @@ void computeFirstOrder(int *differences, int *tuples, int numTuples) {
  * @param c Storage for codelet groupings
  *
  */
-void mineDifferences(int **ip, int ips, DDT::Codelet *c, int* d) {
+void mineDifferences(int **ip, int ips, DDT::PatternDAG *c, int* d) {
   int bnd[5] = {0,ips/4,ips/2,ips*3/4,40000};
   auto t1 = std::chrono::steady_clock::now();
 #pragma omp parallel for num_threads(4)
@@ -120,7 +120,7 @@ void printTuple(int* t, std::string&& s) {
  * @param c Codelet memory location associated with tuple
  * @return True if c->pt == nullptr
  */
-inline bool isInCodelet(DDT::Codelet* c) {
+inline bool isInCodelet(DDT::PatternDAG* c) {
     return c->pt != nullptr;
 }
 
@@ -130,7 +130,7 @@ inline bool isInCodelet(DDT::Codelet* c) {
  * @param c Memory location of codelet pointer
  * @return True if codelet pointer is start of codelet
  */
-inline bool isCodeletOrigin(DDT::Codelet* c) {
+inline bool isCodeletOrigin(DDT::PatternDAG* c) {
     return c->pt == c->ct;
 }
 
@@ -149,7 +149,8 @@ inline bool isCodeletOrigin(DDT::Codelet* c) {
  * @param rhstps Size of tuples in right pointer to iterate
  *
  */
-void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Codelet *lhscp, DDT::Codelet *rhscp, int* lhstpd, int* rhstpd) {
+void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::PatternDAG
+*lhscp, DDT::PatternDAG *rhscp, int* lhstpd, int* rhstpd) {
     __m128i thresholds = _mm_set_epi32(THRESHOLDS[3], THRESHOLDS[2], THRESHOLDS[1], THRESHOLDS[0]);
   auto lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp));
   auto rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp));

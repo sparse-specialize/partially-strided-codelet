@@ -1,8 +1,9 @@
 //
 // Created by kazem on 7/12/21.
 //
-
+#include "def.h"
 #include "GenericCodeletsPSCT1.h"
+
 namespace DDT{
 /**
  * Different implementations of PSC Type2 for SpMV ->

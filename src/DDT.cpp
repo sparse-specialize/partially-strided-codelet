@@ -37,7 +37,7 @@ namespace DDT {
     // Allocate memory
     int nd = m.nz*tpr;
     auto* tuples = new int[nd%4+nd+1];
-    auto* codelets = new DDT::Codelet[m.nz]();
+    auto* codelets = new DDT::PatternDAG[m.nz]();
     int** dp = new int*[m.r+1];
     auto df = new int[nd%4+nd+1]();
     // posix_memalign(reinterpret_cast<void **>(d), 32, nd);
@@ -89,7 +89,8 @@ namespace DDT {
     ss << "y[" << ct[0] << "] += Lx[" << ct[1] << "] * x[" << ct[2] << "];\n";
   }
 
-  void generateCodelet(std::stringstream& ss, DDT::GlobalObject& d, DDT::Codelet* c) {
+  void generateCodelet(std::stringstream& ss, DDT::GlobalObject& d, DDT::PatternDAG*
+  c) {
     int TPR = 3;
     // Get codelet type
     auto TYPE = FSC;
