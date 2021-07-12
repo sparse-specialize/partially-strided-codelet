@@ -30,6 +30,9 @@
 int THRESHOLDS[4] = { 2, 100, 100, 0 };
 const int TPD = 3;
 int ZERO_MASK = 0xF000;
+int FSC_MASK  = 0xF000;
+int PSC1_MASK = 0xF0F0;
+int PSC2_MASK = 0xF000;
 
 /**
  * Generate parallel first order differences
@@ -96,13 +99,13 @@ void mineDifferences(int **ip, int ips, DDT::Codelet *c, int* d) {
   auto t1 = std::chrono::steady_clock::now();
 #pragma omp parallel for num_threads(4)
   for (int ii = 0; ii < 4; ++ii) {
-      for (int i = bnd[ii]; i < bnd[ii + 1] - 1; i++) {
-          auto lhscp = (ip[i] - ip[0]) / TPD;
-          auto rhscp = (ip[i + 1] - ip[0]) / TPD;
-          auto lhstps = (ip[i + 1] - ip[i]) / TPD;
-          auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
-          findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp, c + rhscp, d + lhscp*TPD, d + rhscp*TPD);
-      }
+    for (int i = bnd[ii]; i < bnd[ii + 1] - 1; i++) {
+      auto lhscp = (ip[i] - ip[0]) / TPD;
+      auto rhscp = (ip[i + 1] - ip[0]) / TPD;
+      auto lhstps = (ip[i + 1] - ip[i]) / TPD;
+      auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
+      findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp, c + rhscp, d + lhscp*TPD, d + rhscp*TPD);
+    }
   }
   auto t2 = std::chrono::steady_clock::now();
   auto timeTaken = getTimeDifference(t1, t2);
@@ -121,7 +124,7 @@ void printTuple(int* t, std::string&& s) {
  * @return True if c->pt == nullptr
  */
 inline bool isInCodelet(DDT::Codelet* c) {
-    return c->pt != nullptr;
+  return c->pt != nullptr;
 }
 
 /**
@@ -131,7 +134,7 @@ inline bool isInCodelet(DDT::Codelet* c) {
  * @return True if codelet pointer is start of codelet
  */
 inline bool isCodeletOrigin(DDT::Codelet* c) {
-    return c->pt == c->ct;
+  return c->pt == c->ct;
 }
 
 
@@ -150,7 +153,7 @@ inline bool isCodeletOrigin(DDT::Codelet* c) {
  *
  */
 void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Codelet *lhscp, DDT::Codelet *rhscp, int* lhstpd, int* rhstpd) {
-    __m128i thresholds = _mm_set_epi32(THRESHOLDS[3], THRESHOLDS[2], THRESHOLDS[1], THRESHOLDS[0]);
+  __m128i thresholds = _mm_set_epi32(THRESHOLDS[3], THRESHOLDS[2], THRESHOLDS[1], THRESHOLDS[0]);
   auto lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp));
   auto rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp));
 
@@ -178,33 +181,41 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Code
         imm = _mm_movemask_epi8(xordv);
       }
 
-      // Checks for PSC Type 1
-        if (isInCodelet(lhscp+iStart) && !tuplesHaveSameFOD(lhscp[iStart].pt, lhstp + iStart * tpd, rhstp + jStart * tpd)) {
-            i += lhscp[iStart].sz;
-            continue;
+      if (isInCodelet(lhscp+iStart)) {
+        uint16_t MASK = generateDifferenceMask(
+            lhscp[iStart].pt, 
+            lhstp + iStart * tpd, 
+            rhstp + jStart * tpd, 
+            ZERO_MASK);
+
+        // Checks for PSC Type 1 and PSC Type 2
+        if (MASK != PSC1_MASK && MASK != PSC2_MASK) {  
+          i += lhscp[iStart].sz;
+          continue;
         }
+      }
 
       // Adjust pointers to form codelet
       int sz = i - iStart;
       if (sz != 0) {
-          if (!isInCodelet(lhscp + iStart)) {
-              lhscp[iStart].sz = sz;
-              lhscp[iStart].pt = lhscp[iStart].ct;
-          }
-          if (sz == lhscp[iStart].sz) {
-              rhscp[jStart].sz = sz;
-              rhscp[jStart].pt = lhscp[iStart].ct;
-              lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
-              rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
-          }
+        if (!isInCodelet(lhscp + iStart)) {
+          lhscp[iStart].sz = sz;
+          lhscp[iStart].pt = lhscp[iStart].ct;
+        }
+        if (sz == lhscp[iStart].sz) {
+          rhscp[jStart].sz = sz;
+          rhscp[jStart].pt = lhscp[iStart].ct;
+          lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
+          rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
+        }
       } else {
-          if (lhstp[i*tpd+2] < rhstp[j*tpd+2]) {
-              i += lhscp->sz + 1;
-              lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
-          } else if (lhstp[i*tpd+2] >= rhstp[j*tpd+2]) {
-              j += rhscp->sz + 1;
-              rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
-          }
+        if (lhstp[i*tpd+2] < rhstp[j*tpd+2]) {
+          i += lhscp->sz + 1;
+          lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
+        } else if (lhstp[i*tpd+2] >= rhstp[j*tpd+2]) {
+          j += rhscp->sz + 1;
+          rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
+        }
       }
     } else {
       if (lhstp[i*tpd+2] < rhstp[j*tpd+2]) {
@@ -228,7 +239,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Code
  * @param rhs Memory location of start of rhs tuple
  * @return Returns true if distance is the same, otherwise false
  */
-bool tuplesHaveSameFOD(int *lhs, int *mid, int *rhs) {
+inline uint16_t generateDifferenceMask(int *lhs, int *mid, int *rhs, int MASK) {
   // Load tuples into memory
   __m128i lhsv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhs));
   __m128i midv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(mid));
@@ -240,7 +251,7 @@ bool tuplesHaveSameFOD(int *lhs, int *mid, int *rhs) {
       _mm_sub_epi32(rhsv, midv));
 
   uint16_t mm = _mm_movemask_epi8(cmp);
-  return ZERO_MASK == (mm | 0xF000);
+  return (mm | 0xF000);
 }
 
 uint32_t hsum_epi32_avx(__m128i x) {
