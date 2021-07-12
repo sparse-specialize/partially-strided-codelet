@@ -13,5 +13,4 @@ include_directories("./lib/cxxopts/include")
 aux_source_directory("./src" SRC)
 aux_source_directory("./src/trace_gen" TRCGEN)
 
-
 add_executable(DDT main.cpp ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC})
