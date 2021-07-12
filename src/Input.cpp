@@ -23,27 +23,33 @@
 #include "cxxopts.hpp"
 
 namespace DDT {
-    Config parseInput(int argc, char** argv) {
-      cxxopts::Options options("DDT", "Generates vectorized code from memory streams");
+  /**
+   * @brief Parses commandline input for the program
+   *
+   * @param argc 
+   * @param argv
+   */
+  Config parseInput(int argc, char** argv) {
+    cxxopts::Options options("DDT", "Generates vectorized code from memory streams");
 
-      options.add_options()
-        ("h,help", "Help")
-        ("m,matrix", "Path to matrix market file.", cxxopts::value<std::string>());
+    options.add_options()
+      ("h,help", "Help")
+      ("m,matrix", "Path to matrix market file.", cxxopts::value<std::string>());
 
-      auto result = options.parse(argc, argv);
+    auto result = options.parse(argc, argv);
 
-      if (result.count("help")) {
-        std::cout << options.help() << std::endl;
-        exit(0);
-      }
-
-      if (!result.count("matrix")) {
-        std::cout << "Matrix is manditory argument. Use --help" << std::endl;
-        exit(0);
-      }
-
-      auto matrixPath = result["matrix"].as<std::string>();
-
-      return Config{ matrixPath };
+    if (result.count("help")) {
+      std::cout << options.help() << std::endl;
+      exit(0);
     }
+
+    if (!result.count("matrix")) {
+      std::cout << "Matrix is manditory argument. Use --help" << std::endl;
+      exit(0);
+    }
+
+    auto matrixPath = result["matrix"].as<std::string>();
+
+    return Config{ matrixPath };
+  }
 }

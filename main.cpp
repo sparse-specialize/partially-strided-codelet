@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   mineDifferences(d.mt.ip, d.mt.ips, d.c, d.d);
 
   // Generate Codes
-  //  DDT::generateSource(d);
+  // DDT::generateSource(d);
   std::vector<DDT::Codelet> cl;
   DDT::inspectCodelets(d, cl);
 

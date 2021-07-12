@@ -35,7 +35,7 @@ int PSC1_MASK = 0xF0F0;
 int PSC2_MASK = 0xF000;
 
 /**
- * Generate parallel first order differences
+ * @brief Generate parallel first order differences
  *
  * @param ip Array of pointers to the start tuple of each iteration
  * @param ips Size of the ip array
@@ -141,16 +141,20 @@ inline bool isCodeletOrigin(DDT::PatternDAG* c) {
 
 /**
  *
- * Generate the longest common subsequence between two codelet regions.
+ * @brief Generate the longest common subsequence between two codelet regions.
  *
  * Updates the pointers and values in lhscp and rhscp
  * to reflect the new codelet groupings.
  *
- * @param tpd Dimensionality of tuples
- * @param lhstp Left pointer to start of tuple grouping
- * @param rhstp Right pointer to start of tuple grouping
+ * @param tpd    Dimensionality of tuples
+ * @param lhstp  Left pointer to start of tuple grouping
+ * @param rhstp  Right pointer to start of tuple grouping
  * @param lhstps Size of tuples in left pointer to iterate
  * @param rhstps Size of tuples in right pointer to iterate
+ * @param lhscp  Left pointer to codelet
+ * @param rhscp  Right pointer to codelet
+ * @param lhstpd Left pointer to first order differences
+ * @param rhstpd Right pointer to first order differences
  *
  */
 void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::PatternDAG
@@ -246,12 +250,12 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
 
 /** 
  *
- * Determines if the diffence between mid-lhs is the same as rhs-mid
+ * @brief Generates a 16-bit bitmask describing (rhs-mid == mid-lhs)
  *
  * @param lhs Memory location of start of lhs tuple
  * @param mid Memory location of start of mid tuple
  * @param rhs Memory location of start of rhs tuple
- * @return Returns true if distance is the same, otherwise false
+ * @return Returns 16-bit bitmask
  */
 inline uint16_t generateDifferenceMask(int *lhs, int *mid, int *rhs, int MASK) {
   // Load tuples into memory
