@@ -5,6 +5,7 @@
 #ifndef DDT_GENERICCODELETS_H
 #define DDT_GENERICCODELETS_H
 
+#include <immintrin.h>
 namespace DDT{
 /// FSC
  inline double hsum_double_avx(__m256d v);

@@ -7,6 +7,7 @@
 
 namespace DDT{
 
+
  void inspectCodelet(DDT::GlobalObject& d, DDT::PatternDAG* c,
                       const std::vector<Codelet>& cl) {
   int TPR = 3;
