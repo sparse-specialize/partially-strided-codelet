@@ -19,7 +19,7 @@ namespace DDT{
  * @param lbc in lower bound of columns
  * @param ubc in upper bound of columns
  */
- void inline psc_t1_1D4C(double *y, const double *Ax, const double *x,
+ void psc_t1_1D4C(double *y, const double *Ax, const double *x,
                          const int *offset, int lb, int ub, int lbc, int ubc){
   v4df_t Lx_reg, Lx_reg2, result, result2, x_reg, x_reg2;
   for (int i = lb, ii=0; i <ub; ++i, ++ii) {
@@ -45,7 +45,7 @@ namespace DDT{
   }
  }
 
- void inline psc_t1_1D8C(double *y, const double *Ax, const double *x,
+ void psc_t1_1D8C(double *y, const double *Ax, const double *x,
                         const int *offset, int lb, int ub, int lbc, int ubc){
   v4df_t Lx_reg, Lx_reg2, result, result2, x_reg, x_reg2;
   for (int i = lb, ii=0; i <ub; ++i, ++ii) {
@@ -74,7 +74,7 @@ namespace DDT{
   }
  }
 
- void inline psc_t1_2D2R(double *y, const double *Ax, const double *x,
+ void psc_t1_2D2R(double *y, const double *Ax, const double *x,
                             const int *offset, int lb, int ub, int lbc, int ubc){
   v4df_t Lx_reg, Lx_reg2, result, result2, x_reg, x_reg2;
   for (int i = lb, ii=0; i <ub; i+=2, ii+=2) {
@@ -105,7 +105,7 @@ namespace DDT{
   }
  }
 
- void inline psc_t1_2D4R(double *y, const double *Ax, const double *x,
+ void psc_t1_2D4R(double *y, const double *Ax, const double *x,
                               const int *offset, int lb, int ub, int lbc, int ubc){
   v4df_t Lx_reg, Lx_reg2, Lx_reg3, Lx_reg4, result, result2, result3,
     result4, x_reg,

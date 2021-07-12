@@ -10,10 +10,6 @@
 
 namespace DDT{
 
- enum LOCATIONS{
-  LBR=0, LBC, RW, CW, FNL, RO, CO
- };
-
  struct Codelet{
   int size;
   int *offsets;
