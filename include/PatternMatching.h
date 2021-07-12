@@ -13,7 +13,7 @@ void computeFirstOrder(int* differences, int* tuples, int numTuples);
 
 void computeParallelizedFOD(int** ip, int ips, int* differences);
 
-bool tuplesHaveSameFOD(int* lhs, int* mid, int* rhs);
+uint16_t generateDifferenceMask(int* lhs, int* mid, int* rhs, int MASK);
 
 void mineDifferences(int** ip, int ips, DDT::PatternDAG* c, int* d);
 
