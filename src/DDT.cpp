@@ -25,12 +25,6 @@
 #include <vector>
 
 namespace DDT {
-  enum CodeletType {
-    FSC = 0,
-    PSC1 = 1,
-    PSC2 = 2
-  };
-
   DDT::GlobalObject allocateMemory(Matrix& m) {
     // TPR
     int tpr = 3;
@@ -93,19 +87,19 @@ namespace DDT {
   c) {
     int TPR = 3;
     // Get codelet type
-    auto TYPE = FSC;
+    auto TYPE = 0;
 
     int df = 0;
     for (int i = 0; i < c->sz; i++) {
       if (i == 0)
         df = c[i+1].ct[2] - c[i].ct[2];
       else if (df != (c[i+1].ct[2] - c[i].ct[2])) {
-        TYPE = PSC2;
+        TYPE = 2;
         break;
       }
     }
 
-    if (TYPE == PSC1) {
+    if (TYPE == 1) {
       int buf[40];
       int rowCnt = 0;
 
@@ -114,7 +108,7 @@ namespace DDT {
         int nc = (c->pt - d.mt.ip[0])/TPR;
         c = d.c + nc;
       }
-    } else if (TYPE == PSC2) {
+    } else if (TYPE == 2) {
       int buf[40];
       int rowCnt = 0;
 
@@ -149,7 +143,7 @@ namespace DDT {
       ss << "\t}\n";
       ss << "}\n";
       ss << "}\n";
-    } else if (TYPE == FSC) {
+    } else if (TYPE == 0) {
       int rowCnt = 0;
 
       int mi = c->ct[1] - c->pt[1];
