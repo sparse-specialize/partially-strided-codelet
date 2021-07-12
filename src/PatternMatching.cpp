@@ -27,7 +27,7 @@
 #include <iostream>
 #include <vector>
 
-int THRESHOLDS[4] = { 2, 100, 2, 0 };
+int THRESHOLDS[4] = { 2, 100, 100, 0 };
 const int TPD = 3;
 int ZERO_MASK = 0xF000;
 
@@ -42,9 +42,9 @@ int ZERO_MASK = 0xF000;
  */
 void computeParallelizedFOD(int **ip, int ips, int *differences) {
   auto t1 = std::chrono::steady_clock::now();
-#pragma omp parallel for
+#pragma omp parallel for num_threads(2)
   for (int i = 0; i < ips - 1; i++) {
-    computeFirstOrder(differences + (ip[i] - ip[0]) - (3 * i), ip[i], ip[i + 1] - ip[i]);
+    computeFirstOrder(differences + (ip[i] - ip[0]), ip[i], ip[i + 1] - ip[i]);
   }
   auto t2 = std::chrono::steady_clock::now();
 
@@ -92,17 +92,16 @@ void computeFirstOrder(int *differences, int *tuples, int numTuples) {
  *
  */
 void mineDifferences(int **ip, int ips, DDT::Codelet *c, int* d) {
-  int tpr = 3;
   int bnd[5] = {0,ips/4,ips/2,ips*3/4,40000};
   auto t1 = std::chrono::steady_clock::now();
-#pragma omp parallel for
+#pragma omp parallel for num_threads(4)
   for (int ii = 0; ii < 4; ++ii) {
       for (int i = bnd[ii]; i < bnd[ii + 1] - 1; i++) {
           auto lhscp = (ip[i] - ip[0]) / TPD;
           auto rhscp = (ip[i + 1] - ip[0]) / TPD;
           auto lhstps = (ip[i + 1] - ip[i]) / TPD;
           auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
-          findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp, c + rhscp, d + i * tpr - (i + 1), d + (i + 1) * tpr - (i + 2));
+          findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp, c + rhscp, d + lhscp*TPD, d + rhscp*TPD);
       }
   }
   auto t2 = std::chrono::steady_clock::now();
@@ -127,6 +126,7 @@ inline bool isInCodelet(DDT::Codelet* c) {
 
 /**
  * Determines if DDT::Codelet is origin for codelet
+ *
  * @param c Memory location of codelet pointer
  * @return True if codelet pointer is start of codelet
  */
@@ -164,12 +164,6 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Code
     mm = ~mm | 0xf000;
 
     if (ZERO_MASK == mm) {
-      // @TODO: if other section could contain codelets, update this code
-      // if (isCodelet[1]) {
-      //   tuplesHaveSameFOD();
-      // }
-      //
-
       __m128i lhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstpd + i * tpd));
       __m128i rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstpd + j * tpd));
       __m128i xordv = _mm_xor_si128(rhsdv, lhsdv);
@@ -184,12 +178,13 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Code
         imm = _mm_movemask_epi8(xordv);
       }
 
+      // Checks for PSC Type 1
         if (isInCodelet(lhscp+iStart) && !tuplesHaveSameFOD(lhscp[iStart].pt, lhstp + iStart * tpd, rhstp + jStart * tpd)) {
             i += lhscp[iStart].sz;
             continue;
         }
 
-        // Adjust pointers to form codelet
+      // Adjust pointers to form codelet
       int sz = i - iStart;
       if (sz != 0) {
           if (!isInCodelet(lhscp + iStart)) {

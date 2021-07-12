@@ -42,6 +42,8 @@ namespace DDT {
     int* d;
   };
 
+  void generateSource(DDT::GlobalObject& d);
+
   GlobalObject init(DDT::Config& config);
 
   void free(DDT::GlobalObject d);

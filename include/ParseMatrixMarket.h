@@ -37,6 +37,7 @@ auto readSparseMatrix(std::string path) {
 
   std::vector<std::tuple<int,int,double>> mat;
 
+
   int rows,cols,nnz;
   std::string line;
   bool parsed = false;

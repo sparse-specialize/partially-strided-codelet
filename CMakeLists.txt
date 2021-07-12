@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -march=native -fopenmp")
 
 include_directories("./include")
+include_directories("./src/trace_gen")
 include_directories("./lib/cxxopts/include")
 
 aux_source_directory("./src" SRC)
