@@ -110,13 +110,15 @@ namespace DDT{
   v4df_t Lx_reg, Lx_reg2, Lx_reg3, Lx_reg4, result, result2, result3,
     result4, x_reg,
     x_reg2;
-  for (int i = lb, ii=0; i <ub; i+=4, ii+=4) {
+  int tii = ub%4;
+  for (int i = lb, ii=0; i <ub-tii; i+=4, ii+=4) {
    result.v = _mm256_setzero_pd();
    result2.v = _mm256_setzero_pd();
    result3.v = _mm256_setzero_pd();
    result4.v = _mm256_setzero_pd();
-   for (int j = lbc, k=offset[ii], k1=offset[ii], k2=offset[ii],
-          k3=offset[ii]; j < ubc; j+=4, k+=4, k1+=4, k2+=4, k3+=4) {
+   int ti = ubc%4;
+   for (int j = lbc, k=offset[ii], k1=offset[ii+1], k2=offset[ii+2],
+          k3=offset[ii+3]; j < ubc-ti; j+=4, k+=4, k1+=4, k2+=4, k3+=4) {
     //y[i] += Ax[k] * x[j];
     //_mm256_mask_i32gather_pd()
     // x_reg.d[0] = x[*aij]; /// TODO replaced with gather
@@ -135,12 +137,60 @@ namespace DDT{
     result3.v = _mm256_fmadd_pd(Lx_reg3.v,x_reg.v,result3.v);//Skylake	4	0.5
     result4.v = _mm256_fmadd_pd(Lx_reg4.v,x_reg.v,result4.v);//Skylake	4	0.5
    }
+   double t0, t1, t2, t3;
+   for (int j = lbc-ti, k=offset[ii], k1=offset[ii+1], k2=offset[ii+2],
+          k3=offset[ii+3]; j < ubc; j++, k++, k1++, k2++, k3++) {
+    double xj = x[j];
+    t0 += Ax[k] * xj;
+    t1 += Ax[k1] * xj;
+    t2 += Ax[k2] * xj;
+    t3 += Ax[k3] * xj;
+   }
    auto h0 = _mm256_hadd_pd(result.v, result2.v);
-   y[i] += (h0[0] + h0[2]);
-   y[i+1] += (h0[1] + h0[3]);
+   y[i] += (h0[0] + h0[2] + t0);
+   y[i+1] += (h0[1] + h0[3] + t1);
    h0 = _mm256_hadd_pd(result3.v, result4.v);
-   y[i+2] += (h0[0] + h0[2]);
-   y[i+3] += (h0[1] + h0[3]);
+   y[i+2] += (h0[0] + h0[2] + t2);
+   y[i+3] += (h0[1] + h0[3] + t3);
   }
+  /** the rest **/
+  for (int i = ub-tii, ii=0; i <ub; i++, ii++) {
+   result.v = _mm256_setzero_pd();
+   result2.v = _mm256_setzero_pd();
+   result3.v = _mm256_setzero_pd();
+   result4.v = _mm256_setzero_pd();
+   int ti = ubc%4;
+   for (int j = lbc, k=offset[ii], k1=offset[ii+1], k2=offset[ii+2],
+          k3=offset[ii+3]; j < ubc-ti; j+=4, k+=4, k1+=4, k2+=4, k3+=4) {
+    x_reg.v = _mm256_loadu_pd((double *) (x+j));
+    Lx_reg.v = _mm256_loadu_pd((double *) (Ax + k)); // Skylake	7	0.5
+    Lx_reg2.v = _mm256_loadu_pd((double *) (Ax + k1)); // Skylake	7
+    Lx_reg3.v = _mm256_loadu_pd((double *) (Ax + k2)); // Skylake	7
+    Lx_reg4.v = _mm256_loadu_pd((double *) (Ax +k3)); // Skylake	7
+    // 	0.5
+    result.v = _mm256_fmadd_pd(Lx_reg.v,x_reg.v,result.v);//Skylake	4	0.5
+    result2.v = _mm256_fmadd_pd(Lx_reg2.v,x_reg.v,result2.v);//Skylake	4	0.5
+    result3.v = _mm256_fmadd_pd(Lx_reg3.v,x_reg.v,result3.v);//Skylake	4	0.5
+    result4.v = _mm256_fmadd_pd(Lx_reg4.v,x_reg.v,result4.v);//Skylake	4	0.5
+   }
+   double t0, t1, t2, t3;
+   for (int j = lbc-ti, k=offset[ii], k1=offset[ii+1], k2=offset[ii+2],
+          k3=offset[ii+3]; j < ubc; j++, k++, k1++, k2++, k3++) {
+    double xj = x[j];
+    t0 += Ax[k] * xj;
+    t1 += Ax[k1] * xj;
+    t2 += Ax[k2] * xj;
+    t3 += Ax[k3] * xj;
+   }
+   auto h0 = _mm256_hadd_pd(result.v, result2.v);
+   y[i] += (h0[0] + h0[2] + t0);
+   y[i+1] += (h0[1] + h0[3] + t1);
+   h0 = _mm256_hadd_pd(result3.v, result4.v);
+   y[i+2] += (h0[0] + h0[2] + t2);
+   y[i+3] += (h0[1] + h0[3] + t3);
+  }
+
  }
+
+
 }
