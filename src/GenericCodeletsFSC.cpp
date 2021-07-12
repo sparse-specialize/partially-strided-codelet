@@ -42,7 +42,7 @@ namespace DDT {
  * @param cbl in number of columns to compute
  * @param cbu in number of columns to compute
  */
- void inline psc_t2_2DC(
+ void inline fsc_t2_2DC(
    double *y,
    const double *Ax,
    const double *x,

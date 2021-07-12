@@ -16,6 +16,7 @@
  * =====================================================================================
  */
 #include <immintrin.h>
+namespace DDT {
 
 #ifdef _mm256_i32gather_pd
 #define loadvx(of, x, ind, xv) \
@@ -27,14 +28,14 @@
 #endif
 
 
-inline double hsum_double_avx(__m256d v) {
-    __m128d vlow  = _mm256_castpd256_pd128(v);
-    __m128d vhigh = _mm256_extractf128_pd(v, 1); // high 128
-            vlow  = _mm_add_pd(vlow, vhigh);     // reduce down to 128
+ inline double hsum_double_avx(__m256d v) {
+  __m128d vlow = _mm256_castpd256_pd128(v);
+  __m128d vhigh = _mm256_extractf128_pd(v, 1); // high 128
+  vlow = _mm_add_pd(vlow, vhigh);     // reduce down to 128
 
-    __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
-    return  _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
-}
+  __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+  return _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
+ }
 
 /**
  * Computes y[lb:ub] += Lx[axo+axi:axo+axi*cb] * x[offset[0:cb]]
@@ -49,55 +50,55 @@ inline double hsum_double_avx(__m256d v) {
  * @param ub in upper bound of rows
  * @param cb in number of columns to compute
  */
-void inline psc_t2_2DC(
-    double *y,
-    const double *Ax,
-    const double *x,
-    const int *offset,
-    const int axi,
-    const int axo,
-    const int lb,
-    const int ub,
-    const int cb
-    ) {
+ void psc_t2_2DC(
+   double *y,
+   const double *Ax,
+   const double *x,
+   const int *offset,
+   const int axi,
+   const int axo,
+   const int lb,
+   const int ub,
+   const int cb
+ ) {
   auto ax0 = Ax + axo + axi;
-  auto ax1 = Ax + axo + axi*2;
+  auto ax1 = Ax + axo + axi * 2;
 
-  for (int i = lb; i < ub; i+=2) {
-    auto r0 = _mm256_setzero_pd();
-    auto r1 = _mm256_setzero_pd();
+  for (int i = lb; i < ub; i += 2) {
+   auto r0 = _mm256_setzero_pd();
+   auto r1 = _mm256_setzero_pd();
 
-    int j = 0;
-    for (; j < cb; j+=4) {
-      __m256d xv;
-      loadvx(offset, x, 0, xv);
+   int j = 0;
+   for (; j < cb; j += 4) {
+    __m256d xv;
+    loadvx(offset, x, 0, xv);
 
-      auto axv0 = _mm256_loadu_pd(ax0+j);
-      auto axv1 = _mm256_loadu_pd(ax1+j);
+    auto axv0 = _mm256_loadu_pd(ax0 + j);
+    auto axv1 = _mm256_loadu_pd(ax1 + j);
 
-      r0 = _mm256_fmadd_pd(axv0, xv, r0);
-      r1 = _mm256_fmadd_pd(axv1, xv, r1);
-    }
+    r0 = _mm256_fmadd_pd(axv0, xv, r0);
+    r1 = _mm256_fmadd_pd(axv1, xv, r1);
+   }
 
-    // Compute tail
-    __m128d tail = _mm_setzero_pd();
-    for (; j < cb; j++) {
-      tail[0] += ax0[j] * x[j];
-      tail[1] += ax1[j] * x[j];
-    }
+   // Compute tail
+   __m128d tail = _mm_setzero_pd();
+   for (; j < cb; j++) {
+    tail[0] += ax0[j] * x[j];
+    tail[1] += ax1[j] * x[j];
+   }
 
-    // H-Sum
-    auto h0 = _mm256_hadd_pd(r0, r1);
-    __m128d vlow  = _mm256_castpd256_pd128(h0);
-    __m128d vhigh = _mm256_extractf128_pd(h0, 1);  // high 128
-    vlow  = _mm_add_pd(vlow, vhigh);     // reduce down to 128
-    vlow = _mm_add_pd(vlow, tail);
-    // Store
-    _mm_storeu_pd(y+i, vlow);
+   // H-Sum
+   auto h0 = _mm256_hadd_pd(r0, r1);
+   __m128d vlow = _mm256_castpd256_pd128(h0);
+   __m128d vhigh = _mm256_extractf128_pd(h0, 1);  // high 128
+   vlow = _mm_add_pd(vlow, vhigh);     // reduce down to 128
+   vlow = _mm_add_pd(vlow, tail);
+   // Store
+   _mm_storeu_pd(y + i, vlow);
 
-    // Load new addresses
-    ax0 += axi*2;
-    ax1 += axi*2;
+   // Load new addresses
+   ax0 += axi * 2;
+   ax1 += axi * 2;
   }
 
   // Compute last iteration
@@ -106,19 +107,19 @@ void inline psc_t2_2DC(
   loadvx(offset, x, 0, xv);
   int j = cb;
   for (; j < cb; j += 4) {
-    auto axv0 = _mm256_loadu_pd(ax0+j);
-    r0 = _mm256_fmadd_pd(axv0, xv, r0);
+   auto axv0 = _mm256_loadu_pd(ax0 + j);
+   r0 = _mm256_fmadd_pd(axv0, xv, r0);
   }
 
   // Compute tail
   double tail = 0.;
   for (; j < cb; j++) {
-    tail += *(ax0+j) * x[offset[j]];
+   tail += *(ax0 + j) * x[offset[j]];
   }
 
   // H-Sum
-  y[ub-1] = tail + hsum_double_avx(r0);
-}
+  y[ub - 1] = tail + hsum_double_avx(r0);
+ }
 
 
 /**
@@ -134,51 +135,52 @@ void inline psc_t2_2DC(
  * @param ub
  * @param cb
  */
-void inline psc_t2_2D4C(
-    double *y,
-    const double *Ax,
-    const double *x,
-    const int *offset,
-    const int axi,
-    const int axo,
-    const int lb,
-    const int ub,
-    const int cb
-    ) {
+ void psc_t2_2D4C(
+   double *y,
+   const double *Ax,
+   const double *x,
+   const int *offset,
+   const int axi,
+   const int axo,
+   const int lb,
+   const int ub,
+   const int cb
+ ) {
   auto ax0 = Ax + axo + axi * 0;
   auto ax1 = Ax + axo + axi * 1;
 
   __m256d xv;
   loadvx(offset, x, 0, xv);
-  for (int i = lb; i < ub; i+=2) {
-    auto axv0 = _mm256_loadu_pd(ax0);
-    auto axv1 = _mm256_loadu_pd(ax1);
+  for (int i = lb; i < ub; i += 2) {
+   auto axv0 = _mm256_loadu_pd(ax0);
+   auto axv1 = _mm256_loadu_pd(ax1);
 
-    auto r0 = _mm256_mul_pd(axv0, xv);
-    auto r1 = _mm256_mul_pd(axv1, xv);
+   auto r0 = _mm256_mul_pd(axv0, xv);
+   auto r1 = _mm256_mul_pd(axv1, xv);
 
-    // H-Sum
-    auto h0 = _mm256_hadd_pd(r0, r1);
-    __m128d vlow  = _mm256_castpd256_pd128(h0);
-    __m128d vhigh = _mm256_extractf128_pd(h0, 1);  // high 128
-    vlow  = _mm_add_pd(vlow, vhigh);     // reduce down to 128
+   // H-Sum
+   auto h0 = _mm256_hadd_pd(r0, r1);
+   __m128d vlow = _mm256_castpd256_pd128(h0);
+   __m128d vhigh = _mm256_extractf128_pd(h0, 1);  // high 128
+   vlow = _mm_add_pd(vlow, vhigh);     // reduce down to 128
 
-    // Store
-    _mm_storeu_pd(y+i, vlow);
+   // Store
+   _mm_storeu_pd(y + i, vlow);
 
-    // Load new addresses
-    ax0 += axo*2;
-    ax1 += axo*2;
+   // Load new addresses
+   ax0 += axo * 2;
+   ax1 += axo * 2;
   }
 
   // Compute last iteration
   auto r0 = _mm256_setzero_pd();
   int j = cb;
   for (; j < cb; j += 4) {
-    auto axv0 = _mm256_loadu_pd(ax0+j);
-    r0 = _mm256_fmadd_pd(axv0, xv, r0);
+   auto axv0 = _mm256_loadu_pd(ax0 + j);
+   r0 = _mm256_fmadd_pd(axv0, xv, r0);
   }
 
   // H-Sum
-  y[ub-1] = hsum_double_avx(r0);
+  y[ub - 1] = hsum_double_avx(r0);
+ }
 }
