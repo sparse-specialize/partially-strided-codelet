@@ -190,8 +190,6 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
         hsad = hsad && ZERO_MASK == (MASK | 0xF000);
       }
 
-      DDT::CodeletType t;
-
       // Determines codelet type
       if (isInCodelet(lhscp+iStart)) {
         uint16_t MASK = generateDifferenceMask(
@@ -205,6 +203,9 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
           i += lhscp[iStart].sz;
           continue;
         }
+
+        // Update codelet type
+        rhscp[jStart].t = hsad && MASK == PSC1_MASK ? DDT::TYPE_PSC1 : lhscp[iStart].t;
       }
 
       // Adjust pointers to form codelet
@@ -213,7 +214,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
         if (!isInCodelet(lhscp + iStart)) {
           lhscp[iStart].sz = sz;
           lhscp[iStart].pt = lhscp[iStart].ct;
-          lhscp[iStart].t  = hsad ? DDT::TYPE_FSC : DDT::TYPE_PSC2;
+          rhscp[jStart].t  = hsad ? DDT::TYPE_FSC : DDT::TYPE_PSC2;
         }
         if (sz == lhscp[iStart].sz) {
           rhscp[jStart].sz = sz;
