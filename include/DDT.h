@@ -48,6 +48,8 @@ namespace DDT {
     MemoryTrace mt;
     PatternDAG* c;
     int* d;
+    int* o;
+    int onz;
   };
 
   void generateSource(DDT::GlobalObject& d);

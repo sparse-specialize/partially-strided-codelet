@@ -46,8 +46,12 @@ int main(int argc, char** argv) {
 
   // Generate Codes
   // DDT::generateSource(d);
-  std::vector<DDT::Codelet> cl;
+  std::vector<DDT::Codelet*> cl;
   DDT::inspectCodelets(d, cl);
+
+  for (auto const& c : cl) {
+      std::cout << c->get_type() << std::endl;
+  }
 
   // Clean up
   DDT::free(d);
