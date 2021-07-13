@@ -10,9 +10,9 @@
 #include <stdexcept>
 #include <vector>
 
-namespace DDT{
+namespace DDT {
 
- struct Codelet{
+ struct Codelet {
   int size;
   int *offsets;
   bool is_alloc;

@@ -21,6 +21,11 @@
 #define DDT_DDT
 
 namespace DDT {
+  enum NumericalOperation {
+    OP_SPMV,
+    OP_SPTRS
+  };
+
   enum CodeletType {
     TYPE_FSC,
     TYPE_PSC1,
@@ -42,6 +47,7 @@ namespace DDT {
 
   struct Config {
     std::string matrixPath;
+    NumericalOperation op;
   };
 
   struct GlobalObject {

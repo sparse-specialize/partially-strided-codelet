@@ -218,7 +218,7 @@ namespace DDT {
     auto m = readSparseMatrix<CSR>(config.matrixPath);
 
     // Allocate memory and generate trace
-    runSpMVModel(m);
+    // runSpMVModel(m);
     auto d = DDT::allocateMemory(m);
 
     return d;

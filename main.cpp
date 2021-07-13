@@ -1,4 +1,5 @@
 #include "DDT.h"
+#include "Executor.h"
 #include "Input.h"
 #include "Inspector.h"
 #include "PatternMatching.h"
@@ -49,9 +50,8 @@ int main(int argc, char** argv) {
   std::vector<DDT::Codelet*> cl;
   DDT::inspectCodelets(d, cl);
 
-  for (auto const& c : cl) {
-      std::cout << c->get_type() << std::endl;
-  }
+  // Execute codes
+  DDT::executeCodelets(cl, config);
 
   // Clean up
   DDT::free(d);
