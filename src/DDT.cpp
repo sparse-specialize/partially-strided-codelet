@@ -34,6 +34,7 @@ namespace DDT {
     auto* codelets = new DDT::PatternDAG[m.nz]();
     int** dp = new int*[m.r+1];
     auto df = new int[nd%4+nd+1]();
+    auto o = new int[m.nz]();
     // posix_memalign(reinterpret_cast<void **>(d), 32, nd);
 
     // Convert matrix into SpMV Trace
@@ -52,7 +53,7 @@ namespace DDT {
     }
     dp[dps] = tuples + nd;
 
-    return GlobalObject{ MemoryTrace{dp, dps}, codelets, df };
+    return GlobalObject{ MemoryTrace{dp, dps}, codelets, df, o, m.nz };
   }
 
   void runSpMVModel(Matrix& m) {
@@ -217,7 +218,7 @@ namespace DDT {
     auto m = readSparseMatrix<CSR>(config.matrixPath);
 
     // Allocate memory and generate trace
-    runSpMVModel(m);
+    // runSpMVModel(m);
     auto d = DDT::allocateMemory(m);
 
     return d;
@@ -229,5 +230,6 @@ namespace DDT {
     delete d.d;
     delete d.mt.ip;
     delete d.c;
+    delete d.o;
   }
 }

@@ -118,7 +118,7 @@ namespace DDT {
   }
 
   // H-Sum
-  y[ub - 1] = tail + hsum_double_avx(r0);
+//  y[ub - 1] = tail + hsum_double_avx(r0);
  }
 
 

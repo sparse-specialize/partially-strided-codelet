@@ -4,7 +4,7 @@
 
 #include "def.h"
 
-namespace DDT{
+namespace DDT {
 
  void psc_t3_1D1R(double *y, const double *Ax, const int *Ai,  const double
  *x, const int *offset, int lb, int fnl, int cw){
