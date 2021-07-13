@@ -60,6 +60,7 @@ namespace sparse_avx{
  };
 
 
+ int closest_row(int nnz_num, const int *Ap, int init_row);
 
 }
 
