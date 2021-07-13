@@ -61,15 +61,16 @@ namespace DDT {
    const int ub,
    const int cb
  ) {
-  auto ax0 = Ax + axo + axi;
-  auto ax1 = Ax + axo + axi * 2;
+  auto ax0 = Ax + axo + axi * 0;
+  auto ax1 = Ax + axo + axi * 1;
 
-  for (int i = lb; i < ub; i += 2) {
+  int co = (ub-lb) % 2;
+  for (int i = lb; i < ub-co; i += 2) {
    auto r0 = _mm256_setzero_pd();
    auto r1 = _mm256_setzero_pd();
 
    int j = 0;
-   for (; j < cb; j += 4) {
+   for (; j < cb-3; j += 4) {
     __m256d xv;
     loadvx(offset, x, 0, xv);
 
@@ -101,24 +102,24 @@ namespace DDT {
    ax1 += axi * 2;
   }
 
-  // Compute last iteration
-  auto r0 = _mm256_setzero_pd();
-  __m256d xv;
-  loadvx(offset, x, 0, xv);
-  int j = cb;
-  for (; j < cb; j += 4) {
-   auto axv0 = _mm256_loadu_pd(ax0 + j);
-   r0 = _mm256_fmadd_pd(axv0, xv, r0);
-  }
+  if (co) {
+      // Compute last iteration
+      auto r0 = _mm256_setzero_pd();
+      __m256d xv;
+      loadvx(offset, x, 0, xv);
+      int j = 0;
+      for (; j < cb - 3; j += 4) {
+          auto axv0 = _mm256_loadu_pd(ax0 + j);
+          r0 = _mm256_fmadd_pd(axv0, xv, r0);
+      }
 
-  // Compute tail
-  double tail = 0.;
-  for (; j < cb; j++) {
-   tail += *(ax0 + j) * x[offset[j]];
-  }
+      // Compute tail
+      double tail = 0.;
+      for (; j < cb; j++) { tail += *(ax0 + j) * x[offset[j]]; }
 
-  // H-Sum
-//  y[ub - 1] = tail + hsum_double_avx(r0);
+      // H-Sum
+      y[ub - 1] = tail + hsum_double_avx(r0);
+  }
  }
 
 
