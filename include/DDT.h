@@ -63,6 +63,11 @@ namespace DDT {
   GlobalObject init(DDT::Config& config);
 
   void free(DDT::GlobalObject d);
+
+  /// used for testing executor
+  struct Args{
+  double *x, *y;
+ };
 }
 
 #endif

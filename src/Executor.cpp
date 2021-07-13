@@ -48,7 +48,17 @@ void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config
   delete[] y;
 }
 
-/** 
+
+void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const
+DDT::Config c, const double *x, double *y) {
+  // Read matrix
+  CSR m = readSparseMatrix<CSR>(c.matrixPath);
+
+  // Execute SpMV
+  spmv_generic(m.r, m.Lp, m.Li, m.Lx, x, y, cl);
+
+ }
+/**
  * @brief Executes codelets found in a matrix performing a computation
  *
  * @param cl List of codelets to perform computation on
@@ -65,4 +75,17 @@ void executeCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config c) 
       break;
   }
 }
+ void executeCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config
+ c, Args args) {
+  switch (c.op) {
+   case DDT::OP_SPMV:
+    executeSPMVCodelets(cl, c, args.x, args.y);
+    break;
+   case DDT::OP_SPTRS:
+    executeSpTRSCodelets(cl, c);
+   default:
+    break;
+  }
+ }
+
 }

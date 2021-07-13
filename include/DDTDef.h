@@ -2,8 +2,8 @@
 // Created by kazem on 7/12/21.
 //
 
-#ifndef DDT_DEF_H
-#define DDT_DEF_H
+#ifndef DDT_DDTDEF_H
+#define DDT_DDTDEF_H
 
 #include<immintrin.h>
 namespace DDT{
@@ -39,4 +39,4 @@ namespace DDT{
 #endif
 }
 
-#endif //DDT_DEF_H
+#endif //DDT_DDTDEF_H

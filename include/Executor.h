@@ -29,6 +29,8 @@ namespace DDT {
 
 void executeCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config c);
 
+ void executeCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config
+ c, Args args);
 }
 
 #endif  // DDT_EXECUTOR

@@ -59,9 +59,11 @@ namespace DDT {
     }
 
     // Verify correctness
+/*
     if (!verifySpMV(n, Ap, Ai, Ax, x, y)) {
         std::cout << "Error: numerical operation was incorrect." << std::endl;
         exit(1);
     }
+*/
   }
 }

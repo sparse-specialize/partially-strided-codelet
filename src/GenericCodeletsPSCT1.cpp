@@ -1,7 +1,7 @@
 //
 // Created by kazem on 7/12/21.
 //
-#include "def.h"
+#include "DDTDef.h"
 #include "GenericCodelets.h"
 
 namespace DDT{
