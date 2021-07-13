@@ -6,12 +6,20 @@
 #define DDT_GENERICCODELETS_H
 
 #include <immintrin.h>
-namespace DDT{
-/// FSC
 
- void fsc_t2_2DC( double *y, const double *Ax, const double *x, const
- int axi, const int  axo, const int  lb, const int ub, const int cbl,
-   const int cbu);
+namespace DDT {
+/// FSC
+    void fsc_t2_2DC(
+            double *y,
+            const double *Ax,
+            const double *x,
+            const int axi,
+            const int axo,
+            const int lb,
+            const int ub,
+            const int cbl,
+            const int cbu
+    );
 
  /// PSCT1
  void psc_t1_1D4C(double *y, const double *Ax, const double *x,

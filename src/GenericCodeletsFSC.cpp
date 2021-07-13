@@ -15,6 +15,8 @@
  *
  * =====================================================================================
  */
+#include "GenericCodelets.h"
+
 #include <immintrin.h>
 
 namespace DDT {
@@ -42,7 +44,7 @@ namespace DDT {
  * @param cbl in number of columns to compute
  * @param cbu in number of columns to compute
  */
- void inline fsc_t2_2DC(
+ void fsc_t2_2DC(
    double *y,
    const double *Ax,
    const double *x,
@@ -53,61 +55,62 @@ namespace DDT {
    const int cbl,
    const int cbu
  ) {
-  auto ax0 = Ax + axo + axi * 0;
-  auto ax1 = Ax + axo + axi * 1;
-  auto x0 = x + cbl;
+     auto ax0 = Ax + axo + axi * 0;
+     auto ax1 = Ax + axo + axi * 1;
+     auto x0 = x + cbl;
 
-  for (int i = lb; i < ub; i += 2) {
-   auto r0 = _mm256_setzero_pd();
-   auto r1 = _mm256_setzero_pd();
+     int co = (ub - lb) % 2;
+     for (int i = lb; i < ub - co; i += 2) {
+         auto r0 = _mm256_setzero_pd();
+         auto r1 = _mm256_setzero_pd();
 
-   int j = 0;
-   for (; j < cbu - cbl; j += 4) {
-    auto xv = _mm256_loadu_pd(x0 + j);
-    auto axv0 = _mm256_loadu_pd(ax0 + j);
-    auto axv1 = _mm256_loadu_pd(ax1 + j);
+         int j = 0;
+         for (; j < (cbu - cbl) - 3; j += 4) {
+             auto xv = _mm256_loadu_pd(x0 + j);
+             auto axv0 = _mm256_loadu_pd(ax0 + j);
+             auto axv1 = _mm256_loadu_pd(ax1 + j);
 
-    r0 = _mm256_fmadd_pd(axv0, xv, r0);
-    r1 = _mm256_fmadd_pd(axv1, xv, r1);
-   }
+             r0 = _mm256_fmadd_pd(axv0, xv, r0);
+             r1 = _mm256_fmadd_pd(axv1, xv, r1);
+         }
 
-   // Compute tail
-   __m128d tail = _mm_setzero_pd();
-   for (; j < cbu - cbl; j++) {
-    tail[0] += ax0[j] * x0[j];
-    tail[1] += ax1[j] * x0[j];
-   }
+         // Compute tail
+         __m128d tail = _mm_setzero_pd();
+         for (; j < (cbu - cbl); j++) {
+             tail[0] += ax0[j] * x0[j];
+             tail[1] += ax1[j] * x0[j];
+         }
 
-   // H-Sum
-   auto h0 = _mm256_hadd_pd(r0, r1);
-   __m128d vlow = _mm256_castpd256_pd128(h0);
-   __m128d vhigh = _mm256_extractf128_pd(h0, 1);  // high 128
-   vlow = _mm_add_pd(vlow, vhigh);     // reduce down to 128
-   vlow = _mm_add_pd(vlow, tail);
-   // Store
-   _mm_storeu_pd(y + i, vlow);
+         // H-Sum
+         auto h0 = _mm256_hadd_pd(r0, r1);
+         __m128d vlow = _mm256_castpd256_pd128(h0);
+         __m128d vhigh = _mm256_extractf128_pd(h0, 1);// high 128
+         vlow = _mm_add_pd(vlow, vhigh);              // reduce down to 128
+         vlow = _mm_add_pd(vlow, tail);
+         // Store
+         _mm_storeu_pd(y + i, vlow);
 
-   // Load new addresses
-   ax0 += axi * 2;
-   ax1 += axi * 2;
-  }
+         // Load new addresses
+         ax0 += axi * 2;
+         ax1 += axi * 2;
+     }
 
-  // Compute last iteration
-  auto r0 = _mm256_setzero_pd();
-  int j = 0;
-  for (; j < cbu - cbl; j += 4) {
-   auto xv = _mm256_loadu_pd(x0 + j);
-   auto axv0 = _mm256_loadu_pd(ax0 + j);
-   r0 = _mm256_fmadd_pd(axv0, xv, r0);
-  }
+     // Compute last iteration
+     if (co) {
+         auto r0 = _mm256_setzero_pd();
+         int j = 0;
+         for (; j < (cbu - cbl) - 3; j += 4) {
+             auto xv = _mm256_loadu_pd(x0 + j);
+             auto axv0 = _mm256_loadu_pd(ax0 + j);
+             r0 = _mm256_fmadd_pd(axv0, xv, r0);
+         }
 
-  // Compute tail
-  double tail = 0.;
-  for (; j < cbu - cbl; j++) {
-   tail += *(ax0 + j) * x[j];
-  }
+         // Compute tail
+         double tail = 0.;
+         for (; j < cbu - cbl; j++) { tail += *(ax0 + j) * x[j]; }
 
-  // H-Sum
-  y[ub - 1] = tail + hsum_double_avx(r0);
+         // H-Sum
+         y[ub - 1] = tail + hsum_double_avx(r0);
+     }
  }
 }

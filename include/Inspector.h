@@ -108,7 +108,7 @@ namespace DDT {
         }
 
         if constexpr (Type == DDT::TYPE_FSC) {
-            int rowCnt = 0;
+            int rowCnt = 1;
 
             // Loop array induction variable coefficients
             int mi = c->ct[1] - c->pt[1];
@@ -130,11 +130,11 @@ namespace DDT {
             int vo = c->ct[2];
 
             // Generate codelet
-            cl.emplace_back(new DDT::FSCCodelet(oo,vo,rowCnt, c->sz,mo,mi));
+            cl.emplace_back(new DDT::FSCCodelet(oo,vo,rowCnt, c->sz+1,mo,mi));
         }
 
         if constexpr (Type == DDT::TYPE_PSC1) {
-            int rowCnt = 0;
+            int rowCnt = 1;
 
             while (c->pt != c->ct) {
                 d.o[--d.onz] = c->ct[1];
@@ -149,11 +149,11 @@ namespace DDT {
             int vo = c->ct[2];
 
             // Generate codelet
-            cl.push_back(new DDT::PSCT1V1(oo,vo,rowCnt,c->sz,d.o+d.onz));
+            cl.push_back(new DDT::PSCT1V1(oo,vo,rowCnt,c->sz+1,d.o+d.onz));
         }
 
         if constexpr (Type == DDT::TYPE_PSC2) {
-            int rowCnt = 0;
+            int rowCnt = 1;
 
             // Loop array induction variable coefficients
             int mi = c->ct[1] - c->pt[1];
@@ -179,7 +179,7 @@ namespace DDT {
             }
 
             // Generate codelet
-            cl.emplace_back(new DDT::PSCT2V1(oo, rowCnt, c->sz, mo, mi, d.o+d.onz));
+            cl.emplace_back(new DDT::PSCT2V1(oo, rowCnt, c->sz+1, mo, mi, d.o+d.onz));
         }
         c->ct = nullptr;
     }
