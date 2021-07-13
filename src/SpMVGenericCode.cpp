@@ -24,6 +24,7 @@ namespace DDT {
         for (int i = 0; i < n; i++) {
             if (yy[i] != y[i]) {
                 std::cout << "Wrong at 'i' = " << i << std::endl;
+                std::cout << "(" << yy[i] << "," << y[i] << ")" << std::endl;
                 return false;
             }
         }
@@ -37,6 +38,9 @@ namespace DDT {
   void spmv_generic(const int n, const int *Ap, const int *Ai, const double
       *Ax, const double *x, double *y, const std::vector<Codelet*>& lst) {
       // Perform SpMV
+
+//      f0(y, Ax, x);
+
     for (const auto& c : lst) {
       switch (c->get_type()) {
         case CodeletType::TYPE_FSC:

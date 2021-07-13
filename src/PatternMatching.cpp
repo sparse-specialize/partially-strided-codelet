@@ -209,7 +209,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
         }
 
         // Update codelet type
-        rhscp[jStart].t = hsad && MASK == PSC1_MASK ? DDT::TYPE_PSC1 : lhscp[iStart].t;
+        rhscp[jStart].t = hsad && MASK == PSC1_MASK ? DDT::TYPE_PSC1 : hsad ? DDT::TYPE_FSC : DDT::TYPE_PSC2;
       }
 
       // Adjust pointers to form codelet

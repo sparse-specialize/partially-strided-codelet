@@ -122,6 +122,7 @@ namespace DDT {
         c = d.c + nc;
         rowCnt++;
       }
+//        std::cout << "Codelet At: (" << c->ct[0] << "," << c->ct[1]<< "," << c->ct[2] << ")\n";
 
       int oo = c->ct[0];
       int mo = c->ct[1];
@@ -132,7 +133,7 @@ namespace DDT {
       ss << "auto mm = Lx+" << mo << ";";
       ss << "auto xx = x+" << vo << ";\n";
       ss << "int of[] = {";
-      for (int i = 0; i < c->sz; i++) {
+      for (int i = 0; i < c->sz+1; i++) {
         ss << c[i].ct[2] << ",";
       }
       ss << "};\n";
@@ -140,18 +141,20 @@ namespace DDT {
       // Generated Code
       ss << "for (int i = 0; i < " << rowCnt+1 << "; i++) {\n";
       ss << "\tfor (int j = 0; j < " << c->sz+1 << "; j++) {\n";
-      ss << "\t\tyy[i] += mm[i*" << mi << "+j] * xx[i*"<< vi << "+of[j]];\n";
+      ss << "\t\tyy[i] += mm[i*" << mi << "+j] * x[i*"<< vi << "+of[j]];\n";
       ss << "\t}\n";
       ss << "}\n";
       ss << "}\n";
+
+      c->ct = nullptr;
     } else if (TYPE == 0) {
       int rowCnt = 0;
 
       int mi = c->ct[1] - c->pt[1];
       int vi = c->ct[2] - c->pt[2];
 
-      int mj = c->ct[4] - c->pt[1];
-      int vj = c->ct[5] - c->pt[2];
+      int mj = c->ct[4] - c->ct[1];
+      int vj = c->ct[5] - c->ct[2];
 
       while (c->pt != c->ct) {
         int nc = (c->pt - d.mt.ip[0])/TPR;
@@ -174,6 +177,8 @@ namespace DDT {
       ss << "\t}\n";
       ss << "}\n";
       ss << "}\n";
+
+      c->ct = nullptr;
     }
   }
 
