@@ -22,6 +22,7 @@
 #include "SpMVGenericCode.h"
 #include "ParseMatrixMarket.h"
 
+#include <chrono>
 #include <vector>
 
 namespace DDT {
@@ -30,12 +31,13 @@ void executeSpTRSCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Confi
 
 void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config c) {
   // Read matrix
-  auto m = readSparseMatrix<CSR>(c.matrixPath);
-
-  std::cout << m.Lx[0] << std::endl;
+  CSR m = readSparseMatrix<CSR>(c.matrixPath);
 
   // Setup memory
   auto x = new double[m.c]();
+  for (int i = 0; i < m.c; i++) {
+      x[i] = 1;
+  }
   auto y = new double[m.r]();
 
   // Execute SpMV

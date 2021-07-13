@@ -96,18 +96,18 @@ void computeFirstOrder(int *differences, int *tuples, int numTuples) {
  */
 void mineDifferences(int **ip, int ips, DDT::PatternDAG *c, int* d) {
   // int bnd[9] = { 0, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000 };
-  int bnd[5] = { 0, ips/4, ips/2, ips*3/4, 40000 };
+//  int bnd[5] = { 0, ips/4, ips/2, ips*3/4, ips };
   auto t1 = std::chrono::steady_clock::now();
-#pragma omp parallel for num_threads(4)
-  for (int ii = 0; ii < 4; ++ii) {
-    for (int i = bnd[ii]; i < bnd[ii + 1] - 1; i++) {
+//#pragma omp parallel for num_threads(4)
+//  for (int ii = 0; ii < 4; ++ii) {
+    for (int i = 0; i < ips-1; i++) {
       auto lhscp = (ip[i] - ip[0]) / TPD;
       auto rhscp = (ip[i + 1] - ip[0]) / TPD;
       auto lhstps = (ip[i + 1] - ip[i]) / TPD;
       auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
       findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp, c + rhscp, d + lhscp*TPD, d + rhscp*TPD);
     }
-  }
+//  }
   auto t2 = std::chrono::steady_clock::now();
   auto timeTaken = getTimeDifference(t1, t2);
 

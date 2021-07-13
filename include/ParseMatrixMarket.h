@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 typedef std::vector<std::tuple<int,int,double>> RawMatrix;
@@ -16,8 +17,9 @@ typedef std::vector<std::tuple<int,int,double>> RawMatrix;
 
 class Matrix {
   public:
-    Matrix(int r, int c, int nz, RawMatrix m) : r(r), c(c), nz(nz), m(m) {}
-    ~Matrix() {}
+    Matrix() = default;
+    Matrix(int r, int c, int nz, RawMatrix m) : r(r), c(c), nz(nz), m(m), Lp(nullptr), Li(nullptr), Lx(nullptr) {}
+    ~Matrix() = default;
 
     int r;
     int c;
@@ -37,7 +39,7 @@ class CSR : public Matrix {
         delete[] this->Li;
         delete[] this->Lx;
     }
-    CSR(int r, int c, int nz, RawMatrix m) : Matrix(r, c, nz, m) {
+    CSR(int r, int c, int nz, RawMatrix m) : Matrix(r,c,nz,m) {
       this->Lp = new int[r+1]();
       this->Li = new int[nz]();
       this->Lx = new double[nz]();
@@ -63,7 +65,8 @@ class CSR : public Matrix {
     }
 
     // Copy Constructor
-    CSR(const CSR &lhs) : CSR(lhs.r,lhs.c,lhs.nz,lhs.m) {}
+    CSR(const CSR &lhs) : CSR(lhs.r,lhs.c,lhs.nz,lhs.m) {
+    }
 
     // Move Constructor
     CSR (CSR&& lhs)  noexcept : Matrix(lhs) {
@@ -80,9 +83,13 @@ class CSR : public Matrix {
 class CSC : public Matrix {};
 
 template <class type>
-auto readSparseMatrix(const std::string& path) -> Matrix {
+auto readSparseMatrix(const std::string& path) -> type {
   std::ifstream file;
   file.open(path, std::ios_base::in);
+  if (!file.is_open()) {
+      std::cout << "File could not be found..." << std::endl;
+      exit(1);
+  }
 
   std::vector<std::tuple<int,int,double>> mat;
 

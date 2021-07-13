@@ -8,10 +8,36 @@
 #include <vector>
 
 namespace DDT {
+    bool verifySpMV(const int n, const int *Ap, const int *Ai, const double
+    *Ax, const double *x, double *y) {
+        // Allocate memory
+        auto yy = new double[n]();
+
+        // Perform SpMV
+        for (int i = 0; i < n; i++) {
+            for (int j = Ap[i]; j < Ap[i+1]; j++) {
+                yy[i] += Ax[j] * x[Ai[j]];
+            }
+        }
+
+        // Compare outputs
+        for (int i = 0; i < n; i++) {
+            if (yy[i] != y[i]) {
+                std::cout << "Wrong at 'i' = " << i << std::endl;
+                return false;
+            }
+        }
+
+        // Clean up memory
+        delete[] yy;
+
+        return true;
+    }
 
   void spmv_generic(const int n, const int *Ap, const int *Ai, const double
       *Ax, const double *x, double *y, const std::vector<Codelet*>& lst) {
-    for (auto c : lst) {
+      // Perform SpMV
+    for (const auto& c : lst) {
       switch (c->get_type()) {
         case CodeletType::TYPE_FSC:
           break;
@@ -31,6 +57,11 @@ namespace DDT {
           break;
       }
     }
-  }
 
+    // Verify correctness
+    if (!verifySpMV(n, Ap, Ai, Ax, x, y)) {
+        std::cout << "Error: numerical operation was incorrect." << std::endl;
+        exit(1);
+    }
+  }
 }

@@ -7,6 +7,7 @@
 
 #include "DDT.h"
 
+#include <iostream>
 #include <stdexcept>
 #include <vector>
 
@@ -19,7 +20,7 @@ namespace DDT {
   int lbr, lbc, row_width, col_width; //LBR, RW, CW
   int first_nnz_loc, row_offset; //FNL, RO
 
-  Codelet(int br, int bc, int rw, int cw, int fnl, int ro, int *offs):lbr(br),
+  Codelet(int br, int bc, int rw, int cw, int fnl, int ro, int *offs) : lbr(br), row_width(rw),
   lbc(bc),col_width(cw),first_nnz_loc(fnl),row_offset(ro), offsets(offs){}
 
   virtual CodeletType get_type()=0;
