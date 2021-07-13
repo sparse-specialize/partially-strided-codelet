@@ -50,12 +50,13 @@ void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config
 
 
 void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const
-DDT::Config c, const double *x, double *y) {
+DDT::Config c, const int r, const int* Lp, const int *Li, const double*Lx,
+const double* x, double* y) {
   // Read matrix
-  CSR m = readSparseMatrix<CSR>(c.matrixPath);
+  //CSR m = readSparseMatrix<CSR>(c.matrixPath);
 
   // Execute SpMV
-  spmv_generic(m.r, m.Lp, m.Li, m.Lx, x, y, cl);
+  spmv_generic(r, Lp, Li, Lx, x, y, cl);
 
  }
 /**
@@ -79,7 +80,8 @@ void executeCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config c) 
  c, Args args) {
   switch (c.op) {
    case DDT::OP_SPMV:
-    executeSPMVCodelets(cl, c, args.x, args.y);
+    executeSPMVCodelets(cl, c,args.r, args.Lp, args.Li, args.Lx, args.x, args
+    .y);
     break;
    case DDT::OP_SPTRS:
     executeSpTRSCodelets(cl, c);

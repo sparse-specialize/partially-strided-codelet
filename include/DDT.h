@@ -67,7 +67,9 @@ namespace DDT {
   /// used for testing executor
   struct Args{
   double *x, *y;
+  int r; int* Lp; int* Li; double* Lx;
  };
+
 }
 
 #endif

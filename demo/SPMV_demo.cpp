@@ -37,19 +37,21 @@ int main(int argc, char* argv[]){
 
  auto *ddtspmv = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT");
  auto ddt_exec =  ddtspmv->evaluate();
+ auto ddt_analysis = ddtspmv->get_analysis_bw();
 
  if(true){
   std::cout<<"Matrix,";
-  std::cout<<"SpMV Base,SpMV Parallel Base,SpMV "
-             "Vec256 Serial,SpMV Vec256,";
+  std::cout<<"SpMV Base,SpMV Parallel Base,SpMV DDT Executor,Prune Time,FOD "
+             "Time,Mining Time,"
+             ;
   std::cout<<"\n";
  }
 
- std::cout<<argv[1] <<","<<
+ std::cout<<config.matrixPath <<","<<
           spmv_baseline.elapsed_time<<","<<
           spmv_p.elapsed_time<<","<<
-          ddt_exec.elapsed_time<<","<<
-          "\n";
+          ddt_exec.elapsed_time<<",";
+ ddt_analysis.print_t_array();
 
  delete A;
  delete B;

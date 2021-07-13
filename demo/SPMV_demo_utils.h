@@ -100,7 +100,6 @@ namespace sparse_avx{
 //    mt.a.t  = 0;
   }
   auto t1 = std::chrono::steady_clock::now();
-  std::cout << "Pruning Time: " << getTimeDifference(t0,t1) << std::endl;
  }
 
  class SpMVDDT : public SpMVSerial {
@@ -108,26 +107,33 @@ namespace sparse_avx{
   DDT::Config config;
   std::vector<DDT::Codelet*> cl;
   DDT::GlobalObject d;
+  timing_measurement analysis_breakdown;
+
   void build_set() override{
    // Allocate memory and generate global object
    d = DDT::init(config);
-
+   analysis_breakdown.start_timer();
    // Prune memory trace
    pruneIterations(d.mt, 10);
 
+   analysis_breakdown.start_timer();
    // Compute and Mark regions for PSC-3
    computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d);
 
+   analysis_breakdown.start_timer();
    // Mine trace and profile
    mineDifferences(d.mt.ip, d.mt.ips, d.c, d.d);
    // Generate Codes
    // DDT::generateSource(d);
    DDT::inspectCodelets(d, cl);
+   analysis_breakdown.measure_elapsed_time();
   }
 
   timing_measurement fused_code() override {
    timing_measurement t1;
    DDT::Args args; args.x = x_in_; args.y = x_;
+   args.r = L1_csr_->m; args.Lp=L1_csr_->p; args.Li=L1_csr_->i;
+   args.Lx = L1_csr_->x;
    t1.start_timer();
    // Execute codes
    DDT::executeCodelets(cl, config, args);
@@ -145,6 +151,8 @@ namespace sparse_avx{
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
   };
+
+  timing_measurement get_analysis_bw(){return analysis_breakdown;}
 
   ~SpMVDDT(){
    DDT::free(d);

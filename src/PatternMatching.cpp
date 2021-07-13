@@ -53,7 +53,7 @@ void computeParallelizedFOD(int **ip, int ips, int *differences) {
 
   auto timeTaken = getTimeDifference(t1, t2);
 
-  std::cout << "FOD Time: " << timeTaken << std::endl;
+  //std::cout << "FOD Time: " << timeTaken << std::endl;
 }
 
 /**
@@ -111,7 +111,7 @@ void mineDifferences(int **ip, int ips, DDT::PatternDAG *c, int* d) {
   auto t2 = std::chrono::steady_clock::now();
   auto timeTaken = getTimeDifference(t1, t2);
 
-  std::cout << "Mine Time: " << timeTaken << std::endl;
+  //std::cout << "Mine Time: " << timeTaken << std::endl;
 }
 
 void printTuple(int* t, std::string&& s) {
