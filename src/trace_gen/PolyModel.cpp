@@ -47,4 +47,12 @@ namespace sparse_avx{
  void SectionPolyModel::set_runtime_args(std::initializer_list<Expr> exprs ){
   _runtime_args.insert(_runtime_args.begin(), exprs.begin(), exprs.end());
  }
+
+
+ int closest_row(int nnz_num, const int *Ap, int init_row=0){
+  int i = init_row;
+  while ( Ap[i] <= nnz_num )
+   i++;
+  return i-1;
+ }
 }

@@ -1,23 +1,21 @@
 //
-// Created by kazem on 7/8/21.
+// Created by kazem on 7/13/21.
 //
 
 #include <cassert>
-#include <iostream>
-#include "SpMVModel.h"
-
+#include "SpTRSVModel.h"
 namespace sparse_avx{
 
- SpMVModel::SpMVModel():SectionPolyModel() {}
+ SpTRSVModel::SpTRSVModel():SectionPolyModel() {}
 
- SpMVModel::SpMVModel(int n, int m, int nnz, int *Ap, int *Ai):_num_rows
- (n),_num_cols(m), _nnz(nnz), _Ap(Ap), _Ai(Ai) {//FIXME:should be removed
- }
+ SpTRSVModel::SpTRSVModel(int n, int m, int nnz, int *Ap, int *Ai):_num_rows
+                                                                 (n),_num_cols(m),
+                                                                 _nnz(nnz),
+                                                                 _Ap(Ap), _Ai(Ai) {}
 
- Trace* SpMVModel::generate_trace() {
+ Trace* SpTRSVModel::generate_trace() {
   auto *trace = new Trace(_nnz);
   std::fill_n(trace->_op_codes,_nnz, TRACE_OP::AddM);
-#pragma omp parallel for default(none) shared(trace)
   for (int i = 0; i < _num_rows; ++i) {
    for (int j = _Ap[i]; j < _Ap[i+1]; ++j) {
     auto cur_adr = trace->_mem_addr + 3*j;
@@ -28,7 +26,8 @@ namespace sparse_avx{
   return trace;
  }
 
- Trace** SpMVModel::generate_trace(int num_threads) {
+
+ Trace** SpTRSVModel::generate_trace(int num_threads) {
   Trace** trace_list = new Trace*[num_threads];
   auto *tr_list_mm_array = new int[3*_nnz]();
   auto *tr_list_oc_array = new int[_nnz]();
@@ -54,7 +53,7 @@ namespace sparse_avx{
   bnd_row_array[num_threads] = _num_rows;
   trace_list[num_threads-1] = new Trace(_nnz-nnz_bounds[num_threads-2],
                                         tr_list_mm_array+3*nnz_bounds[num_threads-2],
-                            tr_list_oc_array+nnz_bounds[num_threads-2], num_threads);
+                                        tr_list_oc_array+nnz_bounds[num_threads-2], num_threads);
 #pragma omp parallel for //default(none) shared(num_threads, bnd_row_array, \
   trace_list)
   for (int ii = 0; ii < num_threads; ++ii) {
