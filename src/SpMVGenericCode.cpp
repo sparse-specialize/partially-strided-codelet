@@ -41,10 +41,12 @@ namespace DDT {
 
 //      f0(y, Ax, x);
 
-    for (const auto& c : lst) {
+    for (auto it = lst.rbegin(); it != lst.rend(); it++) {
+      auto c = *it;
       switch (c->get_type()) {
         case CodeletType::TYPE_FSC:
-          fsc_t2_2DC(y, Ax, x, c->row_offset, c->first_nnz_loc, c->lbr, c->lbr+c->row_width, c->lbc, c->col_width+c->lbc);
+          fsc_t2_2DC(y, Ax, x, c->row_offset, c->first_nnz_loc, c->lbr,
+                     c->lbr+c->row_width, c->lbc, c->col_width+c->lbc);
           break;
         case CodeletType::TYPE_PSC1:
           psc_t1_2D4R(y,Ax,x,c->offsets,c->lbr,c->lbr+c->row_width,c->lbc,

@@ -126,11 +126,11 @@ namespace sparse_avx{
    // Generate Codes
    // DDT::generateSource(d);
    DDT::inspectCodelets(d, cl);
-/*
+
    for(auto ii : cl){
-    std::cout<<ii->get_type()<<"\n";
+    ii->print();
    }
-*/
+
    analysis_breakdown.measure_elapsed_time();
   }
 

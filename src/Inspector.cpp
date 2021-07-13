@@ -6,14 +6,37 @@
 #include "Inspector.h"
 
 namespace DDT {
-    int TPR = 3;
-  /** 
-   * @brief Generates run-time codelet object based on type in DDT::PatternDAG
-   *
-   * @param d  Global DDT object containing pattern information
-   * @param c  Codelet to turn into run-time object
-   * @param cl List of runtime codelet descriptions 
-   */
+
+    void FSCCodelet::print() {
+      std::cout<<"FSC: y["<<lbr<<":"<<lbr+row_width<<"] = Ax["<<first_nnz_loc<<","
+      <<row_offset<<"]*x["<<lbc<<":"<<lbc+col_width<<"]\n";
+    }
+
+    void PSCT1V1::print() {
+     std::cout<<"T1: y["<<lbr<<":"<<lbr+row_width<<"] = Ax["<<offsets[0]<<","
+              <<offsets[row_width]<<"]*x["<<lbc<<":"<<lbc+col_width<<"]\n";
+    }
+
+    void PSCT2V1::print() {
+      std::cout<<"T2: y["<<lbr<<":"<<lbr+row_width<<"] = Ax["<<first_nnz_loc<<","
+              <<first_nnz_loc+row_offset<<"]*x["<<offsets[0]<<":"<<offsets
+              [col_width]<<"]\n";
+    }
+
+    void PSCT3V1::print() {
+     std::cout<<"T3: y["<<lbr<<"] = Ax["<<first_nnz_loc<<","
+              <<first_nnz_loc+col_width<<"]*x["<<offsets[0]<<":"<<offsets
+              [col_width]<<"]\n";
+    }
+
+ int TPR = 3;
+ /**
+  * @brief Generates run-time codelet object based on type in DDT::PatternDAG
+  *
+  * @param d  Global DDT object containing pattern information
+  * @param c  Codelet to turn into run-time object
+  * @param cl List of runtime codelet descriptions
+  */
   void generateCodelet(DDT::GlobalObject& d, DDT::PatternDAG* c, std::vector<Codelet*>& cl) {
     switch (c->t) {
       case DDT::TYPE_FSC:
