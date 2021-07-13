@@ -52,6 +52,7 @@ int main(int argc, char* argv[]){
           spmv_p.elapsed_time<<","<<
           ddt_exec.elapsed_time<<",";
  ddt_analysis.print_t_array();
+ std::cout<<"\n";
 
  delete A;
  delete B;

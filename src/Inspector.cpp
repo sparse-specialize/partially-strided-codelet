@@ -84,4 +84,11 @@ namespace DDT {
       }
     }
   }
+
+
+ void free(std::vector<DDT::Codelet*>& cl){
+  for (auto & i : cl) {
+   delete i;
+  }
+ }
 }

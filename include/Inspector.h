@@ -23,6 +23,8 @@ namespace DDT {
   Codelet(int br, int bc, int rw, int cw, int fnl, int ro, int *offs) : lbr(br), row_width(rw),
   lbc(bc),col_width(cw),first_nnz_loc(fnl),row_offset(ro), offsets(offs){}
 
+  virtual ~Codelet()= default;
+
   virtual CodeletType get_type()=0;
  // virtual void pack()=0;
 
@@ -33,7 +35,8 @@ namespace DDT {
    * y[lbr:lbr+row_width] = Ax[FNL:FNL+CW, ..., FNL+RO:FNL+RO+CW]*x[lbc:lbc+CW];
    */
   FSCCodelet(int br, int bc, int rw, int cw, int fnl, int ro) : Codelet(br,bc,
-                                                                       rw,cw,fnl,ro,NULL){};
+
+                                                                         rw,cw,fnl,ro,NULL){};
 
   CodeletType get_type() override{return CodeletType::TYPE_FSC;}
   //void pack()override;
@@ -185,6 +188,8 @@ namespace DDT {
     }
 
     void inspectCodelets(DDT::GlobalObject& d, std::vector<Codelet*>& cl);
+
+    void free(std::vector<DDT::Codelet*>& cl);
 }
 
 
