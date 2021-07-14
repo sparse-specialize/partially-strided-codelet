@@ -206,7 +206,23 @@ int precision = 48;
   }
  }
 
-
+ int shape2int(int shape){
+  int st = 0;
+  switch (shape) {
+   case LOWER:
+    st=-1;
+    break;
+   case UPPER:
+    st =1;
+    break;
+   case GENERAL:
+    st = 0;
+    break;
+   default:
+    st=0;
+  }
+  return st;
+ }
 /// Builds triplet from coordinate mtx file
 /// \param inFile
 /// \param nnz
@@ -263,7 +279,7 @@ int precision = 48;
    throw mtx_arith_error("REAL", type_str(arith));
   else if (mtx_format != COORDINATE)
    throw mtx_format_error("COORDINATE", format_str(mtx_format));
-  A = new CSC(m,n,nnz,false, shape == LOWER);
+  A = new CSC(m,n,nnz,false, shape2int(shape));
   read_triplets_real(in_file, nnz, triplet_vec);
   compress_triplets_to_csc(triplet_vec, A, insert_diag);
   A->nnz = A->p[n]; // if insert diag is true, it will be different.
