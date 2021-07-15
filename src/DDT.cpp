@@ -40,11 +40,14 @@ namespace DDT {
 
     // Convert matrix into SpMV Trace
     int dps = 0;
+    int cnt = 0;
     for (int i = 0; i < m.nz; i++) {
-      auto& t = m.m[i];
-      tuples[i*3] = std::get<0>(t);
+      if (m.Lp[cnt] == i) {
+          cnt++;
+      }
+      tuples[i*3+0] = cnt-1;
       tuples[i*3+1] = i;
-      tuples[i*3+2] = std::get<1>(t);
+      tuples[i*3+2] = m.Li[i];
 
       codelets[i].ct = tuples+i*3;
 
@@ -58,27 +61,27 @@ namespace DDT {
   }
 
   void runSpMVModel(Matrix& m) {
-    auto ap = new int[m.r+1];
-    auto ai = new int[m.nz];
-    int rn = 0;
-    for (int i = 0; i < m.nz; ++i) {
-      ai[i] = std::get<1>(m.m[i]);
-      if (i == 0 || std::get<0>(m.m[i]) != std::get<0>(m.m[i-1])) {
-        ap[rn++] = i;
-      }
-    }
-    ap[rn] = m.nz;
-    // make matrix to specs
-    int num_thread = 1;
-    auto *sm = new sparse_avx::SpMVModel(m.r, m.c, m.nz, ap, ai);
-    auto trs = sm->generate_trace(num_thread);
-    auto trace_array = trs[0]->MemAddr(); // This is the array that has traces
-    // for (int i = 0; i < trs[0]->_num_partitions; ++i) {
-      // trs[i]->print();
-      // std::cout << "\n\n";
-    // }
-    delete[] ap;
-    delete[] ai;
+//    auto ap = new int[m.r+1];
+//    auto ai = new int[m.nz];
+//    int rn = 0;
+//    for (int i = 0; i < m.nz; ++i) {
+//      ai[i] = std::get<1>(m.m[i]);
+//      if (i == 0 || std::get<0>(m.m[i]) != std::get<0>(m.m[i-1])) {
+//        ap[rn++] = i;
+//      }
+//    }
+//    ap[rn] = m.nz;
+//    // make matrix to specs
+//    int num_thread = 1;
+//    auto *sm = new sparse_avx::SpMVModel(m.r, m.c, m.nz, ap, ai);
+//    auto trs = sm->generate_trace(num_thread);
+//    auto trace_array = trs[0]->MemAddr(); // This is the array that has traces
+//    // for (int i = 0; i < trs[0]->_num_partitions; ++i) {
+//      // trs[i]->print();
+//      // std::cout << "\n\n";
+//    // }
+//    delete[] ap;
+//    delete[] ai;
   }
 
   void generateSingleStatement(std::stringstream& ss, int* ct) {
@@ -98,8 +101,31 @@ namespace DDT {
       while (c->pt != c->ct) {
         buf[rowCnt++] = c->ct[0];
         int nc = (c->pt - d.mt.ip[0])/TPR;
+        c->ct = nullptr;
         c = d.c + nc;
       }
+        int oo = c->ct[0];
+        int mo = c->ct[1];
+        int vo = c->ct[2];
+
+        ss << "{\n";
+        ss << "auto yy = y+" << oo << ";";
+        ss << "auto mm = Lx+" << mo << ";";
+        ss << "auto xx = x+" << vo << ";\n";
+        ss << "int of[] = {";
+        for (int i = 0; i < rowCnt; i++) {
+            ss << buf[rowCnt-i] << ",";
+        }
+        ss << "};\n";
+
+        // Generated Code
+        ss << "for (int i = 0; i < " << rowCnt+1 << "; i++) {\n";
+        ss << "\tfor (int j = 0; j < " << c->sz+1 << "; j++) {\n";
+        ss << "\t\tyy[i] += mm[of[i]+j] * x[i*j];\n";
+        ss << "\t}\n";
+        ss << "}\n";
+        ss << "}\n";
+        c->ct = nullptr;
     } else if (TYPE == DDT::TYPE_PSC2) {
       int buf[40];
       int rowCnt = 0;

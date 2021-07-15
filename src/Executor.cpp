@@ -17,6 +17,8 @@
  */
 
 #include "DDT.h"
+//#include "smp_def.h"
+//#include "io.h"
 #include "Executor.h"
 #include "Inspector.h"
 #include "SpMVGenericCode.h"
@@ -31,7 +33,7 @@ void executeSpTRSCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Confi
 
 void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config c) {
   // Read matrix
-  CSR m = readSparseMatrix<CSR>(c.matrixPath);
+  auto m = readSparseMatrix<CSR>(c.matrixPath);
 
   // Setup memory
   auto x = new double[m.c]();
