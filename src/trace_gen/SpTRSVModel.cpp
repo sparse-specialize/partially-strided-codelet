@@ -14,13 +14,17 @@ namespace sparse_avx{
                                                                  _Ap(Ap), _Ai(Ai) {}
 
  Trace* SpTRSVModel::generate_trace() {
-  auto *trace = new Trace(_nnz);
-  std::fill_n(trace->_op_codes,_nnz, TRACE_OP::AddM);
+  auto *trace = new Trace(_nnz+_num_cols);
+  int cnt = 0;
   for (int i = 0; i < _num_rows; ++i) {
+   auto cur_adr = trace->_mem_addr + 3*cnt;
+   cur_adr[0] = i; cur_adr[1] = _Ap[i]; cur_adr[2] = i;
+   cnt++;
    for (int j = _Ap[i]; j < _Ap[i+1]; ++j) {
-    auto cur_adr = trace->_mem_addr + 3*j;
+    cur_adr = trace->_mem_addr + 3*cnt;
     cur_adr[0] = i; cur_adr[1] = j; cur_adr[2] = _Ai[j];
     //trace->_tuple[j] = new AddMul(cur_adr);
+    cnt++;
    }
   }
   return trace;
@@ -29,16 +33,16 @@ namespace sparse_avx{
 
  Trace** SpTRSVModel::generate_trace(int num_threads) {
   Trace** trace_list = new Trace*[num_threads];
-  auto *tr_list_mm_array = new int[3*_nnz]();
-  auto *tr_list_oc_array = new int[_nnz]();
-  std::fill_n(tr_list_oc_array, _nnz, TRACE_OP::AddM);
+  auto *tr_list_mm_array = new int[3*_nnz + 3*_num_cols]();
+  auto *tr_list_oc_array = new int[_nnz + _num_cols]();
+  //std::fill_n(tr_list_oc_array, _nnz, TRACE_OP::AddM);
   auto *nnz_bounds = new int[num_threads];
   std::vector<int> bnd_row_array(num_threads+1);
   int nnz_part = _nnz/num_threads;
   int bnd_row = closest_row(nnz_part, _Ap, 0);
   bnd_row_array[0] = 0;
   bnd_row_array[1] = bnd_row;
-  nnz_bounds[0] = _Ap[bnd_row];
+  nnz_bounds[0] = _Ap[bnd_row] + bnd_row;
   trace_list[0] = new Trace(nnz_bounds[0], tr_list_mm_array, tr_list_oc_array,
                             num_threads);
   for (int i = 1; i < num_threads-1; ++i) {
