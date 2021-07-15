@@ -202,7 +202,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
           t  = hsad ? DDT::TYPE_FSC : DDT::TYPE_PSC2;
         } else {
           uint16_t MASK = generateDifferenceMask(
-              lhscp[iStart].pt, 
+              lhscp[iStart].pt,
               lhstp + iStart * tpd, 
               rhstp + jStart * tpd, 
               ZERO_MASK);
@@ -214,7 +214,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
             continue;
           }
           // Update codelet type
-          t = hsad && MASK == PSC1_MASK ? DDT::TYPE_PSC1 : hsad ? DDT::TYPE_FSC : DDT::TYPE_PSC2;
+          t = hsad && MASK == PSC1_MASK ? DDT::TYPE_PSC1 : lhscp[iStart].t;
         }
         if (sz == lhscp[iStart].sz) {
           rhscp[jStart].sz = sz;
