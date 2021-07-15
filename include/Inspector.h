@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <cassert>
+
 namespace DDT {
 
  struct Codelet {
@@ -170,6 +172,7 @@ namespace DDT {
             int mj = c->ct[4] - c->pt[1];
 
             while (c->pt != c->ct) {
+                assert((c->ct[1] - c->pt[1]) == mi);
                 int nc = (c->pt - d.mt.ip[0])/TPR;
                 c->ct = nullptr;
                 c = d.c + nc;
