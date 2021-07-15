@@ -15,10 +15,12 @@
  *
  * =====================================================================================
  */
-#include <string>
 
 #ifndef DDT_DDT
 #define DDT_DDT
+
+#include <string>
+#include <vector>
 
 namespace DDT {
   enum NumericalOperation {
