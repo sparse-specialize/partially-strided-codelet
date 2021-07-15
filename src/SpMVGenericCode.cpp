@@ -8,6 +8,10 @@
 #include <vector>
 
 namespace DDT {
+    template<class type>
+    bool is_float_equal(const type x, const type y, double absTol, double relTol) {
+        return std::abs(x - y) <= std::max(absTol, relTol * std::max(std::abs(x), std::abs(y)));
+    }
     bool verifySpMV(const int n, const int *Ap, const int *Ai, const double
     *Ax, const double *x, double *y) {
         // Allocate memory
@@ -20,9 +24,11 @@ namespace DDT {
             }
         }
 
+        const double eps = 1e-8;
+
         // Compare outputs
         for (int i = 0; i < n; i++) {
-            if (yy[i] != y[i]) {
+            if (!is_float_equal(yy[i],y[i],eps,eps)) {
                 std::cout << "Wrong at 'i' = " << i << std::endl;
                 std::cout << "(" << yy[i] << "," << y[i] << ")" << std::endl;
                 return false;
@@ -38,8 +44,6 @@ namespace DDT {
   void spmv_generic(const int n, const int *Ap, const int *Ai, const double
       *Ax, const double *x, double *y, const std::vector<Codelet*>& lst) {
       // Perform SpMV
-
-//      f0(y, Ax, x);
 
     for (const auto& c : lst) {
       switch (c->get_type()) {
@@ -63,12 +67,10 @@ namespace DDT {
       }
     }
 
-    // Verify correctness
-/*
+//     Verify correctness
     if (!verifySpMV(n, Ap, Ai, Ax, x, y)) {
         std::cout << "Error: numerical operation was incorrect." << std::endl;
         exit(1);
     }
-*/
   }
 }

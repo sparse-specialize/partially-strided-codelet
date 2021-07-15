@@ -16,6 +16,8 @@
  * =====================================================================================
  */
 #include <immintrin.h>
+#include <iostream>
+
 namespace DDT {
 
 #ifdef _mm256_i32gather_pd
@@ -64,6 +66,14 @@ namespace DDT {
   auto ax0 = Ax + axo + axi * 0;
   auto ax1 = Ax + axo + axi * 1;
 
+        // if (lb <= 14334 && 14334 < ub) {
+        //     std::cout << lb << std::endl;
+        //     std::cout << ub << std::endl;
+        //     std::cout << offset[0] << std::endl;
+        //     std::cout << "psc2 here" << std::endl;
+        //     std::cout << std::endl;
+        // }
+
   int co = (ub-lb) % 2;
   for (int i = lb; i < ub-co; i += 2) {
    auto r0 = _mm256_setzero_pd();
@@ -81,11 +91,12 @@ namespace DDT {
     r1 = _mm256_fmadd_pd(axv1, xv, r1);
    }
 
-   // Compute tail
-   __m128d tail = _mm_setzero_pd();
+      // Compute tail
+   __m128d tail = _mm_loadu_pd(y+i);
+
    for (; j < cb; j++) {
-    tail[0] += ax0[j] * x[j];
-    tail[1] += ax1[j] * x[j];
+       tail[0] += ax0[j] * x[j];
+       tail[1] += ax1[j] * x[j];
    }
 
    // H-Sum
@@ -94,6 +105,7 @@ namespace DDT {
    __m128d vhigh = _mm256_extractf128_pd(h0, 1);  // high 128
    vlow = _mm_add_pd(vlow, vhigh);     // reduce down to 128
    vlow = _mm_add_pd(vlow, tail);
+
    // Store
    _mm_storeu_pd(y + i, vlow);
 
@@ -118,7 +130,7 @@ namespace DDT {
       for (; j < cb; j++) { tail += *(ax0 + j) * x[offset[j]]; }
 
       // H-Sum
-      y[ub - 1] = tail + hsum_double_avx(r0);
+      y[ub - 1] += tail + hsum_double_avx(r0);
   }
  }
 

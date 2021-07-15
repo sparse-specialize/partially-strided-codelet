@@ -87,6 +87,8 @@ namespace DDT {
   //void pack()override;
  };
 
+
+
     template <DDT::CodeletType Type>
     void generateCodeletType(DDT::GlobalObject& d, DDT::PatternDAG* c, std::vector<Codelet*>& cl) {
         int TPR = 3;
@@ -95,10 +97,13 @@ namespace DDT {
         if constexpr (Type == DDT::TYPE_PSC3) {
             int colWidth = ((c->ct - c->pt) / TPR) + 1;
 
+
             while (c->ct != c->pt) {
                 d.o[--d.onz] = c->ct[2];
                 c->ct -= TPR;
             }
+            d.o[--d.onz] = c->ct[2];
+
 
             int oo = c->ct[0];
             int mo = c->ct[1];
@@ -143,6 +148,7 @@ namespace DDT {
                 c = d.c + nc;
                 rowCnt++;
             }
+            d.o[--d.onz] = c->ct[1];
 
             // Loop Array Offsets
             int oo = c->ct[0];

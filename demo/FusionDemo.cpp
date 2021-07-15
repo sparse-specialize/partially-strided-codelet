@@ -31,6 +31,15 @@ namespace sym_lib{
   return time_array[n/2];
  }
 
+ template<class type>
+ bool is_float_equal(const type x, const type y, double absTol, double relTol) {
+     return std::abs(x - y) <= std::max(absTol, relTol * std::max(std::abs(x), std::abs(y)));
+ }
+
+ template<class type>
+ bool is_generic_equal(const type x, const type y, double eps) {
+     return std::abs(x - y) > eps;
+ }
 
  template<class type>
  bool is_equal(int beg_idx, int end_idx, const type* vec1, const type* vec2,
@@ -38,8 +47,12 @@ namespace sym_lib{
   for (int i = beg_idx; i < end_idx; ++i) {
    if(std::isnan(vec1[i]) || std::isnan(vec2[i]))
     return false;
-   if(std::abs(vec1[i] - vec2[i]) > eps)
-    return false;
+   if constexpr (std::is_same_v<type, double> || std::is_same_v<type, float>) {
+        if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { std::cout << i << std::endl; return false; }
+   } else {
+       if (!is_generic_equal(vec1[i],vec2[i], eps))
+           return false;
+   }
   }
   return true;
  }
@@ -92,7 +105,7 @@ namespace sym_lib{
 
  void FusionDemo::testing() {
   if(correct_x_)
-   if (!is_equal(0, n_, correct_x_, x_,1e-4))
+   if (!is_equal(0, n_, correct_x_, x_,1e-1))
     PRINT_LOG(name_ + " code != reference solution.\n");
  }
 

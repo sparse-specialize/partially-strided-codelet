@@ -1,6 +1,8 @@
 //
 // Created by cetinicz on 2021-07-07.
 //
+
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -55,8 +57,15 @@ class CSR : public Matrix {
         this->Li[i] = iv;
         this->Lx[i] = im;
 
-        if (i == 0 || std::get<0>(m[i-1]) != ov) {
-          this->Lp[LpCnt++] = i;
+        if (i == 0 ) {
+          this->Lp[LpCnt] = LpCnt;
+            LpCnt++;
+        }
+        if (i != 0 && std::get<0>(m[i-1]) != ov) {
+            while (LpCnt != ov) {
+                this->Lp[LpCnt] = LpCnt;
+                LpCnt++;
+            }
         }
         if (i == nz - 1) {
           this->Lp[LpCnt] = i + 1;
@@ -65,8 +74,7 @@ class CSR : public Matrix {
     }
 
     // Copy Constructor
-    CSR(const CSR &lhs) : CSR(lhs.r,lhs.c,lhs.nz,lhs.m) {
-    }
+    CSR(const CSR &lhs) : CSR(lhs.r,lhs.c,lhs.nz,lhs.m) {}
 
     // Move Constructor
     CSR (CSR&& lhs)  noexcept : Matrix(lhs) {
@@ -128,6 +136,13 @@ auto readSparseMatrix(const std::string& path) -> type {
         bool c2 = std::get<1>(lhs) < std::get<1>(rhs);
         return c0 ? c2 : c1;
         });
+//    int i = 0;
+//    for (auto const& t : mat) {
+//        if (std::get<0>(t) == 7898) {
+//            std::cout << "(" << std::get<0>(t)<< "," << i << "," << std::get<1>(t)<< "): " << std::get<2>(t) << std::endl;
+//        }
+//        i++;
+//    }
     return CSR( rows, cols, nnz, mat);
   }
 }

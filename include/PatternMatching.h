@@ -22,6 +22,5 @@ double getTimeDifference(std::chrono::steady_clock::time_point t1, std::chrono::
 void findCLCS(int tpd, int* lhstp, int* rhstp, int lhstps, int rhstps, DDT::PatternDAG* lhscp, DDT::PatternDAG* rhscp,
               int* lhstpd, int* rhstpd);
 
-void printTuple(int* t, std::string&& s);
 
 #endif  // DDT_PATTERNMATCHING_H

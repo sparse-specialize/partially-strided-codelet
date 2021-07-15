@@ -18,6 +18,7 @@
 #include "DDT.h"
 #include "ParseMatrixMarket.h"
 #include "SpMVModel.h"
+#include "smp_def.h"
 
 #include <chrono>
 #include <iostream>
@@ -88,19 +89,9 @@ namespace DDT {
   c) {
     int TPR = 3;
     // Get codelet type
-    auto TYPE = 0;
+    auto TYPE = c->t;
 
-    int df = 0;
-    for (int i = 0; i < c->sz; i++) {
-      if (i == 0)
-        df = c[i+1].ct[2] - c[i].ct[2];
-      else if (df != (c[i+1].ct[2] - c[i].ct[2])) {
-        TYPE = 2;
-        break;
-      }
-    }
-
-    if (TYPE == 1) {
+    if (TYPE == DDT::TYPE_PSC1) {
       int buf[40];
       int rowCnt = 0;
 
@@ -109,7 +100,7 @@ namespace DDT {
         int nc = (c->pt - d.mt.ip[0])/TPR;
         c = d.c + nc;
       }
-    } else if (TYPE == 2) {
+    } else if (TYPE == DDT::TYPE_PSC2) {
       int buf[40];
       int rowCnt = 0;
 
@@ -147,7 +138,7 @@ namespace DDT {
       ss << "}\n";
 
       c->ct = nullptr;
-    } else if (TYPE == 0) {
+    } else if (TYPE == DDT::TYPE_FSC) {
       int rowCnt = 0;
 
       int mi = c->ct[1] - c->pt[1];
@@ -181,6 +172,10 @@ namespace DDT {
       c->ct = nullptr;
     }
   }
+
+    void printTuple(int* t, std::string&& s) {
+        std::cout << s << ": (" << t[0] << "," << t[1] << "," << t[2] << ")" << std::endl;
+    }
 
   void generateSource(DDT::GlobalObject& d) {
     int TPR = 3;

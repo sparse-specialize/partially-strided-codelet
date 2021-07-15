@@ -18,6 +18,7 @@
 #include "GenericCodelets.h"
 
 #include <immintrin.h>
+#include <iostream>
 
 namespace DDT {
 
@@ -75,7 +76,7 @@ namespace DDT {
          }
 
          // Compute tail
-         __m128d tail = _mm_setzero_pd();
+         __m128d tail = _mm_loadu_pd(y+i);
          for (; j < (cbu - cbl); j++) {
              tail[0] += ax0[j] * x0[j];
              tail[1] += ax1[j] * x0[j];
@@ -110,7 +111,7 @@ namespace DDT {
          for (; j < cbu - cbl; j++) { tail += *(ax0 + j) * x[j]; }
 
          // H-Sum
-         y[ub - 1] = tail + hsum_double_avx(r0);
+         y[ub - 1] += tail + hsum_double_avx(r0);
      }
  }
 }

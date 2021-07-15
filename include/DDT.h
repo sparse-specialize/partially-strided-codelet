@@ -60,6 +60,9 @@ namespace DDT {
 
   void generateSource(DDT::GlobalObject& d);
 
+
+    void printTuple(int* t, std::string&& s);
+
   GlobalObject init(DDT::Config& config);
 
   void free(DDT::GlobalObject d);
