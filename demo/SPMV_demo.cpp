@@ -39,7 +39,7 @@ int main(int argc, char* argv[]){
  auto ddt_exec =  ddtspmv->evaluate();
  auto ddt_analysis = ddtspmv->get_analysis_bw();
 
- if (true){
+ if (config.header){
   std::cout<<"Matrix,";
   std::cout<<"SpMV Base,SpMV Parallel Base,SpMV DDT Executor,Prune Time,FOD "
              "Time,Mining Time,"

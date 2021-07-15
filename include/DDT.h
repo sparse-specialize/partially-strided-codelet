@@ -50,6 +50,7 @@ namespace DDT {
   struct Config {
     std::string matrixPath;
     NumericalOperation op;
+    int header;
   };
 
   struct GlobalObject {
