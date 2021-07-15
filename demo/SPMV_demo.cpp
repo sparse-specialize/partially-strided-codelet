@@ -18,8 +18,8 @@ int main(int argc, char* argv[]){
  CSC *A_full=NULLPNTR;
  format::CSR *B=NULLPNTR, *L_csr=NULLPNTR;
  if(A->stype < 0){
-//  A_full = sym_lib::make_full(A);
-  B = sym_lib::csc_to_csr(A);
+  A_full = sym_lib::make_full(A);
+  B = sym_lib::csc_to_csr(A_full);
  } else{
   B = sym_lib::csc_to_csr(A);
  }
