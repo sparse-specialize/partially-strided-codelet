@@ -35,7 +35,9 @@ namespace DDT {
     options.add_options()
       ("h,help", "Help")
       ("m,matrix", "Path to matrix market file.", cxxopts::value<std::string>())
-      ("n,numerical_operation", "Numerical operation being performed on matrix.", cxxopts::value<std::string>());
+      ("n,numerical_operation", "Numerical operation being performed on "
+                                "matrix.", cxxopts::value<std::string>())
+      ("d,header", "prints header or not.");
 
     auto result = options.parse(argc, argv);
 
@@ -65,7 +67,11 @@ namespace DDT {
       std::cout << "'numerical_operation' must be passed in as one of: ['SPMV', 'SPTRS']" << std::endl;
       exit(0);
     }
+    int header = 0;
+   if (result.count("header")) {
+    header = 1;
+   }
 
-    return Config{ matrixPath, op };
+   return Config{ matrixPath, op, header };
   }
 }
