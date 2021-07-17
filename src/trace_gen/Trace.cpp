@@ -39,7 +39,8 @@ namespace sparse_avx{
 
  void Trace::print() {
   for (int i = 0; i < _num_trace; ++i) {
-   std::cout<<_mem_addr[i*3]<<","<<_mem_addr[i*3+1]<<","<<_mem_addr[i*3+2]<<"\n";
+   std::cout<<_op_codes[i] <<" : "<<_mem_addr[i*3]<<","<<_mem_addr[i*3+1]<<","
+                                                      ""<<_mem_addr[i*3+2]<<"\n";
   }
  }
 
@@ -53,4 +54,17 @@ namespace sparse_avx{
   delete []list;
  }
 
+ void free_trace_list(Trace*** list, int dim1, const std::vector<int>& dim2){
+  delete []list[0][0]->_op_codes;
+  delete []list[0][0]->_mem_addr;
+  for (int i = 0; i < dim1; ++i) {
+   for (int j = 0; j < dim2[i]; ++j) {
+    delete list[i][j];
+   }
+  }
+  for (int i = 0; i < dim1; ++i) {
+    delete list[i];
+  }
+  delete []list;
+ }
 }

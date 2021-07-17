@@ -5,6 +5,7 @@
 #ifndef SPARSE_AVX512_DEMO_TRACE_H
 #define SPARSE_AVX512_DEMO_TRACE_H
 
+#include <vector>
 #include "TraceIR.h"
 
 namespace sparse_avx{
@@ -36,6 +37,7 @@ namespace sparse_avx{
  };
 
  void free_trace_list(Trace** list);
+ void free_trace_list(Trace*** list, int dim1, const std::vector<int>& dim2);
 
 
 }

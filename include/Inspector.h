@@ -21,9 +21,16 @@ namespace DDT {
   bool is_alloc;
   int lbr, lbc, row_width, col_width, col_offset; //LBR, RW, CW
   int first_nnz_loc, row_offset; //FNL, RO
-
+  bool multi_stmt; //FIXME: we should remove this, each codelet has only one
+  // statemet (operation)
   Codelet(int br, int bc, int rw, int cw, int fnl, int ro, int co, int *offs) : lbr(br), row_width(rw),
-  lbc(bc),col_width(cw),first_nnz_loc(fnl),row_offset(ro), col_offset(co), offsets(offs){}
+  lbc(bc),col_width(cw),first_nnz_loc(fnl),row_offset(ro), col_offset(co),
+  offsets(offs), multi_stmt(false){}
+
+  Codelet(int br, int bc, int rw, int cw, int fnl, int ro, int co, int *offs,
+          bool ms
+          ) : lbr(br), row_width(rw),lbc(bc),col_width(cw),first_nnz_loc(fnl),
+          row_offset(ro), col_offset(co),offsets(offs), multi_stmt(ms){}
 
   virtual ~Codelet()= default;
 
@@ -39,6 +46,8 @@ namespace DDT {
   FSCCodelet(int br, int bc, int rw, int cw, int fnl, int ro, int co) : Codelet(br,bc,
                                                                          rw,cw,fnl,ro,co,NULL){};
 
+  FSCCodelet(int br, int bc, int rw, int cw, int fnl, int ro, int co, bool
+  ms) : Codelet(br,bc,rw,cw,fnl,ro,co,NULL,ms){};
   CodeletType get_type() override{return CodeletType::TYPE_FSC;}
   void print()override;
  };
@@ -53,6 +62,10 @@ namespace DDT {
   //int *row_offsets; //RO
   PSCT1V1(int br, int bc, int rw, int cw, int co, int *ros): Codelet(br,bc,rw,cw,-1,
                                                              -1,co,ros){};
+
+  PSCT1V1(int br, int bc, int rw, int cw, int co, int *ros, bool ms): Codelet
+  (br,bc,rw,cw,-1,-1,co,ros, ms){};
+
   CodeletType get_type() override{return CodeletType::TYPE_PSC1;}
   void print()override;
  };
@@ -72,6 +85,9 @@ namespace DDT {
                                                                       fnl,
                                                                       ro, co, cio){};
 
+  PSCT2V1(int br, int rw, int cw, int fnl, int ro, int co, int *cio, bool ms):
+  Codelet(br, -1, rw, cw, fnl, ro, co, cio, ms){};
+
   CodeletType get_type() override{return CodeletType::TYPE_PSC2;}
   void print()override;
  };
@@ -86,6 +102,9 @@ namespace DDT {
 
   PSCT3V1(int rs, int nn, int fnl, int *cio ): Codelet(rs, -1, 1, nn, fnl,
                                                        -1, 1, cio){};
+
+  PSCT3V1(int rs, int nn, int fnl, int *cio, bool ms ): Codelet(rs, -1, 1, nn,
+                                                              fnl,-1, 1, cio, ms){};
 
   CodeletType get_type() override{return CodeletType::TYPE_PSC3;}
   void print()override;

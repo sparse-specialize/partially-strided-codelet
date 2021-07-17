@@ -8,14 +8,25 @@ add_executable(spmv_demo
 target_link_libraries(spmv_demo
         ${Sympiler_Libs})
 
+
+
 add_executable(sptrsv_demo
         FusionDemo.cpp
         SPTRSV_demo.cpp
-        ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
+        ${SRC}
+        ${TRCGEN}
+        ${MATRIX_PARSING_SRC}
         ${Sympiler_SRC}
+        ${METIS_SOURCE_FILES}
         )
-target_link_libraries(sptrsv_demo
-        ${Sympiler_Libs}
-        )
-add_definitions(-DMETIS)
+
+if(METIS_FOUND)
+    target_link_libraries(sptrsv_demo
+            lbc
+            ${METIS_LIBRARIES}
+            )
+else()
+    target_link_libraries(sptrsv_demo
+            lbc)
+endif()
 add_definitions(-DCSV_LOG)
