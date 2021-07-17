@@ -5,7 +5,7 @@
 #ifndef PROJECT_FUSIONDEMO_H
 #define PROJECT_FUSIONDEMO_H
 
-#include "smp/smp_def.h"
+#include "def.h"
 #ifdef PROFILE
 #ifdef PAPI
 #include "PAPIWrapper.h"
@@ -14,7 +14,6 @@
 #endif
 #endif
 
-using namespace format;
 namespace sym_lib{
  class FusionDemo {
 
@@ -26,8 +25,8 @@ namespace sym_lib{
 
   int num_test_{};
   int num_threads_{};
-  format::CSR *L1_csr_, *L2_csr_, *A_csr_;
-  format::CSC *L1_csc_, *L1t_csc_, *L2_csc_, *A_csc_;
+  CSR *L1_csr_, *L2_csr_, *A_csr_;
+  CSC *L1_csc_, *L1t_csc_, *L2_csc_, *A_csc_;
 
   /// profiling info
   int redundant_nodes_{};
@@ -79,9 +78,6 @@ namespace sym_lib{
  void print_common(std::string matrix_name, std::string variant, std::string strategy,
                    CSC *B, CSC *L, int num_thread);
 
- CSR* csc_to_csr(CSC* A);
-
- CSC *make_full(CSC *A);
 
 }
 

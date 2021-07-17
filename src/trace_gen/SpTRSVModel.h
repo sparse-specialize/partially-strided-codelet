@@ -13,12 +13,18 @@ namespace sparse_avx{
   int _num_rows{}, _num_cols{}, _nnz{};
   int *_Ap{}, *_Ai{};
 
+  int _final_level_no, *_final_level_ptr, *_final_part_ptr, *_final_node_ptr;
+ protected:
+
+  void iteration_space_prunning(int parts) override;
  public:
   SpTRSVModel();
+  ~SpTRSVModel();
   SpTRSVModel(int n, int m, int nnz, int *Ap, int *Ai);
 
   Trace* generate_trace() override;
   Trace** generate_trace(int num_threads) override;
+  Trace*** generate_3d_trace(int num_threads) override;
  };
 
 }

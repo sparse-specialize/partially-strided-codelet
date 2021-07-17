@@ -18,7 +18,6 @@
 #include "DDT.h"
 #include "ParseMatrixMarket.h"
 #include "SpMVModel.h"
-#include "smp_def.h"
 
 #include <chrono>
 #include <iostream>

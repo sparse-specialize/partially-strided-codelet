@@ -1,9 +1,9 @@
 //
-// Created by kazem on 6/13/21.
+// Created by kazem on 7/16/21.
 //
 
-#ifndef SPARSE_AVX512_DEMO_SPMVVEC_H
-#define SPARSE_AVX512_DEMO_SPMVVEC_H
+#ifndef DDT_SPTRSV_DEMO_UTILS_H
+#define DDT_SPTRSV_DEMO_UTILS_H
 
 #include "FusionDemo.h"
 
@@ -17,27 +17,18 @@
 namespace sparse_avx{
 
  ///// SPMV
- void spmv_csr(int n, const int *Ap, const int *Ai, const double *Ax,
-               const double *x, double *y) {
+ void sptrsv_csc(int n, int *Lp, int *Li, double *Lx, double *x) {
   int i, j;
   for (i = 0; i < n; i++) {
-   for (j = Ap[i]; j < Ap[i + 1]; j++) {
-    y[i] += Ax[j] * x[Ai[j]];
+   x[i] /= Lx[Lp[i]];
+   for (j = Lp[i] + 1; j < Lp[i + 1]; j++) {
+    x[Li[j]] -= Lx[j] * x[i];
    }
   }
  }
 
- void spmv_csr_parallel(int n, const int *Ap, const int *Ai, const double *Ax,
-               const double *x, double *y) {
-#pragma omp parallel for
-  for (int i = 0; i < n; i++) {
-   for (int j = Ap[i]; j < Ap[i + 1]; j++) {
-    y[i] += Ax[j] * x[Ai[j]];
-   }
-  }
- }
 
- class SpMVSerial : public sym_lib::FusionDemo {
+ class SpTRSVSerial : public sym_lib::FusionDemo {
  protected:
   void setting_up() override {
    std::fill_n(x_,n_,0.0);
@@ -45,16 +36,17 @@ namespace sparse_avx{
   }
 
   sym_lib::timing_measurement fused_code() override {
+   std::copy(x_in_, x_in_+n_, x_);
    sym_lib::timing_measurement t1;
    t1.start_timer();
-   spmv_csr(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_);
+   sptrsv_csc(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_);
    t1.measure_elapsed_time();
    //copy_vector(0,n_,x_in_,x_);
    return t1;
   }
 
  public:
-  SpMVSerial(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+  SpTRSVSerial(sym_lib::CSR *L, sym_lib::CSC *L_csc,
              double *correct_x,
              std::string name) :
     FusionDemo(L_csc->n, name) {
@@ -63,30 +55,9 @@ namespace sparse_avx{
    correct_x_ = correct_x;
   };
 
-  ~SpMVSerial() override = default;
+  ~SpTRSVSerial() override = default;
  };
 
- class SpMVParallel : public SpMVSerial {
- protected:
-  sym_lib::timing_measurement fused_code() override {
-   sym_lib::timing_measurement t1;
-   t1.start_timer();
-   spmv_csr_parallel(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_);
-   t1.measure_elapsed_time();
-   //copy_vector(0,n_,x_in_,x_);
-   return t1;
-  }
-
- public:
-  SpMVParallel(sym_lib::CSR *L, sym_lib::CSC *L_csc,
-           double *correct_x,
-           std::string name) :
-    SpMVSerial(L, L_csc, correct_x, name) {
-   L1_csr_ = L;
-   L1_csc_ = L_csc;
-   correct_x_ = correct_x;
-  };
- };
 
 
  void pruneIterations(DDT::MemoryTrace mt, int density) {
@@ -102,7 +73,7 @@ namespace sparse_avx{
   auto t1 = std::chrono::steady_clock::now();
  }
 
- class SpMVDDT : public SpMVSerial {
+ class SpTRSVDDT : public SpTRSVSerial {
  protected:
   DDT::Config config;
   std::vector<DDT::Codelet*> cl;
@@ -148,10 +119,10 @@ namespace sparse_avx{
   }
 
  public:
-  SpMVDDT(sym_lib::CSR *L, sym_lib::CSC *L_csc,
-           double *correct_x, DDT::Config &conf,
-           std::string name) :
-    SpMVSerial(L, L_csc, correct_x, name), config(conf) {
+  SpTRSVDDT(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+          double *correct_x, DDT::Config &conf,
+          std::string name) :
+    SpTRSVSerial(L, L_csc, correct_x, name), config(conf) {
    L1_csr_ = L;
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
@@ -159,7 +130,7 @@ namespace sparse_avx{
 
   sym_lib::timing_measurement get_analysis_bw(){return analysis_breakdown;}
 
-  ~SpMVDDT(){
+  ~SpTRSVDDT(){
    DDT::free(d);
    DDT::free(cl);
   }
@@ -168,5 +139,4 @@ namespace sparse_avx{
 
 }
 
-
-#endif //SPARSE_AVX512_DEMO_SPMVVEC_H
+#endif //DDT_SPTRSV_DEMO_UTILS_H

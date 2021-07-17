@@ -17,6 +17,7 @@ namespace sparse_avx{
   int _num_trace;
   int _trace_threshold;
   int _num_partitions;
+  int _num_hlevels;
 
   bool _pre_alloc;
 

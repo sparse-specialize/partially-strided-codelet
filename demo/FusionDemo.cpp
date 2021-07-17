@@ -5,6 +5,8 @@
 #define CSV_LOG
 
 #include <cstring>
+#include <cmath>
+#include <utils.h>
 #include "FusionDemo.h"
 #ifdef METIS
 #include <metis_interface.h>
@@ -14,22 +16,6 @@
 namespace sym_lib{
 
 
- bool time_cmp(timing_measurement a, timing_measurement b){
-  return a.elapsed_time<b.elapsed_time;}
-
- timing_measurement
- time_median(std::vector<timing_measurement> time_array){
-  size_t n = time_array.size();
-  if(n==0){
-   timing_measurement t;
-   t.elapsed_time=-1;
-   return t;
-  }
-  std::sort(time_array.begin(),time_array.end(),time_cmp);
-  if(n==1)
-   return time_array[0];
-  return time_array[n/2];
- }
 
  template<class type>
  bool is_float_equal(const type x, const type y, double absTol, double relTol) {
@@ -131,7 +117,7 @@ namespace sym_lib{
   }
   testing();
 
-  median_t = time_median(time_array);
+  median_t = sym_lib::time_median(time_array);
 /*  for (int j = 0; j < time_array.size(); ++j) {
    std::cout<<" :"<<time_array[j].elapsed_time<<";";
   }
@@ -166,125 +152,6 @@ namespace sym_lib{
   PRINT_CSV("No Metis");
 #endif
   PRINT_CSV(num_threads);
- }
-
-
- // TODO eventually use CSC / CSR class
- // TODO test for these two format change
- int
- csc_to_csr(int nrow, int ncol, int *Ap, int *Ai, double *Ax, int *&rowptr,
-            int *&colind, double *&values) {
-  // count row entries to generate row ptr
-  int nnz = Ap[ncol];
-  int *rowCnt = new int[nrow]();
-  for (int i = 0; i < nnz; i++)
-   rowCnt[Ai[i]]++;
-
-  rowptr = new int[nrow + 1]();
-  int counter = 0;
-  for (int i = 0; i < nrow; i++) {
-   rowptr[i] = counter;
-   counter += rowCnt[i];
-  }
-  rowptr[nrow] = nnz;
-
-  colind = new int[nnz]();
-  values = new double[nnz]();
-
-  memset(rowCnt, 0, sizeof(int) * nrow);
-  for (int i = 0; i < ncol; i++) {
-   for (int j = Ap[i]; j < Ap[i + 1]; j++) {
-    int row = Ai[j];
-    int index = rowptr[row] + rowCnt[row];
-    colind[index] = i;
-    values[index] = Ax[j];
-    rowCnt[row]++;
-   }
-  }
-  delete[]rowCnt;
-
-  return 0;
- }
-
-
- CSR* csc_to_csr(CSC* A) {
-  // count row entries to generate row ptr
-  int nnz = A->p[A->n];
-  int *rowCnt = new int[A->n]();
-  for (int i = 0; i < nnz; i++)
-   rowCnt[A->i[i]]++;
-
-  CSR *B = new CSR(A->n,A->m,A->nnz,A->is_pattern);
-  int *rowptr = B->p; //new int[nrow + 1]();
-  size_t ncol = B->n;
-  size_t nrow = B->m;
-  int counter = 0;
-  for (int i = 0; i < (int)nrow; i++) {
-   rowptr[i] = counter;
-   counter += rowCnt[i];
-  }
-  rowptr[nrow] = nnz;
-
-  int *colind = B->i;
-  double *values = B->x;
-
-  memset(rowCnt, 0, sizeof(int) * nrow);
-  for (int i = 0; i < (int)ncol; i++) {
-   for (int j = A->p[i]; j < A->p[i + 1]; j++) {
-    int row = A->i[j];
-    int index = rowptr[row] + rowCnt[row];
-    colind[index] = i;
-    if(!B->is_pattern)
-     values[index] = A->x[j];
-    rowCnt[row]++;
-   }
-  }
-  delete[]rowCnt;
-  return B;
- }
-
-
- CSC *make_full(CSC *A) {
-  if(A->stype == 0) {
-   std::cerr << "Not symmetric\n";
-   return nullptr;
-  }
-
-  CSC *Afull = new CSC(A->m, A->n, A->nnz * 2 - A->n);
-  auto ind = new int[A->n]();
-
-  for(size_t i = 0; i < A->n; i++) {
-   for(size_t p = A->p[i]; p < A->p[i+1]; p++) {
-    int row = A->i[p];
-    ind[i]++;
-    if(row != i)
-     ind[row]++;
-   }
-  }
-  Afull->p[0] = 0;
-  for(size_t i = 0; i < A->n; i++)
-   Afull->p[i+1] = Afull->p[i] + ind[i];
-
-  for(size_t i = 0; i < A->n; i++)
-   ind[i] = 0;
-  for(size_t i = 0; i < A->n; i++) {
-   for(size_t p = A->p[i]; p < A->p[i+1]; p++) {
-    int row = A->i[p];
-    int index = Afull->p[i] + ind[i];
-    Afull->i[index] = row;
-    Afull->x[index] = A->x[p];
-    ind[i]++;
-    if(row != i) {
-     index = Afull->p[row] + ind[row];
-     Afull->i[index] = i;
-     Afull->x[index] = A->x[p];
-     ind[row]++;
-    }
-   }
-  }
-  delete[]ind;
-
-  return Afull;
  }
 
 

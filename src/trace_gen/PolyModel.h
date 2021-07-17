@@ -46,6 +46,8 @@ namespace sparse_avx{
   /// mapping inputs to the kernels
   std::vector<Expr> _runtime_args;
 
+  virtual void iteration_space_prunning(int parts){}
+
  public:
   SectionPolyModel();
 
@@ -53,6 +55,7 @@ namespace sparse_avx{
 
   virtual Trace* generate_trace();
   virtual Trace** generate_trace(int num_threads);
+  virtual Trace*** generate_3d_trace(int num_threads);
 
   void set_runtime_args(std::initializer_list<Expr> exprs );
 

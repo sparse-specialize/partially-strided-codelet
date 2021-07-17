@@ -19,6 +19,13 @@ namespace sparse_avx{
   return t;
  }
 
+ Trace*** SectionPolyModel::generate_3d_trace(int num_threads) {//TODO write it
+  // using
+  // stack
+  Trace ***t = NULL;
+  return t;
+ }
+
  SectionPolyModel::SectionPolyModel() {
 
  }
