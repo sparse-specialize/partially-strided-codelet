@@ -14,10 +14,13 @@ int main(int argc, char* argv[]){
  format::CSC *A;
  format::read_mtx_csc_real(f, A);
  auto  *sol = new double[A->n]();
- std::fill_n(sol, A->n, 1);
+ for (int i = 0; i < A->n; i++) {
+     sol[i] = i;
+ }
+// std::fill_n(sol, A->n, 1);
  CSC *A_full=NULLPNTR;
  format::CSR *B=NULLPNTR, *L_csr=NULLPNTR;
- if(A->stype < 0){
+ if (A->stype < 0) {
   A_full = sym_lib::make_full(A);
   B = sym_lib::csc_to_csr(A_full);
  } else{
@@ -33,6 +36,7 @@ int main(int argc, char* argv[]){
  //std::copy(sol_spmv, sol_spmv+A->n, )
 
  auto *spsp = new SpMVParallel(B, A, sol_spmv, "SpMV Parallel");
+ spsp->set_num_threads(config.nThread);
  auto spmv_p =  spsp->evaluate();
 
  auto *ddtspmv = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT");

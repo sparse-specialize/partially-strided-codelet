@@ -51,6 +51,7 @@ namespace DDT {
     std::string matrixPath;
     NumericalOperation op;
     int header;
+    int nThread;
   };
 
   struct GlobalObject {
@@ -59,19 +60,19 @@ namespace DDT {
     int* d;
     int* o;
     int onz;
+    int* tb;
   };
 
   void generateSource(DDT::GlobalObject& d);
 
-
-    void printTuple(int* t, std::string&& s);
+  void printTuple(int* t, std::string&& s);
 
   GlobalObject init(DDT::Config& config);
 
   void free(DDT::GlobalObject d);
 
-  /// used for testing executor
-  struct Args{
+  /// Used for testing executor
+  struct Args {
   double *x, *y;
   int r; int* Lp; int* Li; double* Lx;
  };

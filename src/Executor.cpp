@@ -28,22 +28,22 @@
 #include <vector>
 
 namespace DDT {
-void executeSpTRSCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config c) {
+void executeSpTRSCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& c) {
 }
 
-void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config c) {
+void executeSPMVCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& c) {
   // Read matrix
   auto m = readSparseMatrix<CSR>(c.matrixPath);
 
   // Setup memory
   auto x = new double[m.c]();
   for (int i = 0; i < m.c; i++) {
-      x[i] = 1;
+      x[i] = i;
   }
   auto y = new double[m.r]();
 
   // Execute SpMV
-  spmv_generic(m.r, m.Lp, m.Li, m.Lx, x, y, cl);
+  spmv_generic(m.r, m.Lp, m.Li, m.Lx, x, y, cl, c);
 
   // Clean up memory
   delete[] x;
@@ -51,42 +51,39 @@ void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config
 }
 
 
-void executeSPMVCodelets(const std::vector<DDT::Codelet*>& cl, const
-DDT::Config c, const int r, const int* Lp, const int *Li, const double*Lx,
+void executeSPMVCodelets(const std::vector<DDT::Codelet*>* cl, const
+DDT::Config& cfg, const int r, const int* Lp, const int *Li, const double*Lx,
 const double* x, double* y) {
-  // Read matrix
-  //CSR m = readSparseMatrix<CSR>(c.matrixPath);
-
   // Execute SpMV
-  spmv_generic(r, Lp, Li, Lx, x, y, cl);
-
+  spmv_generic(r, Lp, Li, Lx, x, y, cl, cfg);
  }
+
 /**
  * @brief Executes codelets found in a matrix performing a computation
  *
  * @param cl List of codelets to perform computation on
  * @param c  Configuration object for setting up executor
  */
-void executeCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config c) {
-  switch (c.op) {
+void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& cfg) {
+  switch (cfg.op) {
     case DDT::OP_SPMV:
-      executeSPMVCodelets(cl, c);
+      executeSPMVCodelets(cl, cfg);
       break;
     case DDT::OP_SPTRS:
-      executeSpTRSCodelets(cl, c);
+      executeSpTRSCodelets(cl, cfg);
     default:
       break;
   }
 }
- void executeCodelets(const std::vector<DDT::Codelet*>& cl, const DDT::Config
- c, Args args) {
-  switch (c.op) {
+ void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config&
+ cfg, Args& args) {
+  switch (cfg.op) {
    case DDT::OP_SPMV:
-    executeSPMVCodelets(cl, c,args.r, args.Lp, args.Li, args.Lx, args.x, args
+    executeSPMVCodelets(cl, cfg,args.r, args.Lp, args.Li, args.Lx, args.x, args
     .y);
     break;
    case DDT::OP_SPTRS:
-    executeSpTRSCodelets(cl, c);
+    executeSpTRSCodelets(cl, cfg);
    default:
     break;
   }

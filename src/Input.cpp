@@ -37,6 +37,7 @@ namespace DDT {
       ("m,matrix", "Path to matrix market file.", cxxopts::value<std::string>())
       ("n,numerical_operation", "Numerical operation being performed on "
                                 "matrix.", cxxopts::value<std::string>())
+      ("t,threads", "Number of parallel threads", cxxopts::value<int>()->default_value("1"))
       ("d,header", "prints header or not.");
 
     auto result = options.parse(argc, argv);
@@ -57,6 +58,7 @@ namespace DDT {
 
     auto matrixPath = result["matrix"].as<std::string>();
     auto operation = result["numerical_operation"].as<std::string>();
+    auto nThreads = result["threads"].as<int>();
 
     NumericalOperation op;
     if (operation == "SPMV") {
@@ -72,6 +74,6 @@ namespace DDT {
     header = 1;
    }
 
-   return Config{ matrixPath, op, header };
+   return Config{ matrixPath, op, header, nThreads };
   }
 }

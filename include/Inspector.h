@@ -19,11 +19,11 @@ namespace DDT {
   int size;
   int *offsets;
   bool is_alloc;
-  int lbr, lbc, row_width, col_width; //LBR, RW, CW
+  int lbr, lbc, row_width, col_width, col_offset; //LBR, RW, CW
   int first_nnz_loc, row_offset; //FNL, RO
 
-  Codelet(int br, int bc, int rw, int cw, int fnl, int ro, int *offs) : lbr(br), row_width(rw),
-  lbc(bc),col_width(cw),first_nnz_loc(fnl),row_offset(ro), offsets(offs){}
+  Codelet(int br, int bc, int rw, int cw, int fnl, int ro, int co, int *offs) : lbr(br), row_width(rw),
+  lbc(bc),col_width(cw),first_nnz_loc(fnl),row_offset(ro), col_offset(co), offsets(offs){}
 
   virtual ~Codelet()= default;
 
@@ -36,8 +36,8 @@ namespace DDT {
   /**
    * y[lbr:lbr+row_width] = Ax[FNL:FNL+CW, ..., FNL+RO:FNL+RO+CW]*x[lbc:lbc+CW];
    */
-  FSCCodelet(int br, int bc, int rw, int cw, int fnl, int ro) : Codelet(br,bc,
-                                                                         rw,cw,fnl,ro,NULL){};
+  FSCCodelet(int br, int bc, int rw, int cw, int fnl, int ro, int co) : Codelet(br,bc,
+                                                                         rw,cw,fnl,ro,co,NULL){};
 
   CodeletType get_type() override{return CodeletType::TYPE_FSC;}
   void print()override;
@@ -51,8 +51,8 @@ namespace DDT {
    */
   //int lbr, lbc, row_width, col_width; //LBR, RW, CW
   //int *row_offsets; //RO
-  PSCT1V1(int br, int bc, int rw, int cw, int *ros): Codelet(br,bc,rw,cw,-1,
-                                                             -1,ros){};
+  PSCT1V1(int br, int bc, int rw, int cw, int co, int *ros): Codelet(br,bc,rw,cw,-1,
+                                                             -1,co,ros){};
   CodeletType get_type() override{return CodeletType::TYPE_PSC1;}
   void print()override;
  };
@@ -67,10 +67,10 @@ namespace DDT {
   //int first_nnz_loc, row_offset; //FNL, RO
   //int *coli_offset;// CIO
 
-  PSCT2V1(int br, int rw, int cw, int fnl, int ro, int *cio): Codelet(br, -1,
+  PSCT2V1(int br, int rw, int cw, int fnl, int ro, int co, int *cio): Codelet(br, -1,
                                                                       rw, cw,
                                                                       fnl,
-                                                                      ro, cio){};
+                                                                      ro, co, cio){};
 
   CodeletType get_type() override{return CodeletType::TYPE_PSC2;}
   void print()override;
@@ -85,7 +85,7 @@ namespace DDT {
 //  int *coli_offset;// CIO
 
   PSCT3V1(int rs, int nn, int fnl, int *cio ): Codelet(rs, -1, 1, nn, fnl,
-                                                       -1, cio){};
+                                                       -1, 1, cio){};
 
   CodeletType get_type() override{return CodeletType::TYPE_PSC3;}
   void print()override;
@@ -100,7 +100,6 @@ namespace DDT {
         // Get codelet type
         if constexpr (Type == DDT::TYPE_PSC3) {
             int colWidth = ((c->ct - c->pt) / TPR) + 1;
-
 
             while (c->ct != c->pt) {
                 d.o[--d.onz] = c->ct[2];
@@ -133,17 +132,22 @@ namespace DDT {
                 rowCnt++;
             }
 
+            if (vj != 1) { std::cout << c->ct[1] << std::endl; std::cout << vj << std::endl; assert(vj == 1); }
+
             // Loop Array Offsets
             int oo = c->ct[0];
             int mo = c->ct[1];
             int vo = c->ct[2];
 
             // Generate codelet
-            cl.emplace_back(new DDT::FSCCodelet(oo,vo,rowCnt, c->sz+1,mo,mi));
+            cl.emplace_back(new DDT::FSCCodelet(oo,vo,rowCnt, c->sz+1,mo,mi,vi));
         }
 
         if constexpr (Type == DDT::TYPE_PSC1) {
             int rowCnt = 1;
+
+            int vi = c->ct[2] - c->pt[2];
+            int vj = c->ct[5] - c->ct[2];
 
             while (c->pt != c->ct) {
                 d.o[--d.onz] = c->ct[1];
@@ -154,12 +158,15 @@ namespace DDT {
             }
             d.o[--d.onz] = c->ct[1];
 
+            assert(vi == 0);
+            assert(vj == 1);
+
             // Loop Array Offsets
             int oo = c->ct[0];
             int vo = c->ct[2];
 
             // Generate codelet
-            cl.push_back(new DDT::PSCT1V1(oo,vo,rowCnt,c->sz+1,d.o+d.onz));
+            cl.push_back(new DDT::PSCT1V1(oo,vo,rowCnt,c->sz+1,vi,d.o+d.onz));
         }
 
         if constexpr (Type == DDT::TYPE_PSC2) {
@@ -182,7 +189,6 @@ namespace DDT {
             // Loop Array Offsets
             int oo = c->ct[0];
             int mo = c->ct[1];
-            int vo = c->ct[2];
 
             // Generate offset array into vector
             for (int i = c->sz; i >= 0; --i) {
@@ -190,14 +196,14 @@ namespace DDT {
             }
 
             // Generate codelet
-            cl.emplace_back(new DDT::PSCT2V1(oo, rowCnt, c->sz+1, mo, mi, d.o+d.onz));
+            cl.emplace_back(new DDT::PSCT2V1(oo, rowCnt, c->sz+1, mo, mi, vi, d.o+d.onz));
         }
         c->ct = nullptr;
     }
 
-    void inspectCodelets(DDT::GlobalObject& d, std::vector<Codelet*>& cl);
+    void inspectCodelets(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& c);
 
-    void free(std::vector<DDT::Codelet*>& cl);
+        void free(std::vector<DDT::Codelet*>& cl);
 }
 
 

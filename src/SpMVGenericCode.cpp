@@ -26,14 +26,18 @@ namespace DDT {
 
         const double eps = 1e-8;
 
+
         // Compare outputs
+        bool wrong = false;
         for (int i = 0; i < n; i++) {
             if (!is_float_equal(yy[i],y[i],eps,eps)) {
                 std::cout << "Wrong at 'i' = " << i << std::endl;
                 std::cout << "(" << yy[i] << "," << y[i] << ")" << std::endl;
-                return false;
+                wrong = true;
             }
         }
+        if (wrong)
+            return false;
 
         // Clean up memory
         delete[] yy;
@@ -42,13 +46,14 @@ namespace DDT {
     }
 
   void spmv_generic(const int n, const int *Ap, const int *Ai, const double
-      *Ax, const double *x, double *y, const std::vector<Codelet*>& lst) {
+      *Ax, const double *x, double *y, const std::vector<Codelet*>* lst, const DDT::Config& cfg) {
       // Perform SpMV
-
-    for (const auto& c : lst) {
+#pragma omp parallel for num_threads(cfg.nThread)
+for (int i = 0; i < cfg.nThread; i++) {
+    for (const auto& c : lst[i]) {
       switch (c->get_type()) {
         case CodeletType::TYPE_FSC:
-          fsc_t2_2DC(y, Ax, x, c->row_offset, c->first_nnz_loc, c->lbr, c->lbr+c->row_width, c->lbc, c->col_width+c->lbc);
+          fsc_t2_2DC(y, Ax, x, c->row_offset, c->first_nnz_loc, c->lbr, c->lbr+c->row_width, c->lbc, c->col_width+c->lbc, c->col_offset);
           break;
         case CodeletType::TYPE_PSC1:
           psc_t1_2D4R(y,Ax,x,c->offsets,c->lbr,c->lbr+c->row_width,c->lbc,
@@ -56,7 +61,7 @@ namespace DDT {
           break;
         case CodeletType::TYPE_PSC2:
           psc_t2_2DC(y,Ax, x, c->offsets, c->row_offset, c->first_nnz_loc, c->lbr,
-              c->lbr+c->row_width, c->col_width);
+              c->lbr+c->row_width, c->col_width, c->col_offset);
           break;
         case CodeletType::TYPE_PSC3:
           psc_t3_1D1R(y, Ax, Ai, x, c->offsets, c->lbr, c->first_nnz_loc,
@@ -66,13 +71,13 @@ namespace DDT {
           break;
       }
     }
+}
 
     // Verify correctness
-/*
-    if (!verifySpMV(n, Ap, Ai, Ax, x, y)) {
-        std::cout << "Error: numerical operation was incorrect." << std::endl;
-        exit(1);
-    }
-*/
+//    if (!verifySpMV(n, Ap, Ai, Ax, x, y)) {
+//        std::cout << "Error: numerical operation was incorrect." << std::endl;
+//        exit(1);
+//    }
+//    std::cout << "op correct..." << std::endl;
   }
 }
