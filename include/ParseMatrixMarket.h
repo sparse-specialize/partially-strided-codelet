@@ -237,7 +237,7 @@ auto readSparseMatrix(const std::string& path) -> type {
               ss << line;
               ss >> rows >> cols >> nnz;
               parsed = true;
-              mat.reserve(nnz);
+              mat.reserve(sym ? nnz*2-rows : nnz);
               ss.clear();
               break;
           }
@@ -250,30 +250,33 @@ auto readSparseMatrix(const std::string& path) -> type {
           double value;
           ss >> row >> col >> value;
           mat.emplace_back(std::make_tuple(row-1,col-1,value));
+          if (sym && col != row) {
+              mat.emplace_back(std::make_tuple(col - 1, row - 1, value));
+          }
           ss.clear();
     }
   }
   file.close();
 
   // Turn into CSC
-  CSC cc(rows, cols, nnz, mat);
+//  CSC cc(rows, cols, nnz, mat);
 
   // Make full
-  if (sym) {
-      cc.make_full();
-  }
+//  if (sym) {
+//      cc.make_full();
+//  }
 
 
   // Turn into CSR
-  RawMatrix mat2;
-  mat2.reserve(cc.nz);
-  for (int i = 0; i < cc.c; i++) {
-      for (int j = cc.Lp[i]; j < cc.Lp[i+1]; j++) {
-          mat2.emplace_back(cc.Li[j], i, cc.Lx[j]);
-      }
-  }
+//  RawMatrix mat2;
+//  mat2.reserve(cc.nz);
+//  for (int i = 0; i < cc.c; i++) {
+//      for (int j = cc.Lp[i]; j < cc.Lp[i+1]; j++) {
+//          mat2.emplace_back(cc.Li[j], i, cc.Lx[j]);
+//      }
+//  }
 
-  auto ccr = CSR( cc.r, cc.c, cc.nz, mat2);
+  auto ccr = CSR( rows, cols, sym ? nnz*2-rows : nnz, mat);
 
   if (std::is_same<type, CSR>::value) {
     return ccr;

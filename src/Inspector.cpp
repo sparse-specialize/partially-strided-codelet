@@ -5,6 +5,8 @@
 #include "DDT.h"
 #include "Inspector.h"
 
+#include <fstream>
+
 namespace DDT {
 
     void FSCCodelet::print() {
@@ -86,25 +88,27 @@ namespace DDT {
    * @param d  Global DDT object containing pattern information
    * @param cl List of runtime codelet descriptions 
    */
-  void inspectCodelets(DDT::GlobalObject& d, std::vector<Codelet*>& cl) {
-    int TPR = 3;
-
-    for (int i = d.mt.ips-1; i >= 0; i--) {
-      for (int j = 0; j < d.mt.ip[i+1]-d.mt.ip[i];) {
-        int cn = ((d.mt.ip[i]+j)-d.mt.ip[0]) / TPR;
-        if (d.c[cn].pt != nullptr && d.c[cn].ct != nullptr) {
-          // Generate (TYPE_FSC|TYPE_PSC1|TYPE_PSC2)
-          generateCodelet(d, d.c+cn, cl);
-          j += (d.c[cn].sz+1) * TPR;
-        } else if (d.c[cn].ct != nullptr) {
-          // Generate (TYPE_PSC3)
-          j += findType3Bounds(d,i,j,d.mt.ip[i+1]-d.mt.ip[i]);
-          cn = ((d.mt.ip[i]+(j-TPR))-d.mt.ip[0]) / TPR;
-          generateCodelet(d, d.c+cn, cl);
-        } else {
-          j += TPR * (d.c[cn].sz + 1);
+  void inspectCodelets(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& c) {
+//#pragma omp parallel for num_threads(c.nThread) default(none) shared(TPR, cl, d, c, std::cout)
+    for (int t = 0; t < c.nThread; t++) {
+        auto& cc = cl[t];
+        for (int i = d.tb[t+1]-1; i >= d.tb[t]; i--) {
+            for (int j = 0; j < d.mt.ip[i + 1] - d.mt.ip[i];) {
+                int cn = ((d.mt.ip[i] + j) - d.mt.ip[0]) / TPR;
+                if (d.c[cn].pt != nullptr && d.c[cn].ct != nullptr) {
+                    // Generate (TYPE_FSC|TYPE_PSC1|TYPE_PSC2)
+                    generateCodelet(d, d.c + cn, cc);
+                    j += (d.c[cn].sz + 1) * TPR;
+                } else if (d.c[cn].ct != nullptr) {
+                    // Generate (TYPE_PSC3)
+                    j += findType3Bounds(d, i, j, d.mt.ip[i + 1] - d.mt.ip[i]);
+                    cn = ((d.mt.ip[i] + (j - TPR)) - d.mt.ip[0]) / TPR;
+                    generateCodelet(d, d.c + cn, cc);
+                } else {
+                    j += TPR * (d.c[cn].sz + 1);
+                }
+            }
         }
-      }
     }
   }
 

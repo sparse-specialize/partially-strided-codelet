@@ -53,26 +53,20 @@ namespace DDT {
  void psc_t3_1D1R(double *y, const double *Ax, const int *Ai,  const double
  *x, const int *offset, int lb, int fnl, int cw) {
 
-     // if (lb == 14334) {
-     //     std::cout << lb << std::endl;
-     //     std::cout << offset[0] << std::endl;
-     //     std::cout << "psc3 here" << std::endl;
-     //     std::cout << std::endl;
-     // }
   v4df_t Lx_reg, Lx_reg2, result, result2, x_reg, x_reg2;
   int i = lb;
   result.v = _mm256_setzero_pd();
   int ti = cw % 4;
   int k = fnl;
-  for (int j = 0; j < cw-ti; j+=4, k+=4) {
+  int j = 0;
+  for (; j < cw-3; j+=4, k+=4) {
    x_reg.v = _mm256_set_pd(x[offset[j+3]], x[offset[j+2]],
                            x[offset[j+1]], x[offset[j]]);
    Lx_reg.v = _mm256_loadu_pd((double *) (Ax + k)); // Skylake	7	0.5
    result.v = _mm256_fmadd_pd(Lx_reg.v,x_reg.v,result.v);//Skylake	4	0.5
   }
   double tail = 0;
-  k= fnl+cw-ti;
-  for (int j = cw-ti; j < cw; ++j, ++k) {
+  for (; j < cw; ++j, ++k) {
    tail += (Ax[k] * x[offset[j]]);
   }
   auto h0 = hsum_double_avx(result.v);

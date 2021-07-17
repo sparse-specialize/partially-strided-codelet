@@ -11,15 +11,15 @@
 
 void computeFirstOrder(int* differences, int* tuples, int numTuples);
 
-void computeParallelizedFOD(int** ip, int ips, int* differences);
+void computeParallelizedFOD(int** ip, int ips, int* differences, int nThread);
 
 uint16_t generateDifferenceMask(int* lhs, int* mid, int* rhs, int MASK);
 
-void mineDifferences(int** ip, int ips, DDT::PatternDAG* c, int* d);
+void mineDifferences(int **ip, DDT::PatternDAG *c, int* d, int nThreads, const int* tBound);
 
 double getTimeDifference(std::chrono::steady_clock::time_point t1, std::chrono::steady_clock::time_point t2);
 
-void findCLCS(int tpd, int* lhstp, int* rhstp, int lhstps, int rhstps, DDT::PatternDAG* lhscp, DDT::PatternDAG* rhscp,
+int findCLCS(int tpd, int* lhstp, int* rhstp, int lhstps, int rhstps, DDT::PatternDAG* lhscp, DDT::PatternDAG* rhscp,
               int* lhstpd, int* rhstpd);
 
 

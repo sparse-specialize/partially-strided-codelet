@@ -17,7 +17,7 @@ include_directories(${SYMPILER_LBC_ROOT}/src/includes/
         ${SYMPILER_UTIL}/external/includes/
         ${SYMPILER_UTIL_INC})
 set(Sympiler_Libs
-        "lbc")
+        "lbc;metis;")
 set(Sympiler_SRC
         "${SYMPILER_UTIL}/BCSCMatrix.cpp"
         "${SYMPILER_UTIL}/sparse_io.cpp"

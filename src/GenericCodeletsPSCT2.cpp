@@ -21,11 +21,11 @@
 namespace DDT {
 
 #ifdef _mm256_i32gather_pd
-#define loadvx(of, x, ind, xv) \
-  auto vindex = _mm_loadu_si128(reinterpret_cast<const __m128i *>(of)); \
-  xv = _mm256_i32gather_pd(x, vindex, 8);
+#define loadvx(of, x, ind, xv, vindex) \
+  auto (vindex) = _mm_loadu_si128(reinterpret_cast<const __m128i *>(of+ind)); \
+  (xv) = _mm256_i32gather_pd(x, vindex, 8);
 #else
-#define loadvx(of, x, ind, xv) \
+#define loadvx(of, x, ind, xv, msk) \
   xv = _mm256_set_pd(x[of[ind+3]], x[of[ind+2]], x[of[ind+1]], x[of[ind]]);
 #endif
 
@@ -61,18 +61,13 @@ namespace DDT {
    const int axo,
    const int lb,
    const int ub,
-   const int cb
+   const int cb,
+   const int cof
  ) {
   auto ax0 = Ax + axo + axi * 0;
   auto ax1 = Ax + axo + axi * 1;
-
-        // if (lb <= 14334 && 14334 < ub) {
-        //     std::cout << lb << std::endl;
-        //     std::cout << ub << std::endl;
-        //     std::cout << offset[0] << std::endl;
-        //     std::cout << "psc2 here" << std::endl;
-        //     std::cout << std::endl;
-        // }
+  auto x0  = x;
+  auto x1  = x0 + cof;
 
   int co = (ub-lb) % 2;
   for (int i = lb; i < ub-co; i += 2) {
@@ -81,22 +76,23 @@ namespace DDT {
 
    int j = 0;
    for (; j < cb-3; j += 4) {
-    __m256d xv;
-    loadvx(offset, x, 0, xv);
+    __m256d xv0, xv1;
+    loadvx(offset, x0, j, xv0, msk0);
+    loadvx(offset, x1, j, xv1, msk1);
 
     auto axv0 = _mm256_loadu_pd(ax0 + j);
     auto axv1 = _mm256_loadu_pd(ax1 + j);
 
-    r0 = _mm256_fmadd_pd(axv0, xv, r0);
-    r1 = _mm256_fmadd_pd(axv1, xv, r1);
+    r0 = _mm256_fmadd_pd(axv0, xv0, r0);
+    r1 = _mm256_fmadd_pd(axv1, xv1, r1);
    }
 
       // Compute tail
    __m128d tail = _mm_loadu_pd(y+i);
 
    for (; j < cb; j++) {
-       tail[0] += ax0[j] * x[j];
-       tail[1] += ax1[j] * x[j];
+       tail[0] += ax0[j] * x0[offset[j]];
+       tail[1] += ax1[j] * x1[offset[j]];
    }
 
    // H-Sum
@@ -112,22 +108,24 @@ namespace DDT {
    // Load new addresses
    ax0 += axi * 2;
    ax1 += axi * 2;
+   x0  += cof*2;
+   x1  += cof*2;
   }
 
   if (co) {
       // Compute last iteration
       auto r0 = _mm256_setzero_pd();
       __m256d xv;
-      loadvx(offset, x, 0, xv);
       int j = 0;
       for (; j < cb - 3; j += 4) {
+          loadvx(offset, x0, j, xv, msk);
           auto axv0 = _mm256_loadu_pd(ax0 + j);
           r0 = _mm256_fmadd_pd(axv0, xv, r0);
       }
 
       // Compute tail
       double tail = 0.;
-      for (; j < cb; j++) { tail += *(ax0 + j) * x[offset[j]]; }
+      for (; j < cb; j++) { tail += *(ax0 + j) * x0[offset[j]]; }
 
       // H-Sum
       y[ub - 1] += tail + hsum_double_avx(r0);
@@ -163,7 +161,7 @@ namespace DDT {
   auto ax1 = Ax + axo + axi * 1;
 
   __m256d xv;
-  loadvx(offset, x, 0, xv);
+  loadvx(offset, x, 0, xv, msk);
   for (int i = lb; i < ub; i += 2) {
    auto axv0 = _mm256_loadu_pd(ax0);
    auto axv1 = _mm256_loadu_pd(ax1);

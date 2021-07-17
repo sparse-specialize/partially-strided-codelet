@@ -28,6 +28,8 @@
 #include <vector>
 
 int THRESHOLDS[4] = { 2, 100000, 100, 0 };
+int UNIT_THRESHOLDS[4] = { 2, 2, 2, 2 };
+
 const int TPD = 3;
 int ZERO_MASK = 0x0FFF;
 int FSC_MASK  = 0x0FFF;
@@ -43,17 +45,14 @@ int PSC2_MASK = 0x0FFF;
  * @param differences Array of blank memory to store diffences
  *
  */
-void computeParallelizedFOD(int **ip, int ips, int *differences) {
-  auto t1 = std::chrono::steady_clock::now();
-#pragma omp parallel for num_threads(2)
-  for (int i = 0; i < ips; i++) {
-    computeFirstOrder(differences + (ip[i] - ip[0]), ip[i], ip[i + 1] - ip[i]);
-  }
-  auto t2 = std::chrono::steady_clock::now();
-
-  auto timeTaken = getTimeDifference(t1, t2);
-
-  //std::cout << "FOD Time: " << timeTaken << std::endl;
+void computeParallelizedFOD(int **ip, int ips, int *differences, int nThreads) {
+#pragma omp parallel for num_threads(nThreads)
+    for (int t = 0; t < nThreads; t++) {
+        for (int i = 0; i < ips; i++) {
+            computeFirstOrder(differences + (ip[i] - ip[0]), ip[i],
+                              ip[i + 1] - ip[i]);
+        }
+    }
 }
 
 /**
@@ -94,24 +93,20 @@ void computeFirstOrder(int *differences, int *tuples, int numTuples) {
  * @param c Storage for codelet groupings
  *
  */
-void mineDifferences(int **ip, int ips, DDT::PatternDAG *c, int* d) {
-  // int bnd[9] = { 0, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000 };
-//  int bnd[5] = { 0, ips/4, ips/2, ips*3/4, ips };
-  auto t1 = std::chrono::steady_clock::now();
-//#pragma omp parallel for num_threads(4)
-//  for (int ii = 0; ii < 4; ++ii) {
-    for (int i = 0; i < ips-1; i++) {
+void mineDifferences(int **ip, DDT::PatternDAG *c, int* d, int nThreads, const int* tBound) {
+    int tc = 0;
+#pragma omp parallel for num_threads(nThreads) reduction(+:tc)
+  for (int ii = 0; ii < nThreads; ++ii) {
+    int nc = 0;
+    for (int i = tBound[ii]; i < tBound[ii+1]-1; i++) {
       auto lhscp = (ip[i] - ip[0]) / TPD;
       auto rhscp = (ip[i + 1] - ip[0]) / TPD;
       auto lhstps = (ip[i + 1] - ip[i]) / TPD;
       auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
-      findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp, c + rhscp, d + lhscp*TPD, d + rhscp*TPD);
+      nc += findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp, c + rhscp, d + lhscp*TPD, d + rhscp*TPD);
     }
-//  }
-  auto t2 = std::chrono::steady_clock::now();
-  auto timeTaken = getTimeDifference(t1, t2);
-
-  //std::cout << "Mine Time: " << timeTaken << std::endl;
+    tc += nc;
+  }
 }
 
 
@@ -154,12 +149,14 @@ inline bool isCodeletOrigin(DDT::PatternDAG* c) {
  * @param rhstpd Right pointer to first order differences
  *
  */
-void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::PatternDAG
+int findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::PatternDAG
 *lhscp, DDT::PatternDAG *rhscp, int* lhstpd, int* rhstpd) {
     __m128i thresholds = _mm_set_epi32(THRESHOLDS[3], THRESHOLDS[2], THRESHOLDS[1], THRESHOLDS[0]);
+    __m128i unitThresholds = _mm_set_epi32(UNIT_THRESHOLDS[3], UNIT_THRESHOLDS[2], UNIT_THRESHOLDS[1], UNIT_THRESHOLDS[0]);
   auto lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp));
   auto rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp));
 
+  int nc = 0;
   for (int i = 0, j = 0; i < lhstps - 1 && j < rhstps - 1;) {
     // Difference and comparison
     __m128i sub = _mm_sub_epi32(rhs, lhs);
@@ -174,7 +171,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
       __m128i rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstpd + j * tpd));
       __m128i xordv = _mm_cmpeq_epi32(rhsdv, lhsdv);
 
-      auto odv = lhsdv; // originalDifferenceVector
+      __m128i odv = lhsdv; // originalDifferenceVector
       bool hsad = true; // hasSameAdjacentDifferences
 
       int iStart = i;
@@ -196,10 +193,13 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
       int sz = i - iStart;
       if (sz != 0) {
         DDT::CodeletType t;
+          uint16_t unitMask = _mm_movemask_epi8(_mm_cmplt_epi32(odv, unitThresholds));
         if (!isInCodelet(lhscp + iStart)) {
           lhscp[iStart].sz = sz;
           lhscp[iStart].pt = lhscp[iStart].ct;
-          t  = hsad ? DDT::TYPE_FSC : DDT::TYPE_PSC2;
+          t  = hsad && (unitMask|0xF000) == 0xFFFF ? DDT::TYPE_FSC : DDT::TYPE_PSC2;
+          lhscp[iStart].t = t;
+          nc++;
         } else {
           uint16_t MASK = generateDifferenceMask(
               lhscp[iStart].pt,
@@ -208,7 +208,8 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
               ZERO_MASK);
 
           // Checks for PSC Type 1 and PSC Type 2
-          if (!((MASK == PSC1_MASK && hsad) || MASK == FSC_MASK)) {
+          // @TODO: FIX HACK sub[0] == 0
+          if (!((MASK == PSC1_MASK && hsad && (unitMask|0xF000) == 0xFFFF && sub[0] == 0) || MASK == FSC_MASK)) {
             i = lhscp[iStart].sz+iStart+1;
             lhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(lhstp + i * tpd));
             continue;
@@ -237,6 +238,7 @@ void findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps, DDT::Patt
       rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(rhstp + j * tpd));
     }
   }
+  return nc;
 }
 
 /** 

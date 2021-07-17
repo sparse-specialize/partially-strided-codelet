@@ -16,5 +16,6 @@ add_executable(sptrsv_demo
         )
 target_link_libraries(sptrsv_demo
         ${Sympiler_Libs}
-        metis)
+        )
 add_definitions(-DMETIS)
+add_definitions(-DCSV_LOG)

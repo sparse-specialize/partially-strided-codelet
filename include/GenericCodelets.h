@@ -18,7 +18,8 @@ namespace DDT {
             const int lb,
             const int ub,
             const int cbl,
-            const int cbu
+            const int cbu,
+            const int co
     );
 
  /// PSCT1
@@ -42,7 +43,7 @@ namespace DDT {
 
  void psc_t2_2DC( double *y, const double *Ax, const double *x, const int
  *offset, const int  axi, const  int axo, const   int lb, const int
-   ub, const int cb);
+   ub, const int cb, const int cof);
 
  void psc_t2_2D4C( double *y, const double *Ax, const double *x,
    const int *offset, const int axi, const int axo, const int lb, const int

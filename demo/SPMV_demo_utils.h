@@ -28,8 +28,8 @@ namespace sparse_avx{
  }
 
  void spmv_csr_parallel(int n, const int *Ap, const int *Ai, const double *Ax,
-               const double *x, double *y) {
-#pragma omp parallel for
+               const double *x, double *y, int nThreads) {
+#pragma omp parallel for num_threads(nThreads)
   for (int i = 0; i < n; i++) {
    for (int j = Ap[i]; j < Ap[i + 1]; j++) {
     y[i] += Ax[j] * x[Ai[j]];
@@ -71,7 +71,7 @@ namespace sparse_avx{
   sym_lib::timing_measurement fused_code() override {
    sym_lib::timing_measurement t1;
    t1.start_timer();
-   spmv_csr_parallel(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_);
+   spmv_csr_parallel(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_, num_threads_);
    t1.measure_elapsed_time();
    //copy_vector(0,n_,x_in_,x_);
    return t1;
@@ -105,7 +105,7 @@ namespace sparse_avx{
  class SpMVDDT : public SpMVSerial {
  protected:
   DDT::Config config;
-  std::vector<DDT::Codelet*> cl;
+  std::vector<DDT::Codelet*>* cl;
   DDT::GlobalObject d;
   sym_lib::timing_measurement analysis_breakdown;
 
@@ -118,18 +118,16 @@ namespace sparse_avx{
 
    analysis_breakdown.start_timer();
    // Compute and Mark regions for PSC-3
-   computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d);
+   computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, config.nThread);
 
    analysis_breakdown.start_timer();
    // Mine trace and profile
-   mineDifferences(d.mt.ip, d.mt.ips, d.c, d.d);
-   // Generate Codes
-   // DDT::generateSource(d);
-   DDT::inspectCodelets(d, cl);
+   mineDifferences(d.mt.ip, d.c, d.d, config.nThread, d.tb);
 
-   // for(auto ii : cl){
-   //  ii->print();
-   // }
+   analysis_breakdown.start_timer();
+   // Form Codelets
+   this->cl = new std::vector<DDT::Codelet*>[config.nThread];
+   DDT::inspectCodelets(d, cl, config);
 
    analysis_breakdown.measure_elapsed_time();
   }
@@ -161,7 +159,7 @@ namespace sparse_avx{
 
   ~SpMVDDT(){
    DDT::free(d);
-   DDT::free(cl);
+   delete[] cl;
   }
  };
 
