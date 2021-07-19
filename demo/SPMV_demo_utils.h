@@ -118,16 +118,16 @@ namespace sparse_avx{
 
    analysis_breakdown.start_timer();
    // Compute and Mark regions for PSC-3
-   computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, config.nThread);
+   DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, config.nThread);
 
    analysis_breakdown.start_timer();
    // Mine trace and profile
-   mineDifferences(d.mt.ip, d.c, d.d, config.nThread, d.tb);
+   DDT::mineDifferences(d.mt.ip, d.c, d.d, config.nThread, d.tb);
 
    analysis_breakdown.start_timer();
    // Form Codelets
    this->cl = new std::vector<DDT::Codelet*>[config.nThread];
-   DDT::inspectCodelets(d, cl, config);
+   DDT::generateCodeletsFromPattern(d, cl, config);
 
    analysis_breakdown.measure_elapsed_time();
   }

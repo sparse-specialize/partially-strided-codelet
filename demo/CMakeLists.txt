@@ -3,11 +3,10 @@ add_executable(spmv_demo
         FusionDemo.cpp
         SPMV_demo.cpp
         ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
-        ${Sympiler_SRC}
+        ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC}
         )
 target_link_libraries(spmv_demo
         ${Sympiler_Libs})
-
 
 
 add_executable(sptrsv_demo
@@ -17,7 +16,7 @@ add_executable(sptrsv_demo
         ${TRCGEN}
         ${MATRIX_PARSING_SRC}
         ${Sympiler_SRC}
-        ${METIS_SOURCE_FILES}
+        ${METIS_SOURCE_FILES} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC}
         )
 
 if(METIS_FOUND)

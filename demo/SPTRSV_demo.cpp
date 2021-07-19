@@ -28,7 +28,7 @@ int main(int argc, char* argv[]){
  std::fill_n(sol, A->n, 1);
  sym_lib::CSC *A_full=NULLPNTR;
 
-#ifdef METIS
+#ifdef METISA
  //We only reorder L since dependency matters more in l-solve.
  A_full = sym_lib::make_full(A);
  sym_lib::metis_perm_general(A_full, perm);
@@ -39,26 +39,26 @@ int main(int argc, char* argv[]){
  delete[]perm;
 #endif
 
- sym_lib::CSR *L1_ord_csr = sym_lib::csc_to_csr(L1_ord);
+ sym_lib::CSR *L1_ord_csr = sym_lib::csc_to_csr(A);
 
 
- auto *sps = new SpTRSVSerial(L1_ord_csr, L1_ord, NULLPNTR, "Baseline");
+ auto *sps = new SpTRSVSerial(L1_ord_csr, A, NULLPNTR, "Baseline");
  auto sptrsv_baseline =  sps->evaluate();
  double *sol_sptrsv = sps->solution();
  //std::copy(sol_spmv, sol_spmv+A->n, )
 
- auto *spsp = new SpTRSVParallel(L1_ord_csr, L1_ord, sol_sptrsv, "Parallel "
+ auto *spsp = new SpTRSVParallel(L1_ord_csr, A, sol_sptrsv, "Parallel "
                     "LBC",num_threads,coarsening_p, initial_cut);
  auto sptrsv_par =  spsp->evaluate();
 
 
- auto *ddtsptrsv = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
+ auto *ddtsptrsv = new SpTRSVDDT(L1_ord_csr, A, sol_sptrsv, config,
                                  "SpMV DDT", num_threads, coarsening_p, initial_cut);
  auto ddt_exec =  ddtsptrsv->evaluate();
  auto ddt_analysis = ddtsptrsv->get_analysis_bw();
 
 
- if (config.header){
+ if (config.header || true) {
   std::cout<<"Matrix,";
   std::cout<<"SpMV Base,SpMV DDT Executor,Prune Time,FOD "
              "Time,Mining Time,";
@@ -68,12 +68,12 @@ int main(int argc, char* argv[]){
  std::cout<<config.matrixPath <<","<<
           sptrsv_baseline.elapsed_time<<",";
  std::cout<<sptrsv_par.elapsed_time<<",";
-//          ddt_exec.elapsed_time<<",";
-// ddt_analysis.print_t_array();
+ std::cout <<         ddt_exec.elapsed_time<<",";
+ ddt_analysis.print_t_array();
  std::cout<<"\n";
 
  delete A;
- delete L1_ord;
+// delete L1_ord;
  delete L1_ord_csr;
  delete []sol;
 

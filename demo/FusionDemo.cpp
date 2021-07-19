@@ -31,10 +31,10 @@ namespace sym_lib{
  bool is_equal(int beg_idx, int end_idx, const type* vec1, const type* vec2,
                double eps=1e-8){
   for (int i = beg_idx; i < end_idx; ++i) {
-   if(std::isnan(vec1[i]) || std::isnan(vec2[i]))
+   if (std::isnan(vec1[i]) || std::isnan(vec2[i]))
     return false;
    if constexpr (std::is_same_v<type, double> || std::is_same_v<type, float>) {
-        if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { std::cout << i << std::endl; return false; }
+        if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { std::cout << i << '\n' << vec1[i] << "," << vec2[i] << std::endl; return false; }
    } else {
        if (!is_generic_equal(vec1[i],vec2[i], eps))
            return false;
@@ -91,7 +91,7 @@ namespace sym_lib{
 
  void FusionDemo::testing() {
   if(correct_x_)
-   if (!is_equal(0, n_, correct_x_, x_,1e-1))
+   if (!is_equal(0, n_, correct_x_, x_,1e-8))
     PRINT_LOG(name_ + " code != reference solution.\n");
  }
 

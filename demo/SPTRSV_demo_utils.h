@@ -157,64 +157,38 @@ namespace sparse_avx{
  class SpTRSVDDT : public SpTRSVSerial {
  protected:
   DDT::Config config;
-  std::vector<DDT::Codelet*> cl;
+  std::vector<DDT::Codelet*>* cl;
   DDT::GlobalObject d;
   sym_lib::timing_measurement analysis_breakdown;
   int lp_, cp_, ic_;
 
-  void build_set() override{
+  void build_set() override {
    // Allocate memory and generate global object
+      this->cl = new std::vector<DDT::Codelet*>[1]();
    d = DDT::init(config);
    analysis_breakdown.start_timer();
-   auto *sm = new SpTRSVModel(L1_csc_->n, L1_csc_->m, L1_csc_->nnz, L1_csc_->p,
-                              L1_csc_->i, lp_, cp_, ic_);
    sym_lib::timing_measurement t1;
    t1.start_timer();
-   auto trs = sm->generate_3d_trace(lp_);
-   auto tgen = t1.measure_elapsed_time();
-   auto trace_array = trs[0][0]->MemAddr(); // This is the array that has traces
-#ifdef PRINT
-   std::cout<<"\n---- Trace list: ---\n";
-   for (int i = 0; i < sm->_final_level_no; ++i) {
-    for (int j = 0; j < sm->_wp_bounds[i]; ++j) {
-     std::cout<<i<<" , "<<j<<" :\n";
-     trs[i][j]->print();
-     std::cout<<"\n\n";
-    }
-   }
-   std::cout<<": "<<tgen<<"\n";
-#endif
-   // Prune memory trace
-   //pruneIterations(d.mt, 10);
 
    analysis_breakdown.start_timer();
-   // Compute and Mark regions for PSC-3
-   //computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d);
+
+   DDT::inspectCodelets(d,this->cl,config);
 
    analysis_breakdown.start_timer();
-   // Mine trace and profile
-   //mineDifferences(d.mt.ip, d.mt.ips, d.c, d.d);
-   // Generate Codes
-   // DDT::generateSource(d);
-   //DDT::inspectCodelets(d, cl);
-
-   // for(auto ii : cl){
-   //  ii->print();
-   // }
 
    analysis_breakdown.measure_elapsed_time();
-   free_trace_list(trs, sm->_final_level_no, sm->_wp_bounds);
-   delete sm;
   }
 
   sym_lib::timing_measurement fused_code() override {
+   std::copy(x_in_, x_in_+n_, x_);
    sym_lib::timing_measurement t1;
-   DDT::Args args; args.x = x_in_; args.y = x_;
+   DDT::Args args; args.x = x_; args.y = x_;
    args.r = L1_csr_->m; args.Lp=L1_csr_->p; args.Li=L1_csr_->i;
    args.Lx = L1_csr_->x;
    t1.start_timer();
    // Execute codes
-   //DDT::executeCodelets(cl, config, args);
+   DDT::executeCodelets(this->cl, config, args);
+
    t1.measure_elapsed_time();
    //copy_vector(0,n_,x_in_,x_);
    return t1;
@@ -232,7 +206,7 @@ namespace sparse_avx{
 
   ~SpTRSVDDT(){
    DDT::free(d);
-   DDT::free(cl);
+//   DDT::free(cl);
   }
  };
 
