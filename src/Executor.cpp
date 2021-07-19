@@ -17,11 +17,10 @@
  */
 
 #include "DDT.h"
-//#include "smp_def.h"
-//#include "io.h"
 #include "Executor.h"
 #include "Inspector.h"
 #include "SpMVGenericCode.h"
+#include "GenericCodeletsSpTRSV.h"
 #include "ParseMatrixMarket.h"
 
 #include <chrono>
@@ -29,6 +28,20 @@
 
 namespace DDT {
 void executeSpTRSCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& c) {
+    // Read matrix
+    auto m = readSparseMatrix<CSR>(c.matrixPath);
+
+    // Setup memory
+    auto x = new double[m.c]();
+    for (int i = 0; i < m.c; i++) {
+        x[i] = 1;
+    }
+
+    // Execute SpMV
+    DDT::sptrsv_generic(m.r, m.Lp, m.Li, m.Lx, x, cl, c);
+
+    // Clean up memory
+    delete[] x;
 }
 
 void executeSPMVCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& c) {
@@ -43,7 +56,7 @@ void executeSPMVCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config
   auto y = new double[m.r]();
 
   // Execute SpMV
-  spmv_generic(m.r, m.Lp, m.Li, m.Lx, x, y, cl, c);
+  DDT::spmv_generic(m.r, m.Lp, m.Li, m.Lx, x, y, cl, c);
 
   // Clean up memory
   delete[] x;
@@ -57,6 +70,13 @@ const double* x, double* y) {
   // Execute SpMV
   spmv_generic(r, Lp, Li, Lx, x, y, cl, cfg);
  }
+
+ void executeSPTRSVCodelets(const std::vector<DDT::Codelet*>* cl, const
+ DDT::Config& cfg, const int r, const int* Lp, const int *Li, const double*Lx,
+                             double* x, double* y) {
+     sptrsv_generic(r, Lp, Li, Lx, x, cl, cfg);
+ }
+
 
 /**
  * @brief Executes codelets found in a matrix performing a computation
@@ -83,7 +103,7 @@ void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& cf
     .y);
     break;
    case DDT::OP_SPTRS:
-    executeSpTRSCodelets(cl, cfg);
+       executeSPTRSVCodelets(cl, cfg, args.r, args.Lp, args.Li, args.Lx, args.x, args.y);
    default:
     break;
   }

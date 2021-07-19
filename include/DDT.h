@@ -27,12 +27,18 @@ namespace DDT {
     OP_SPMV,
     OP_SPTRS
   };
+ 
+  enum StorageFormat {
+    CSR_SF,
+    CSC_SF
+  };
 
   enum CodeletType {
     TYPE_FSC,
     TYPE_PSC1,
     TYPE_PSC2,
-    TYPE_PSC3
+    TYPE_PSC3,
+    TYPE_PSC3_M
   };
 
   struct PatternDAG {
@@ -52,6 +58,7 @@ namespace DDT {
     NumericalOperation op;
     int header;
     int nThread;
+    StorageFormat sf;
   };
 
   struct GlobalObject {
@@ -67,7 +74,7 @@ namespace DDT {
 
   void printTuple(int* t, std::string&& s);
 
-  GlobalObject init(DDT::Config& config);
+  GlobalObject init(const DDT::Config& config);
 
   void free(DDT::GlobalObject d);
 

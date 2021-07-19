@@ -15,10 +15,12 @@
  *
  * =====================================================================================
  */
+#include "DDT.h"
 #include "Input.h"
 
-#include <iostream>
 #include <stdlib.h>
+
+#include <iostream>
 
 #include "cxxopts.hpp"
 
@@ -33,10 +35,11 @@ namespace DDT {
     cxxopts::Options options("DDT", "Generates vectorized code from memory streams");
 
     options.add_options()
-      ("h,help", "Help")
+      ("h,help", "Prints help text")
       ("m,matrix", "Path to matrix market file.", cxxopts::value<std::string>())
       ("n,numerical_operation", "Numerical operation being performed on "
                                 "matrix.", cxxopts::value<std::string>())
+      ("s,storage_format", "Storage format for matrix", cxxopts::value<std::string>())
       ("t,threads", "Number of parallel threads", cxxopts::value<int>()->default_value("1"))
       ("d,header", "prints header or not.");
 
@@ -55,9 +58,14 @@ namespace DDT {
       std::cout << "'numerical_operation' is manditory argument. Use --help" << std::endl;
       exit(0);
     }
+    if (!result.count("storage_format")) {
+      std::cout << "'storage_format' is manditory argument. Use --help" << std::endl;
+      exit(0);
+    }
 
     auto matrixPath = result["matrix"].as<std::string>();
     auto operation = result["numerical_operation"].as<std::string>();
+    auto storageFormat = result["storage_format"].as<std::string>();
     auto nThreads = result["threads"].as<int>();
 
     NumericalOperation op;
@@ -69,11 +77,21 @@ namespace DDT {
       std::cout << "'numerical_operation' must be passed in as one of: ['SPMV', 'SPTRS']" << std::endl;
       exit(0);
     }
+
+    DDT::StorageFormat sf;
+    if (storageFormat == "CSR") {
+      sf = DDT::CSR_SF;
+    } else if (storageFormat == "CSC") {
+      sf = DDT::CSC_SF;
+    } else {
+      std::cout << "'storage_format' must be passed in as one of: ['CSC', 'CSR']" << std::endl;
+      exit(0);
+    }
     int header = 0;
    if (result.count("header")) {
     header = 1;
    }
 
-   return Config{ matrixPath, op, header, nThreads };
+   return Config{ matrixPath, op, header, nThreads, sf };
   }
 }

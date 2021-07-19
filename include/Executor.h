@@ -32,6 +32,10 @@ void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& c)
 
     void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config&
     c, Args& args);
+
+    void executeSPTRSVCodelets(const std::vector<DDT::Codelet*>* cl, const
+    DDT::Config& cfg, const int r, const int* Lp, const int *Li, const double*Lx,
+                                double* x, double* y);
 }
 
 #endif  // DDT_EXECUTOR

@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -11,16 +12,91 @@
 #include <utility>
 #include <vector>
 
+#include <metis_interface.h>
+#include <sparse_utilities.h>
+
 typedef std::vector<std::tuple<int,int,double>> RawMatrix;
 
 #ifndef DDT_PARSEMATRIXMARKET_H
 #define DDT_PARSEMATRIXMARKET_H
 
+namespace DDT {
 class Matrix {
   public:
     Matrix() = default;
     Matrix(int r, int c, int nz) : r(r), c(c), nz(nz), Lp(nullptr), Li(nullptr), Lx(nullptr) {}
-    ~Matrix() = default;
+    ~Matrix(){
+        delete[] this->Lp;
+        delete[] this->Li;
+        delete[] this->Lx;
+    };
+
+    // Assignment operator
+    Matrix& operator=(Matrix&& lhs)  noexcept {
+        this->nz = lhs.nz;
+        this->r = lhs.r;
+        this->c = lhs.c;
+
+        this->Lp = lhs.Lp;
+        this->Li = lhs.Li;
+        this->Lx = lhs.Lx;
+
+        lhs.Lp = nullptr;
+        lhs.Li = nullptr;
+        lhs.Lx = nullptr;
+
+        return *this;
+    }
+
+    // Assignment operator
+    Matrix& operator=(const Matrix& lhs) {
+        if (this == &lhs) {
+            return *this;
+        }
+        this->nz = lhs.nz;
+        this->r = lhs.r;
+        this->c = lhs.c;
+
+        this->Lp = new int[lhs.r+1]();
+        this->Li = new int[lhs.nz]();
+        this->Lx = new double[lhs.nz]();
+
+        std::memcpy(this->Lp, lhs.Lp, sizeof(int) * lhs.r+1);
+        std::memcpy(this->Li, lhs.Li, sizeof(int) * lhs.nz);
+        std::memcpy(this->Lx, lhs.Lx, sizeof(double) * lhs.nz);
+
+        return *this;
+    }
+
+    // Copy Constructor
+    Matrix(const Matrix& lhs) {
+        this->r = lhs.r;
+        this->c = lhs.c;
+        this->nz = lhs.nz;
+
+        this->Lp = new int[lhs.r+1]();
+        this->Li = new int[lhs.nz]();
+        this->Lx = new double[lhs.nz]();
+
+        std::memcpy(this->Lp, lhs.Lp, sizeof(int) * lhs.r+1);
+        std::memcpy(this->Li, lhs.Li, sizeof(int) * lhs.nz);
+        std::memcpy(this->Lx, lhs.Lx, sizeof(double) * lhs.nz);
+    }
+
+    // Move Constructor
+    Matrix(Matrix&& lhs)  noexcept {
+        this->r = lhs.r;
+        this->c = lhs.c;
+        this->nz = lhs.nz;
+
+        this->Lp = lhs.Lp;
+        this->Lx = lhs.Lx;
+        this->Li = lhs.Li;
+
+        lhs.Lp = nullptr;
+        lhs.Li = nullptr;
+        lhs.Lx = nullptr;
+    }
 
     int r;
     int c;
@@ -37,6 +113,11 @@ class CSR : public Matrix {
         delete[] this->Lp;
         delete[] this->Li;
         delete[] this->Lx;
+    }
+    CSR(int r, int c, int nz) : Matrix(r,c,nz) {
+        this->Lp = new int[r+1]();
+        this->Li = new int[nz]();
+        this->Lx = new double[nz]();
     }
     CSR(int r, int c, int nz, RawMatrix m) : Matrix(r,c,nz) {
       this->Lp = new int[r+1]();
@@ -75,8 +156,36 @@ class CSR : public Matrix {
       }
     }
 
+    // Copy constructor
+    CSR (const CSR& lhs) : Matrix(lhs.r, lhs.c, lhs.nz) {
+        this->Lp = new int[lhs.r+1]();
+        this->Li = new int[lhs.nz]();
+        this->Lx = new double[lhs.nz]();
+
+        std::memcpy(this->Lp, lhs.Lp, sizeof(int) * lhs.r+1);
+        std::memcpy(this->Li, lhs.Li, sizeof(int) * lhs.nz);
+        std::memcpy(this->Lx, lhs.Lx, sizeof(double) * lhs.nz);
+    }
+
+    // Assignment operator
+    CSR& operator=(const CSR& lhs) {
+        this->nz = lhs.nz;
+        this->r = lhs.r;
+        this->c = lhs.c;
+
+        this->Lp = new int[lhs.r+1]();
+        this->Li = new int[lhs.nz]();
+        this->Lx = new double[lhs.nz]();
+
+        std::memcpy(this->Lp, lhs.Lp, sizeof(int) * lhs.r+1);
+        std::memcpy(this->Li, lhs.Li, sizeof(int) * lhs.nz);
+        std::memcpy(this->Lx, lhs.Lx, sizeof(double) * lhs.nz);
+
+        return *this;
+    }
+
     // Move Constructor
-    CSR (CSR&& lhs)  noexcept : Matrix(lhs) {
+    CSR (CSR&& lhs)  noexcept : Matrix(lhs.r, lhs.c, lhs.nz) {
         this->Lp = lhs.Lp;
         this->Lx = lhs.Lx;
         this->Li = lhs.Li;
@@ -93,6 +202,11 @@ public:
         delete[] this->Lp;
         delete[] this->Li;
         delete[] this->Lx;
+    }
+    CSC(int r, int c, int nz) : Matrix(r,c,nz) {
+        this->Lp = new int[c + 1]();
+        this->Li = new int[nz]();
+        this->Lx = new double[nz]();
     }
     CSC(int r, int c, int nz, RawMatrix m) : Matrix(r,c,nz) {
         this->Lp = new int[c+1]();
@@ -178,9 +292,52 @@ public:
         this->Lp = lpc;
     }
 
+    // Assignment copy operator
+    CSC& operator=(CSC&& lhs)  noexcept {
+        this->Lp = lhs.Lp;
+        this->Lx = lhs.Lx;
+        this->Li = lhs.Li;
+
+        lhs.Lp = nullptr;
+        lhs.Li = nullptr;
+        lhs.Lx = nullptr;
+
+        return *this;
+    }
+
+    // Assignment operator
+    CSC& operator=(const CSC& lhs) {
+        if (&lhs == this) {
+            return *this;
+        }
+        this->r  = lhs.r;
+        this->c  = lhs.c;
+        this->nz = lhs.nz;
+
+        this->Lp = new int[lhs.r+1]();
+        this->Li = new int[lhs.nz]();
+        this->Lx = new double[lhs.nz]();
+
+        std::copy(lhs.Lp, lhs.Lp+lhs.r+1, this->Lp);
+        std::copy(lhs.Lx, lhs.Lx+lhs.nz, this->Lx);
+        std::copy(lhs.Li, lhs.Li+lhs.nz, this->Li);
+
+        return *this;
+    }
+
+    // Copy Constructor
+    CSC (CSC& lhs) : Matrix(lhs.r, lhs.c, lhs.nz) {
+        this->Lp = new int[lhs.r+1]();
+        this->Li = new int[lhs.nz]();
+        this->Lx = new double[lhs.nz]();
+
+        std::copy(lhs.Lp, lhs.Lp+lhs.r+1, this->Lp);
+        std::copy(lhs.Lx, lhs.Lx+lhs.nz, this->Lx);
+        std::copy(lhs.Li, lhs.Li+lhs.nz, this->Li);
+    }
 
     // Move Constructor
-    CSC (CSC&& lhs)  noexcept : Matrix(lhs) {
+    CSC (CSC&& lhs)  noexcept : Matrix(lhs.r, lhs.c, lhs.nz) {
             this->Lp = lhs.Lp;
             this->Lx = lhs.Lx;
             this->Li = lhs.Li;
@@ -191,96 +348,125 @@ public:
     }
 };
 
-template <class type>
-auto readSparseMatrix(const std::string& path) -> type {
-    std::ifstream file;
-    file.open(path, std::ios_base::in);
-    if (!file.is_open()) {
-        std::cout << "File could not be found..." << std::endl;
-        exit(1);
+template <typename T>
+Matrix copySymLibMatrix(Matrix& m, T symLibMat) {
+    // Convert matrix back into regular format
+    m.nz = symLibMat->nnz;
+    m.r  = symLibMat->m;
+    m.c  = symLibMat->n;
+
+    std::copy(symLibMat->p, symLibMat->p+symLibMat->m+1, m.Lp);
+    std::copy(symLibMat->i, symLibMat->i+symLibMat->nnz, m.Li);
+    std::copy(symLibMat->x, symLibMat->x+symLibMat->nnz, m.Lx);
+}
+
+template <typename type>
+auto reorderSparseMatrix(const CSC& m) {
+    // Organize data into sympiler based format
+    auto symMat = new sym_lib::CSC(m.r, m.c, m.nz, m.Lp, m.Li, m.Lx);
+    symMat->stype = 1;
+    int  *perm;
+
+    // Permute matrix into new configuration
+//    sym_lib::CSC* A_full = sym_lib::make_full(symMat);
+//    sym_lib::metis_perm_general(symMat, perm);
+    sym_lib::CSC *Lt = transpose_symmetric(symMat, perm);
+    sym_lib::CSC *L1_ord = transpose_symmetric(Lt, NULLPNTR);
+
+    Matrix nm;
+    if (std::is_same_v<CSR,type>) {
+        auto csr = sym_lib::csc_to_csr(L1_ord);
+        nm = CSR(csr->m, csr->n, csr->nnz);
+        copySymLibMatrix(nm, csr);
+    } else if (std::is_same_v<CSC,type>) {
+        nm = CSR(L1_ord->m, L1_ord->n, L1_ord->nnz);
+        copySymLibMatrix(nm, L1_ord);
+    } else {
+        throw std::runtime_error("Error: Unsupported matrix type in template instruction");
     }
 
-    RawMatrix mat;
+    // Clean up memory
+    delete Lt;
+    delete[]perm;
+    delete symMat;
+    delete L1_ord;
 
+    return nm;
+}
 
-  int rows,cols,nnz;
+template <class type>
+Matrix readSparseMatrix(const std::string& path) {
+  std::ifstream file;
+  file.open(path, std::ios_base::in);
+  if (!file.is_open()) {
+    std::cout << "File could not be found..." << std::endl;
+    exit(1);
+  }
+  RawMatrix mat;
+
+  int rows, cols, nnz;
   std::string line;
   bool parsed = false;
   bool sym = false;
   if (file.is_open()) {
     std::stringstream ss;
-    std::getline (file,line);
+    std::getline(file, line);
     ss << line;
     // Junk
     std::getline(ss, line, ' ');
-      // Matrix
-      std::getline(ss, line, ' ');
-      // Type
-      std::getline(ss, line, ' ');
-      if (line != "coordinate") {
-          std::cout << "Can only process real matrices..." << std::endl;
-          exit(1);
-      }
-      std::getline(ss, line, ' ');
+    // Matrix
+    std::getline(ss, line, ' ');
+    // Type
+    std::getline(ss, line, ' ');
+    if (line != "coordinate") {
+      std::cout << "Can only process real matrices..." << std::endl;
+      exit(1);
+    }
+    std::getline(ss, line, ' ');
 
-      // Symmetric
-      std::getline(ss, line, ' ');
-      if (line == "symmetric") {
-          sym = true;
-      }
+    // Symmetric
+    std::getline(ss, line, ' ');
+    if (line == "symmetric") {
+//      sym = true;
+    }
 
-      ss.clear();
+    ss.clear();
 
     while (std::getline (file,line)) {
-          if (line[0] == '%') { continue; }
-          if (!parsed) {
-              ss << line;
-              ss >> rows >> cols >> nnz;
-              parsed = true;
-              mat.reserve(sym ? nnz*2-rows : nnz);
-              ss.clear();
-              break;
-          }
+      if (line[0] == '%') { continue; }
+      if (!parsed) {
+        ss << line;
+        ss >> rows >> cols >> nnz;
+        parsed = true;
+        mat.reserve(sym ? nnz*2-rows : nnz);
+        ss.clear();
+        break;
       }
-      for (int i = 0; i < nnz; i++) {
-          std::getline (file,line);
-          std::tuple<int,int,double> t;
-          ss << line;
-          int row, col;
-          double value;
-          ss >> row >> col >> value;
-          mat.emplace_back(std::make_tuple(row-1,col-1,value));
-          if (sym && col != row) {
-              mat.emplace_back(std::make_tuple(col - 1, row - 1, value));
-          }
-          ss.clear();
+    }
+    for (int i = 0; i < nnz; i++) {
+      std::getline (file,line);
+      std::tuple<int,int,double> t;
+      ss << line;
+      int row, col;
+      double value;
+      ss >> row >> col >> value;
+      mat.emplace_back(std::make_tuple(row-1,col-1,value));
+      if (sym && col != row) {
+        mat.emplace_back(std::make_tuple(col - 1, row - 1, value));
+      }
+      ss.clear();
     }
   }
   file.close();
 
-  // Turn into CSC
-//  CSC cc(rows, cols, nnz, mat);
-
-  // Make full
-//  if (sym) {
-//      cc.make_full();
-//  }
-
-
-  // Turn into CSR
-//  RawMatrix mat2;
-//  mat2.reserve(cc.nz);
-//  for (int i = 0; i < cc.c; i++) {
-//      for (int j = cc.Lp[i]; j < cc.Lp[i+1]; j++) {
-//          mat2.emplace_back(cc.Li[j], i, cc.Lx[j]);
-//      }
-//  }
-
-  auto ccr = CSR( rows, cols, sym ? nnz*2-rows : nnz, mat);
-
-  if (std::is_same<type, CSR>::value) {
-    return ccr;
+  if (std::is_same_v<type, CSR>) {
+    return CSR( rows, cols, sym ? nnz*2-rows : nnz, mat);
+  } else if (std::is_same_v<type, CSC>) {
+    return CSC( rows, cols, sym ? nnz*2-rows : nnz, mat);
+  } else {
+    throw std::runtime_error("Error: Matrix storage format not supported");
   }
+}
 }
 
 #endif  //DDT_PARSEMATRIXMARKET_H

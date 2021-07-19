@@ -110,6 +110,21 @@ namespace DDT {
   void print()override;
  };
 
+    struct PSCT3V1_M:public Codelet{
+        /**
+         * y[RS] = Ax[FNL:FNL+NN] * x[CIO[0],CIO[NN]];
+         */
+//  int row_start, num_nnz; //RS, NN
+//  int first_nnz_loc; //FNL
+//  int *coli_offset;// CIO
+
+        PSCT3V1_M(int rs, int nn, int fnl, int *cio ): Codelet(rs, -1, 1, nn, fnl,
+                                                             -1, 1, cio, true){};
+
+        CodeletType get_type() override{return CodeletType::TYPE_PSC3_M;}
+        void print()override;
+    };
+
 
 
     template <DDT::CodeletType Type>
@@ -126,12 +141,11 @@ namespace DDT {
             }
             d.o[--d.onz] = c->ct[2];
 
-
             int oo = c->ct[0];
             int mo = c->ct[1];
 
-            // Generate codelet
-            cl.emplace_back(new DDT::PSCT3V1(oo,colWidth,mo,d.o+d.onz));
+            auto cornerT = c->ct+(colWidth-1)*TPR;
+            cl.emplace_back(new DDT::PSCT3V1(oo,colWidth,mo,d.o+d.onz,cornerT[0] == cornerT[2]));
         }
 
         if constexpr (Type == DDT::TYPE_FSC) {
