@@ -29,6 +29,7 @@ namespace sparse_avx{
   Trace*** generate_3d_trace(int num_threads) override;
   int _final_level_no;
   std::vector<int> _wp_bounds;
+  std::vector<DDT::Codelet*>** _cl;
 
  };
 

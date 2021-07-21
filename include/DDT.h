@@ -46,12 +46,6 @@ namespace DDT {
     TYPE_PSC3_V2
   };
 
-  struct PatternDAG {
-    int sz;
-    int* ct;
-    int* pt;
-    CodeletType t;
-  };
 
   struct MemoryTrace {
     int** ip;
@@ -73,6 +67,8 @@ namespace DDT {
     int* o;
     int onz;
     int* tb;
+    sparse_avx::SpTRSVModel* sm;
+    sparse_avx::Trace*** t;
   };
 
   void generateSource(DDT::GlobalObject& d);
@@ -84,6 +80,8 @@ namespace DDT {
       int lp = cfg.nThread, cp = 2, ic = 1;
       auto *sm = new sparse_avx::SpTRSVModel(m->m, m->n, m->nnz, m->p, m->i, lp, cp, ic);
       auto trs = sm->generate_3d_trace(cfg.nThread);
+
+      return GlobalObject{  {},  nullptr, nullptr, nullptr, 0, nullptr, sm, trs };
   }
 
   template <typename Matrix>
