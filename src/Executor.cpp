@@ -109,4 +109,20 @@ void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& cf
   }
  }
 
+    void executeParallelCodelets(const DDT::GlobalObject& d, const DDT::Config&
+    cfg, Args& args) {
+        switch (cfg.op) {
+            case DDT::OP_SPMV:
+//                executeSPMVCodelets(cl, cfg,args.r, args.Lp, args.Li, args.Lx, args.x, args
+//                        .y);
+                break;
+            case DDT::OP_SPTRS:
+//                executeParallelSPTRSVCodelets(d, cfg, args.r, args.Lp, args.Li, args.Lx, args.x, args.y);
+            default:
+                break;
+        }
+    }
+
+
+
 }

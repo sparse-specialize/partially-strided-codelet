@@ -14,11 +14,15 @@ int main(int argc, char** argv) {
   auto d = DDT::init(config);
 
   // Parse into run-time Codelets
-  auto cl = new std::vector<DDT::Codelet*> [config.nThread]();
-  DDT::inspectSerialTrace(d, cl, config);
+  if (config.nThread == 1) {
+      auto cl = new std::vector<DDT::Codelet *>[config.nThread]();
+      DDT::inspectSerialTrace(d, cl, config);
 
-  // Execute codes
-  DDT::executeCodelets(cl, config);
+      // Execute codes
+      DDT::executeCodelets(cl, config);
+  } else {
+      DDT::inspectParallelTrace(d, config);
+  }
 
   // Clean up
   DDT::free(d);

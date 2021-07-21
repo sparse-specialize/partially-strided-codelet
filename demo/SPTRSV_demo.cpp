@@ -55,10 +55,10 @@ int main(int argc, char* argv[]){
     auto sptrsv_parv2 =  spspv2->evaluate();
 
 
-// auto *ddtsptrsv = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
-//                                 "SpMV DDT", num_threads, coarsening_p, initial_cut);
-// auto ddt_exec =  ddtsptrsv->evaluate();
-// auto ddt_analysis = ddtsptrsv->get_analysis_bw();
+ auto *ddtsptrsv = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
+                                 "SpMV DDT", num_threads, coarsening_p, initial_cut);
+ auto ddt_exec =  ddtsptrsv->evaluate();
+ auto ddt_analysis = ddtsptrsv->get_analysis_bw();
 
  auto* sptrsv_vec1 = new SpTRSVSerialVec1(L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec1");
  auto sptrsv_vec1_exec = sptrsv_vec1->evaluate();

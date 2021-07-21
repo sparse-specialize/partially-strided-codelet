@@ -455,6 +455,7 @@ namespace DDT {
         for (int i = 0; i < cfg.nThread; i++) {
             for (auto const& c : lst[i]) {
                 switch (c->get_type()) {
+#ifdef O3
                     case DDT::CodeletType::TYPE_FSC:
                         fsc_2D2R_sptrs(x, Ax, c->row_offset, c->first_nnz_loc,
                                        c->lbr, c->lbr + c->row_width, c->lbc,
@@ -471,6 +472,7 @@ namespace DDT {
                                           c->lbr + c->row_width, c->col_width,
                                           c->col_offset);
                         break;
+#endif
                     case DDT::CodeletType::TYPE_PSC3:
                         psc_t3_1D1R_sptrs(x, Ax, c->offsets, c->lbr,
                                           c->first_nnz_loc, c->col_width,c->multi_stmt);

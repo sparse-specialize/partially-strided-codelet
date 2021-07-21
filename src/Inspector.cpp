@@ -61,33 +61,70 @@ namespace DDT {
       case DDT::TYPE_PSC3:
         generateCodeletType<DDT::TYPE_PSC3>(d,c,cl);
         break;
-      case DDT::TYPE_PSC3V2:
-        generateCodeletType<DDT::TYPE_PSC3V2>(d,c,cl);
+      case DDT::TYPE_PSC3_V2:
+        generateCodeletType<DDT::TYPE_PSC3_V2>(d,c,cl);
         break;
       default:
         break;
     }
   }
 
+  inline int nnzLessThan(int ii, int** ip, int ub) {
+      for (int i = 0; i < ip[ii+1]-ip[ii]; i++) {
+          if (ub < ip[ii][i*3]) {
+              return i;
+          }
+      }
+  }
+
   /**
-   * @brief Finds bounds for type3v2 codelets
-   *
+   * @brief Finds bounds for PSC3v3
    * @param ip
    * @param c
    * @param i
-   * @param adj
    * @return
    */
-  int findType3v2Bounds(int** ip, DDT::PatternDAG* c, int i) {
+  int findType3VBounds(int** ip, DDT::PatternDAG* c, int i) {
       int cnl = ((ip[i])-ip[0]) / TPR;
-      while (hasAdacentIteration(i--, ip)/* && nCodelets == 0 */) {
-          int cn = ((ip[i])-ip[0]) / TPR;
-          c[cnl].pt = c[cn].ct;
-          cnl = cn;
-      }
-      c[cnl].t  = DDT::TYPE_PSC3V2;
+      int VW = 4; // Vector width
 
-      return i;
+      int ii = i;
+      bool hai = hasAdacentIteration(ii--, ip);
+      auto TH = nnzLessThan(ii, ip,ip[ii-1][0]);
+      TH = TH - (TH % VW);
+      if (hai) {
+          while (nnzInIteration(ii, ip) > 8 &&
+                 nnzLessThan(ii, ip, ip[ii - 1][0]) >
+                         TH /* && nCodelets == 0 */) {
+              int cn = ((ip[ii]) - ip[0]) / TPR;
+              c[cnl].pt = c[cn].ct;
+              cnl = cn;
+          }
+      } else {
+          while (nnzInIteration(ii, ip) > 8 && hasAdacentIteration(ii, ip) &&
+                 nnzLessThan(ii, ip, ip[ii - 1][0]) >
+                 TH /* && nCodelets == 0 */) {
+              ii--;
+              int cn = ((ip[ii]) - ip[0]) / TPR;
+              c[cnl].pt = c[cn].ct;
+              cnl = cn;
+          }
+      }
+
+      if (ii == i) {
+          // TODO: FIX HERE FOR PREVIOUS TYPE
+          c[cnl].t = DDT::TYPE_PSC3;
+      } else if (hai) {
+          c[cnl].ct = c[cnl].pt;
+          c[cnl].t  = DDT::TYPE_PSC3_V1;
+          c[cnl].sz = TH;
+      } else {
+          c[cnl].ct = c[cnl].pt;
+          c[cnl].t  = DDT::TYPE_PSC3_V2;
+          c[cnl].sz = TH;
+      }
+
+      return ii;
   }
 
   /**
@@ -118,19 +155,23 @@ namespace DDT {
  * @brief Different iteration sections processed differently
  *
  */
-    void pruneIterations(int** ip, int ips, bool* adj) {
+    void pruneIterations(int** ip, int ips) {
         // @TODO: CALCULATE MIN-MAX OVERLAP TO GET DIMENSION OF REUSE
         for (int i = 0; i < ips-1; i++) {
             if (ip[i+1]-ip[i] == 1) {
-                adj[i+1] = true;
+//                adj[i+1] = true;
             }
-            while (ip[i+1] - ip[i] == 1) {
-            }
+//            while (ip[i+1] - ip[i] == 1) {
+//            }
         }
     }
 
     inline bool hasAdacentIteration(int i, int** ip) {
         return ip[i][0] - ip[i-1][0];
+    }
+
+    inline int nnzInIteration(int i, int** ip) {
+        return (ip[i+1] - ip[i]) / TPR;
     }
 
     void generateCodeletsFromParallelDag(DDT::GlobalObject& d, const DDT::Config& cfg) {
@@ -147,16 +188,10 @@ namespace DDT {
                             //  generateCodelet(d, d.c + cn, cc);
                             // j += (d.c[cn].sz + 1) * TPR;
                         } else if (tr->_c[cn].ct != nullptr) { // Generate (TYPE_PSC3)
-                            if (/*nCodelets == 0 && */ hasAdacentIteration(i, tr->_iter_pt)) {
-                                i  = findType3v2Bounds(tr->_iter_pt, tr->_c, i);
-                                cn = ((tr->_iter_pt[i] + j) - tr->_iter_pt[0]) / TPR;
-                                generateCodelet(d, tr->_c + cn, cc);
-                            } else {
-                                j += findType3Bounds(
-                                        d, i, j, d.mt.ip[i + 1] - d.mt.ip[i]);
-                                cn = ((tr->_iter_pt[i] + j) - tr->_iter_pt[0]) / TPR;
-                                generateCodelet(d, d.c + cn, cc);
-                            }
+                            i  = findType3VBounds(tr->_iter_pt, tr->_c, i);
+                            cn = ((tr->_iter_pt[i] + j) - tr->_iter_pt[0]) / TPR;
+                            generateCodelet(d, tr->_c + cn, cc);
+                            break;
                         } else {
                             j += TPR * (d.c[cn].sz + 1);
                         }
@@ -211,7 +246,7 @@ namespace DDT {
         for (int i = 0; i < d.sm->_final_level_no; i++) {
             for (int j = 0; j < d.sm->_wp_bounds[i]; ++j) {
                 // Calculate overlap for each iteration
-                DDT::pruneIterations(d.t[i][j]->_iter_pt, d.t[i][j]->_ni, 0);
+                DDT::pruneIterations(d.t[i][j]->_iter_pt, d.t[i][j]->_ni);
 #ifdef O3
                 // Compute first order differences
                 DDT::computeParallelizedFOD(d.t[i][j]->_iter_pt, d.t[i][j]->_ni, d.d, 1);
@@ -234,7 +269,7 @@ namespace DDT {
    */
   void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
       // Calculate overlap for each iteration
-      DDT::pruneIterations(d.mt, 10);
+      DDT::pruneIterations(d.mt.ip, d.mt.ips);
 
       // Compute first order differences
       DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, cfg.nThread);

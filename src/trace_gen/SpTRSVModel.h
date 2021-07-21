@@ -5,6 +5,7 @@
 #ifndef DDT_SPTRSVMODEL_H
 #define DDT_SPTRSVMODEL_H
 
+#include "DDTCodelets.h"
 #include "PolyModel.h"
 
 namespace sparse_avx{
@@ -30,7 +31,6 @@ namespace sparse_avx{
   int _final_level_no;
   std::vector<int> _wp_bounds;
   std::vector<DDT::Codelet*>** _cl;
-
  };
 
 }
