@@ -15,8 +15,10 @@ namespace sparse_avx{
   _pre_alloc = false;
  }
 
- Trace::Trace(int n, int *ma, int *oc, int np):_num_trace(n),_mem_addr(ma),
- _op_codes(oc), _num_partitions(np){
+ Trace::Trace(int n, int *ma, int *oc, int np, int ni):_num_trace(n),_mem_addr(ma),
+  _op_codes(oc), _num_partitions(np), _ni(ni) {
+  _iter_pt = new int*[ni+1]();
+  _c = new DDT::PatternDAG[n]();
   _pre_alloc = true;
  }
 

@@ -15,8 +15,7 @@ int main(int argc, char** argv) {
 
   // Parse into run-time Codelets
   auto cl = new std::vector<DDT::Codelet*> [config.nThread]();
-  DDT::inspectCodelets(d, cl, config);
-
+  DDT::inspectSerialTrace(d, cl, config);
 
   // Execute codes
   DDT::executeCodelets(cl, config);

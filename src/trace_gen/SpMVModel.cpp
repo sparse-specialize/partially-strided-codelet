@@ -41,20 +41,20 @@ namespace sparse_avx{
   bnd_row_array[1] = bnd_row;
   nnz_bounds[0] = _Ap[bnd_row];
   trace_list[0] = new Trace(nnz_bounds[0], tr_list_mm_array, tr_list_oc_array,
-                            num_threads);
+                            num_threads,bnd_row_array[1]-0);
   for (int i = 1; i < num_threads-1; ++i) {
    nnz_bounds[i] = nnz_bounds[i-1] + nnz_part;
    bnd_row = closest_row(nnz_bounds[i], _Ap, bnd_row);
    bnd_row_array[i+1] = bnd_row;
    nnz_bounds[i] = _Ap[bnd_row];
    trace_list[i] = new Trace(nnz_bounds[i], tr_list_mm_array+3*nnz_bounds[i-1],
-                             tr_list_oc_array+nnz_bounds[i-1], num_threads);
+                             tr_list_oc_array+nnz_bounds[i-1], num_threads, bnd_row_array[i+1]-bnd_row_array[i]);
   }
   nnz_bounds[num_threads-1] = _nnz;
   bnd_row_array[num_threads] = _num_rows;
   trace_list[num_threads-1] = new Trace(_nnz-nnz_bounds[num_threads-2],
                                         tr_list_mm_array+3*nnz_bounds[num_threads-2],
-                            tr_list_oc_array+nnz_bounds[num_threads-2], num_threads);
+                            tr_list_oc_array+nnz_bounds[num_threads-2], num_threads, bnd_row_array[num_threads]-bnd_row_array[num_threads-1]);
 #pragma omp parallel for //default(none) shared(num_threads, bnd_row_array, \
   trace_list)
   for (int ii = 0; ii < num_threads; ++ii) {

@@ -4,6 +4,7 @@
 
 #include "SpTRSVModel.h"
 
+#include <Inspector.h>
 #include <cassert>
 #include <lbc.h>
 #include <sparse_io.h>
@@ -55,6 +56,15 @@ namespace sparse_avx {
                                    _final_level_ptr,_final_part_no,
                                    _final_part_ptr,_final_node_ptr,
                                    parts, cp_, ic_, cost);
+
+     if (true) {
+         auto part_no = _final_level_ptr[_final_level_no];
+         // Sorting the w partitions
+         for (int i = 0; i < part_no; ++i) {
+             std::sort(_final_node_ptr + _final_part_ptr[i],
+                       _final_node_ptr + _final_part_ptr[i + 1]);
+         }
+     }
 #ifdef PRINT
   sym_lib::print_hlevel_set("HLevel set:\n", _final_level_no,
                              _final_level_ptr,
@@ -77,20 +87,20 @@ namespace sparse_avx {
   bnd_row_array[1] = bnd_row;
   nnz_bounds[0] = _Ap[bnd_row];
   trace_list[0] = new Trace(nnz_bounds[0], tr_list_mm_array, tr_list_oc_array,
-                            num_threads);
+                            num_threads, bnd_row_array[1]);
   for (int i = 1; i < num_threads-1; ++i) {
    nnz_bounds[i] = nnz_bounds[i-1] + nnz_part;
    bnd_row = closest_row(nnz_bounds[i], _Ap, bnd_row);
    bnd_row_array[i+1] = bnd_row;
    nnz_bounds[i] = _Ap[bnd_row];
    trace_list[i] = new Trace(nnz_bounds[i], tr_list_mm_array+3*nnz_bounds[i-1],
-                             tr_list_oc_array+nnz_bounds[i-1], num_threads);
+                             tr_list_oc_array+nnz_bounds[i-1], num_threads, bnd_row_array[i+1]-bnd_row_array[i]);
   }
   nnz_bounds[num_threads-1] = _nnz;
   bnd_row_array[num_threads] = _num_rows;
   trace_list[num_threads-1] = new Trace(_nnz-nnz_bounds[num_threads-2],
                                         tr_list_mm_array+3*nnz_bounds[num_threads-2],
-                                        tr_list_oc_array+nnz_bounds[num_threads-2], num_threads);
+                                        tr_list_oc_array+nnz_bounds[num_threads-2], num_threads, bnd_row_array[num_threads]-bnd_row_array[num_threads-1]);
 #pragma omp parallel for //default(none) shared(num_threads, bnd_row_array, \
   trace_list)
   for (int ii = 0; ii < num_threads; ++ii) {
@@ -114,8 +124,10 @@ namespace sparse_avx {
  Trace*** SpTRSVModel::generate_3d_trace(int num_threads) {
      iteration_space_prunning(num_threads);
   Trace*** trace_list = new Trace**[_final_level_no];
+  this->_cl = new std::vector<DDT::Codelet*>*[_final_level_no]();
   for (int i = 0; i < _final_level_no; ++i) {
    trace_list[i] = new Trace*[num_threads];
+   _cl[i] = new std::vector<DDT::Codelet*>[num_threads]();
   }
   auto *tr_list_mm_array = new int[3*_nnz + 3*_num_cols]();
   auto *tr_list_oc_array = new int[_nnz + _num_cols]();
@@ -141,7 +153,7 @@ namespace sparse_avx {
     trace_list[i][wp] = new Trace(nnz_bounds[n_part]-nnz_bounds[n_part-1],
                                   tr_list_mm_array+3*nnz_bounds[n_part-1],
                                tr_list_oc_array+nnz_bounds[n_part-1],
-                              num_threads);
+                              num_threads, cols_wp);
     n_part++;
     wp++;
    }
@@ -157,12 +169,14 @@ namespace sparse_avx {
     if(cols_wp <= 0)
      continue;
     int cnt = 0;
-    for (int r = _final_part_ptr[l]; r < _final_part_ptr[l + 1]; ++r) {
-
+    int iCnt = 0;
+       for (int r = _final_part_ptr[l]; r < _final_part_ptr[l + 1]; ++r) {
      int i = _final_node_ptr[r];
      assert(i < _num_rows);
-     for (int j = _Ap[i]; j < _Ap[i + 1]-1; ++j) {
+     trace_list[ii][wp]->_iter_pt[iCnt++] = trace_list[ii][wp]->_mem_addr + 3 * cnt;
+      for (int j = _Ap[i]; j < _Ap[i + 1]-1; ++j) {
       auto cur_adr = trace_list[ii][wp]->_mem_addr + 3 * cnt;
+      trace_list[ii][wp]->_c[cnt].ct = cur_adr;
       cur_adr[0] = i;
       cur_adr[1] = j;
       cur_adr[2] = _Ai[j];
@@ -173,6 +187,7 @@ namespace sparse_avx {
       //std::cout<<ii<<" - "<<cnt<<" : "<<i <<", "<<j<<", "<<_Ai[j]<<"\n";
      }
      auto cur_adr = trace_list[ii][wp]->_mem_addr + 3 * cnt;
+     trace_list[ii][wp]->_c[cnt].ct = cur_adr;
      cur_adr[0] = i;
      cur_adr[1] = _Ap[i+1]-1;
      cur_adr[2] = i;
@@ -181,17 +196,12 @@ namespace sparse_avx {
      assert(cnt < trace_list[ii][wp]->_num_trace);
      cnt++; // next trace
     }
+    std::cout << iCnt << std::endl;
+    trace_list[ii][wp]->_iter_pt[iCnt] = trace_list[ii][wp]->_mem_addr + 3 * cnt;
     wp++; // next w-partition
    }
   }
-     if (true){
-         auto part_no = _final_level_ptr[_final_level_no];
-         // Sorting the w partitions
-         for (int i = 0; i < part_no; ++i) {
-             std::sort(_final_node_ptr + _final_part_ptr[i],
-                       _final_node_ptr + _final_part_ptr[i + 1]);
-         }
-     }
+
   delete []nnz_bounds;
   return trace_list;
  }

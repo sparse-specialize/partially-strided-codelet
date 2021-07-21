@@ -28,6 +28,22 @@ namespace DDT{
   __m128      f128;
  };
 
+    enum CodeletType {
+        TYPE_FSC,
+        TYPE_PSC1,
+        TYPE_PSC2,
+        TYPE_PSC3,
+        TYPE_PSC3_M,
+        TYPE_PSC3V2,
+    };
+
+    struct PatternDAG {
+        int sz;
+        int* ct;
+        int* pt;
+        CodeletType t;
+    };
+
 #endif
 
 #ifdef __AVX512CD__
