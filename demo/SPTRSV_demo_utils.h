@@ -430,7 +430,11 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
    analysis_breakdown.start_timer();
 
-   DDT::inspectSerialTrace(d,this->cl,config);
+   if (config.nThread == 1) {
+       DDT::inspectSerialTrace(d, this->cl, config);
+   } else {
+       DDT::inspectParallelTrace(d, config);
+   }
 
    analysis_breakdown.start_timer();
 
@@ -444,8 +448,13 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    args.r = L1_csr_->m; args.Lp=L1_csr_->p; args.Li=L1_csr_->i;
    args.Lx = L1_csr_->x;
    t1.start_timer();
+
    // Execute codes
-   DDT::executeCodelets(this->cl, config, args);
+   if (config.nThread == 1) {
+       DDT::executeCodelets(this->cl, config, args);
+   } else {
+       DDT::executeParallelCodelets(d, config, args);
+   }
 
    t1.measure_elapsed_time();
    //copy_vector(0,n_,x_in_,x_);

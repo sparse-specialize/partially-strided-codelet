@@ -28,6 +28,9 @@
 
 namespace DDT {
 
+    void executeParallelCodelets(const DDT::GlobalObject& d, const DDT::Config&
+    cfg, Args& args);
+
 void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& c);
 
     void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config&

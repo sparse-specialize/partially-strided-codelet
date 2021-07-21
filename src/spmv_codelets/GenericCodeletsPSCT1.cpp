@@ -114,6 +114,7 @@ namespace DDT{
   __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
   return _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
  }
+
  void psc_t1_2D4R(double *y, const double *Ax, const double *x,
                               const int *offset, int lb, int ub, int lbc, int ubc){
   v4df_t Lx_reg, Lx_reg2, Lx_reg3, Lx_reg4, result, result2, result3,

@@ -57,25 +57,6 @@ namespace DDT {
     getSpMVIterationThreadBounds(bnd_row_array, nThreads, m);
   }
 
-
-  /**
-   * @brief Generates memory trace divided up into level sets for SpTRSV
-   *
-   * @param m Matrix to be used to generate level set memory trace for SpTRSV
-   * @param nThreads Number of threads to be used by inspector/executor
-   *
-   * @return Global object containing memory allocations
-   */
-    DDT::GlobalObject allocateLevelSetSpTRSVMemoryTrace(const Matrix& m, int nThreads) {
-        int lp = nThreads, cp = 2, ic = 1;
-        auto *sm = new sparse_avx::SpTRSVModel(m.r, m.c, m.nz, m.Lp, m.Li, lp, cp, ic);
-        auto tdt = sm->generate_3d_trace(nThreads);
-
-         for (auto const& bnd : sm->_wp_bounds) {
-             std::cout << bnd << std::endl;
-         }
-    }
-
   /**
    * @brief Allocates memory trace for serial SpTRSV calculation
    * @param m Matrix

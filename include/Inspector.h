@@ -15,7 +15,11 @@
 #include <cassert>
 
 namespace DDT {
+
+
     inline bool hasAdacentIteration(int i, int** ip);
+
+
 
     template <DDT::CodeletType Type>
     void generateCodeletType(DDT::GlobalObject& d, DDT::PatternDAG* c, std::vector<Codelet*>& cl) {
@@ -143,6 +147,8 @@ namespace DDT {
     inline int nnzInIteration(int i, int** ip);
 
     void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg);
+
+    void inspectParallelTrace(DDT::GlobalObject& d, const DDT::Config& cfg);
 
         void free(std::vector<DDT::Codelet*>& cl);
 }
