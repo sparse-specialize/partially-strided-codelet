@@ -15,9 +15,16 @@ set(SYMPILER_LBC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/")
 set(SYMPILER_UTIL "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/utils/")
 set(SPARSE_UTIL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/utils/")
 set(SYMPILER_UTIL_INC "${SYMPILER_UTIL}/includes/")
+set(METIS_INCLUDE_DIRS ${SYMPILER_LBC_ROOT}/external/metis/metis_shared-src/include)
+set(METIS_INCLUDES ${SYMPILER_LBC_ROOT}/external/metis/metis_shared-src/include)
+set(METIS_LIBRARY_DIRS ${SYMPILER_LBC_ROOT}/lib/)
+set(METIS_LIBRARIES ${SYMPILER_LBC_ROOT}/lib/libmetis.so)
+
 include_directories(${SYMPILER_LBC_ROOT}/src/includes/
         ${SYMPILER_UTIL}/external/includes/
-        ${SYMPILER_UTIL_INC})
+        ${SYMPILER_UTIL_INC}
+        ${METIS_INCLUDE_DIRS} ${METIS_INCLUDES}
+        )
 
 set(Sympiler_Libs
         "lbc;metis;")
@@ -28,7 +35,7 @@ set(Sympiler_SRC
         "${SYMPILER_UTIL}/metis_interface.cpp"
         "${SYMPILER_UTIL}/external/mmio.cpp")
 
-find_package(METIS OPTIONAL_COMPONENTS)
+add_definitions(-DMETIS)
 if(METIS_FOUND)
     add_definitions(-DMETIS)
     set(METIS_SOURCE_FILES "${SPARSE_UTIL_SRC}/metis_interface.cpp")

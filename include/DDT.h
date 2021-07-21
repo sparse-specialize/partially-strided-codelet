@@ -19,6 +19,10 @@
 #ifndef DDT_DDT
 #define DDT_DDT
 
+#include "SpTRSVModel.h"
+
+#include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -74,7 +78,27 @@ namespace DDT {
 
   void printTuple(int* t, std::string&& s);
 
-  GlobalObject init(const DDT::Config& config);
+  template <typename Matrix>
+  DDT::GlobalObject allocateExternalSpTRSVMemoryTrace(const Matrix* m, const DDT::Config& cfg) {
+      int lp = cfg.nThread, cp = 2, ic = 1;
+      auto *sm = new sparse_avx::SpTRSVModel(m->m, m->n, m->nnz, m->p, m->i, lp, cp, ic);
+      auto trs = sm->generate_3d_trace(cfg.nThread);
+  }
+
+  template <typename Matrix>
+  DDT::GlobalObject init(const Matrix* m, const DDT::Config& cfg) {
+      // Allocate memory and generate trace
+      DDT::GlobalObject d;
+      if (cfg.op == OP_SPTRS) {
+          d = DDT::allocateExternalSpTRSVMemoryTrace(m, cfg);
+      } else {
+          throw std::runtime_error("Error: Operation not currently supported");
+      }
+
+      return d;
+  }
+
+    GlobalObject init(const DDT::Config& config);
 
   void free(DDT::GlobalObject d);
 

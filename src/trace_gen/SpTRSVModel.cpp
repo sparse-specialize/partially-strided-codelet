@@ -2,11 +2,13 @@
 // Created by kazem on 7/13/21.
 //
 
+#include "SpTRSVModel.h"
+
 #include <cassert>
 #include <lbc.h>
 #include <sparse_io.h>
-#include "SpTRSVModel.h"
-namespace sparse_avx{
+
+namespace sparse_avx {
 
  SpTRSVModel::SpTRSVModel():SectionPolyModel() {}
 
@@ -110,7 +112,7 @@ namespace sparse_avx{
 
 
  Trace*** SpTRSVModel::generate_3d_trace(int num_threads) {
-  iteration_space_prunning(num_threads);
+     iteration_space_prunning(num_threads);
   Trace*** trace_list = new Trace**[_final_level_no];
   for (int i = 0; i < _final_level_no; ++i) {
    trace_list[i] = new Trace*[num_threads];
@@ -130,7 +132,7 @@ namespace sparse_avx{
     //trace_list[i][wp] = new Trace()
     for (int k = _final_part_ptr[j]; k < _final_part_ptr[j + 1]; ++k) {
      int cn = _final_node_ptr[k];
-     nnz_wp += _Ap[cn+1] - _Ap[cn];
+     nnz_wp += (_Ap[cn+1]-1) - _Ap[cn];
     }
     nnz_bounds[n_part] = nnz_bounds[n_part-1] + nnz_wp + cols_wp;
     //std::cout<<"created for: "<<i<<" , "<< wp<< " at: "<<
@@ -159,7 +161,7 @@ namespace sparse_avx{
 
      int i = _final_node_ptr[r];
      assert(i < _num_rows);
-     for (int j = _Ap[i]; j < _Ap[i + 1]; ++j) {
+     for (int j = _Ap[i]; j < _Ap[i + 1]-1; ++j) {
       auto cur_adr = trace_list[ii][wp]->_mem_addr + 3 * cnt;
       cur_adr[0] = i;
       cur_adr[1] = j;
@@ -182,8 +184,15 @@ namespace sparse_avx{
     wp++; // next w-partition
    }
   }
+     if (true){
+         auto part_no = _final_level_ptr[_final_level_no];
+         // Sorting the w partitions
+         for (int i = 0; i < part_no; ++i) {
+             std::sort(_final_node_ptr + _final_part_ptr[i],
+                       _final_node_ptr + _final_part_ptr[i + 1]);
+         }
+     }
   delete []nnz_bounds;
   return trace_list;
  }
-
 }

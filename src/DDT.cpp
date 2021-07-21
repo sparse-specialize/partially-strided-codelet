@@ -175,6 +175,7 @@ namespace DDT {
     std::cout << s << ": (" << t[0] << "," << t[1] << "," << t[2] << ")" << std::endl;
   }
 
+
   /** 
    * @brief Initializes memory and trace for framework
    *
