@@ -33,8 +33,8 @@ namespace DDT{
         TYPE_PSC1,
         TYPE_PSC2,
         TYPE_PSC3,
-        TYPE_PSC3_M,
-        TYPE_PSC3V2,
+        TYPE_PSC3_V1,
+        TYPE_PSC3_V2
     };
 
     struct PatternDAG {
