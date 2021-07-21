@@ -18,11 +18,13 @@ add_executable(sptrsv_demo
         ${Sympiler_SRC}
         ${METIS_SOURCE_FILES} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC}
         )
+link_directories(${METIS_LIBRARY})
 
-if(METIS_FOUND)
+# TODO: Fix this hack
+if(TRUE)
     target_link_libraries(sptrsv_demo
             lbc
-            ${METIS_LIBRARIES}
+            metis
             )
 else()
     target_link_libraries(sptrsv_demo
