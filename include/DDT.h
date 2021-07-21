@@ -37,16 +37,6 @@ namespace DDT {
     CSC_SF
   };
 
-  enum CodeletType {
-    TYPE_FSC,
-    TYPE_PSC1,
-    TYPE_PSC2,
-    TYPE_PSC3,
-    TYPE_PSC3_V1,
-    TYPE_PSC3_V2
-  };
-
-
   struct MemoryTrace {
     int** ip;
     int ips;

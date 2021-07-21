@@ -430,7 +430,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
    analysis_breakdown.start_timer();
 
-   DDT::inspectCodelets(d,this->cl,config);
+   DDT::inspectSerialTrace(d,this->cl,config);
 
    analysis_breakdown.start_timer();
 
