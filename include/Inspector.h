@@ -136,7 +136,7 @@ namespace DDT {
   (br,-1,rw,cw,-1,-1,co,ros,rls,NULL){};
 
   PSCT3V2(int br, int bc, int rw, int cw, int co, int *ros, int *rls, bool ms):
-  Codelet(br,bc,rw,cw,-1,-1,co,ros,rls,NULL,ms){};
+  Codelet(br,-1,rw,cw,-1,-1,co,ros,rls,NULL,ms){};
 
   CodeletType get_type() override{return CodeletType::TYPE_PSC3_V1;}
   void print()override;
@@ -156,7 +156,7 @@ namespace DDT {
   *lbr): Codelet(br,-1,rw,cw,-1,-1,co,ros,rls,lbr){};
 
   PSCT3V3(int br, int bc, int rw, int cw, int co, int *ros, int *rls, int *lbr,
-  bool ms):Codelet(br,bc,rw,cw,-1,-1,co,ros,rls,lbr,ms){};
+  bool ms):Codelet(br,-1,rw,cw,-1,-1,co,ros,rls,lbr,ms){};
 
   CodeletType get_type() override{return CodeletType::TYPE_PSC3_V2;}
   void print()override;
