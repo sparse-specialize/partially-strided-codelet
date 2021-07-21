@@ -21,7 +21,7 @@ add_executable(sptrsv_demo
 link_directories(${METIS_LIBRARY})
 
 # TODO: Fix this hack
-if(TRUE)
+if(METIS_FOUND)
     target_link_libraries(sptrsv_demo
             lbc
             metis

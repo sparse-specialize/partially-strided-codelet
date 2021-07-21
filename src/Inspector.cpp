@@ -31,6 +31,14 @@ namespace DDT {
               [col_width]<<"]\n";
     }
 
+ void PSCT3V2::print() {
+  std::cout<<"NOT IMPLEMENTED\n";
+ }
+
+ void PSCT3V3::print() {
+  std::cout<<"NOT IMPLEMENTED\n";
+ }
+
  int TPR = 3;
  /**
   * @brief Generates run-time codelet object based on type in DDT::PatternDAG
