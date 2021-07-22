@@ -111,24 +111,10 @@ namespace sparse_avx{
 
   void build_set() override{
    // Allocate memory and generate global object
+   this->cl = new std::vector<DDT::Codelet*>[config.nThread];
    d = DDT::init(config);
    analysis_breakdown.start_timer();
-   // Prune memory trace
-   pruneIterations(d.mt, 10);
-
-   analysis_breakdown.start_timer();
-   // Compute and Mark regions for PSC-3
-   DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, config.nThread);
-
-   analysis_breakdown.start_timer();
-   // Mine trace and profile
-   DDT::mineDifferences(d.mt.ip, d.c, d.d, config.nThread, d.tb);
-
-   analysis_breakdown.start_timer();
-   // Form Codelets
-   this->cl = new std::vector<DDT::Codelet*>[config.nThread];
-   DDT::generateCodeletsFromPattern(d, cl, config);
-
+   DDT::inspectSerialTrace(d, cl, config);
    analysis_breakdown.measure_elapsed_time();
   }
 

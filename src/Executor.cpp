@@ -79,7 +79,7 @@ const double* x, double* y) {
 
  void executeParallelSPTRSVCodelets(const DDT::GlobalObject& d, const DDT::Config& cfg, int r, const int* Lp, const int* Li, const double* Lx, double* x) {
      for (int i = 0; i < d.sm->_final_level_no; ++i) {
-//#pragma omp parallel for num_threads(cfg.nThread)
+#pragma omp parallel for num_threads(cfg.nThread)
          for (int j = 0; j < d.sm->_wp_bounds[i]; ++j) {
              auto& cc = d.sm->_cl[i][j];
              sptrsv_generic(r, Lp, Li, Lx, x, cc, cfg);

@@ -16,12 +16,12 @@ int main(int argc, char* argv[]){
  A = sym_lib::read_mtx(config.matrixPath);
  auto  *sol = new double[A->n]();
  for (int i = 0; i < A->n; i++) {
-     sol[i] = i;
+     sol[i] = 1;
  }
 // std::fill_n(sol, A->n, 1);
  sym_lib::CSC *A_full=NULLPNTR;
  sym_lib::CSR *B=NULLPNTR, *L_csr=NULLPNTR;
- if(A->stype < 0){
+ if (A->stype < 0) {
   A_full = sym_lib::make_full(A);
   B = sym_lib::csc_to_csr(A_full);
  } else{
@@ -46,9 +46,7 @@ int main(int argc, char* argv[]){
 
  if (config.header){
   std::cout<<"Matrix,";
-  std::cout<<"SpMV Base,SpMV Parallel Base,SpMV DDT Executor,Prune Time,FOD "
-             "Time,Mining Time,"
-             ;
+  std::cout<<"SpMV Base,SpMV Parallel Base,SpMV DDT Executor,Inspector Time";
   std::cout<<"\n";
  }
 

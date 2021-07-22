@@ -132,6 +132,8 @@ namespace DDT {
 
     inline int nnzInIteration(int i, int** ip);
 
+    void generateCodeletsFromSerialDAG(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg);
+
     void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg);
 
     void inspectParallelTrace(DDT::GlobalObject& d, const DDT::Config& cfg);

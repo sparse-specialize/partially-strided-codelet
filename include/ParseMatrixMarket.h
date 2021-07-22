@@ -349,7 +349,7 @@ public:
 };
 
 template <typename T>
-Matrix copySymLibMatrix(Matrix& m, T symLibMat) {
+void copySymLibMatrix(Matrix& m, T symLibMat) {
     // Convert matrix back into regular format
     m.nz = symLibMat->nnz;
     m.r  = symLibMat->m;
@@ -368,9 +368,9 @@ auto reorderSparseMatrix(const CSC& m) {
     int  *perm;
 
     // Permute matrix into new configuration
-//    sym_lib::CSC* A_full = sym_lib::make_full(symMat);
-//    sym_lib::metis_perm_general(symMat, perm);
-    sym_lib::CSC *Lt = transpose_symmetric(symMat, perm);
+    sym_lib::CSC* A_full = sym_lib::make_full(symMat);
+    sym_lib::metis_perm_general(A_full, perm);
+    sym_lib::CSC *Lt = transpose_symmetric(A_full, perm);
     sym_lib::CSC *L1_ord = transpose_symmetric(Lt, NULLPNTR);
 
     Matrix nm;
@@ -427,7 +427,7 @@ Matrix readSparseMatrix(const std::string& path) {
     // Symmetric
     std::getline(ss, line, ' ');
     if (line == "symmetric") {
-//      sym = true;
+      sym = true;
     }
 
     ss.clear();
@@ -458,6 +458,17 @@ Matrix readSparseMatrix(const std::string& path) {
     }
   }
   file.close();
+
+#ifdef METISA
+    auto ccc = CSC( rows, cols, sym ? nnz*2-rows : nnz, mat);
+    if (std::is_same_v<type, CSR>) {
+        return reorderSparseMatrix<CSR>(ccc);
+    } else if (std::is_same_v<type, CSC>) {
+        return reorderSparseMatrix<CSC>(ccc);
+    } else {
+        throw std::runtime_error("Error: Matrix storage format not supported");
+    }
+#endif
 
   if (std::is_same_v<type, CSR>) {
     return CSR( rows, cols, sym ? nnz*2-rows : nnz, mat);

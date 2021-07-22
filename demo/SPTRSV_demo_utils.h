@@ -123,9 +123,9 @@ namespace sparse_avx{
 
 void sptrsv_csr_lbc_vec_2(int n, int *Lp, int *Li, double *Lx, double *x,
                      int level_no, int *level_ptr,
-                     int *par_ptr, int *partition) {
+                     int *par_ptr, int *partition, int nThreads) {
     for (int i1 = 0; i1 < level_no; ++i1) {
-#pragma omp  parallel
+#pragma omp  parallel num_threads(nThreads)
         {
 #pragma omp for schedule(auto)
             for (int j1 = level_ptr[i1]; j1 < level_ptr[i1 + 1]; ++j1) {
@@ -186,9 +186,9 @@ void sptrsv_csr_lbc_vec_2(int n, int *Lp, int *Li, double *Lx, double *x,
 
 void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
                         int level_no, int *level_ptr,
-                        int *par_ptr, int *partition) {
+                        int *par_ptr, int *partition, int nThreads) {
         for (int i1 = 0; i1 < level_no; ++i1) {
-#pragma omp  parallel
+#pragma omp  parallel num_threads(nThreads)
             {
 #pragma omp for schedule(auto)
                 for (int j1 = level_ptr[i1]; j1 < level_ptr[i1 + 1]; ++j1) {
@@ -320,7 +320,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    t1.start_timer();
    sptrsv_csr_lbc(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_,
                   final_level_no, fina_level_ptr,
-                  final_part_ptr, final_node_ptr);
+                  final_part_ptr, final_node_ptr, num_threads_);
    t1.measure_elapsed_time();
    sym_lib::copy_vector(0,n_,x_in_,x_);
    return t1;
@@ -376,7 +376,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
             t1.start_timer();
             sparse_avx::sptrsv_csr_lbc_vec_2(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_,
                            final_level_no, fina_level_ptr,
-                           final_part_ptr, final_node_ptr);
+                           final_part_ptr, final_node_ptr, num_threads_);
             t1.measure_elapsed_time();
             sym_lib::copy_vector(0,n_,x_in_,x_);
             return t1;

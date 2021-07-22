@@ -21,8 +21,8 @@
 using namespace sparse_avx;
 int main(int argc, char* argv[]){
  auto config = DDT::parseInput(argc, argv);
- int num_threads = 8;
- int coarsening_p = 4; int initial_cut=1;
+ int num_threads = config.nThread;
+ int coarsening_p = 5; int initial_cut=1;
  sym_lib::CSC *A;
  A = sym_lib::read_mtx(config.matrixPath);
  auto  *sol = new double[A->n]();
@@ -32,13 +32,18 @@ int main(int argc, char* argv[]){
 
 #ifdef METIS
     //We only reorder L since dependency matters more in l-solve.
-    A_full = sym_lib::make_full(A);
-    sym_lib::metis_perm_general(A_full, perm);
-    sym_lib::CSC *Lt = transpose_symmetric(A, perm);
-    sym_lib::CSC *L1_ord = transpose_symmetric(Lt, NULLPNTR);
-    delete Lt;
-    delete A_full;
-    delete[]perm;
+    sym_lib::CSC *L1_ord;
+    if (A->stype < 0) {
+     A_full = sym_lib::make_full(A);
+     sym_lib::metis_perm_general(A_full, perm);
+     sym_lib::CSC *Lt = transpose_symmetric(A, perm);
+     L1_ord = transpose_symmetric(Lt, NULLPNTR);
+     delete Lt;
+     delete A_full;
+     delete[] perm;
+ } else {
+    L1_ord = A;
+ }
 #endif
    sym_lib::CSR *L1_ord_csr = sym_lib::csc_to_csr(L1_ord);
 
@@ -71,10 +76,9 @@ int main(int argc, char* argv[]){
     auto sptrsv_vec2_exec = sptrsv_vec2->evaluate();
 
 
- if (config.header || true) {
+ if (config.header) {
   std::cout<<"Matrix,";
-  std::cout<<"SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV Parallel,SpTRSV Vec2 Parallel, SpTRSV DDT Executor,Prune Time,FOD "
-             "Time,Mining Time,";
+  std::cout<<"SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV Parallel,SpTRSV Vec2 Parallel, SpTRSV DDT Executor, Inspector_Time";
   std::cout<<"\n";
  }
 

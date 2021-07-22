@@ -275,9 +275,6 @@ namespace DDT {
 
     void generateCodeletsFromParallelDag(const sparse_avx::Trace* tr, std::vector<DDT::Codelet*>& cc, const DDT::Config& cfg) {
                 for (int i = tr->_ni-1; i >= 0; --i) {
-                    for (int j = 0; j < tr->_iter_pt[i+1]-tr->_iter_pt[i]; j+=3) {
-                        printTuple(tr->_iter_pt[i]+j, "OT");
-                    }
                     for (int j = 0; j < tr->_iter_pt[i+1]-tr->_iter_pt[i]; ++j) {
                         int cn = ((tr->_iter_pt[i] + j) - tr->_iter_pt[0]) / TPR;
                         if (tr->_c[cn].pt != nullptr && tr->_c[cn].ct != nullptr) {
@@ -311,7 +308,7 @@ namespace DDT {
      * @param cl Pointer to containers for codelets for each thread
      * @param cfg Configuration object for inspector/executor
      */
-    void generateCodeletsFromPattern(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
+    void generateCodeletsFromSerialDAG(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
         //#pragma omp parallel for num_threads(c.nThread) default(none) shared(TPR, cl, d, c, std::cout)
         for (int t = 0; t < cfg.nThread; t++) {
             auto& cc = cl[t];
@@ -324,7 +321,7 @@ namespace DDT {
                         j += (d.c[cn].sz + 1) * TPR;
                     } else if (d.c[cn].ct != nullptr) {
                         // Generate (TYPE_PSC3)
-                        if (/* nCodelets == 0*/ true) {
+                        if (/* nCodelets == 0*/ false) {
                             int iEnd = findType3VBounds(d.mt.ip, d.c, i);
                             cn = ((d.mt.ip[i]) - d.mt.ip[0]) / TPR;
                             generateFullRowCodeletType(i, d.mt.ip, d.mt.ips, d.c, d.c + cn, cc);
@@ -341,6 +338,9 @@ namespace DDT {
                     }
                 }
             }
+            std::sort(cc.begin(), cc.end(), [](DDT::Codelet* lhs, DDT::Codelet* rhs) {
+              return lhs->first_nnz_loc < rhs->first_nnz_loc;
+            });
         }
     }
 
@@ -381,19 +381,18 @@ namespace DDT {
   void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
       // Calculate overlap for each iteration
       DDT::pruneIterations(d.mt.ip, d.mt.ips);
-#ifdef O3
-      // Compute first order differences
-      DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, cfg.nThread);
+//#ifdef O3
+      if (cfg.op == DDT::OP_SPMV) {
+          // Compute first order differences
+          DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, cfg.nThread);
 
-      // Mine trace for codelets
-      DDT::mineDifferences(d.mt.ip, d.c, d.d, cfg.nThread, d.tb);
-#endif
+          // Mine trace for codelets
+          DDT::mineDifferences(d.mt.ip, d.c, d.d, cfg.nThread, d.tb);
+      }
+//#endif
       // Generate codelets from pattern DAG
-      DDT::generateCodeletsFromPattern(d, cl, cfg);
+      DDT::generateCodeletsFromSerialDAG(d, cl, cfg);
 
-      std::sort(cl[0].begin(), cl[0].end(), [](DDT::Codelet* lhs, DDT::Codelet* rhs) {
-          return lhs->first_nnz_loc < rhs->first_nnz_loc;
-      });
   }
 
 
