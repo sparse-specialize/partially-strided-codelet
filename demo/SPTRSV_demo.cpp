@@ -70,10 +70,18 @@ int main(int argc, char* argv[]){
     auto sptrsv_parv2 =  spspv2->evaluate();
 
 
- auto *ddtsptrsv = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
-                                 "SpMV DDT", num_threads, coarsening_p, initial_cut);
- auto ddt_exec =  ddtsptrsv->evaluate();
- auto ddt_analysis = ddtsptrsv->get_analysis_bw();
+    config.nThread = 1;
+ auto *ddtsptrsvst = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
+                                 "SpMV DDT", 1, coarsening_p, initial_cut);
+ auto ddt_execst =  ddtsptrsvst->evaluate();
+ auto ddt_analysisst = ddtsptrsvst->get_analysis_bw();
+
+ config.nThread = num_threads;
+
+    auto *ddtsptrsvmt = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
+                                    "SpMV DDT", num_threads, coarsening_p, initial_cut);
+    auto ddt_execmt =  ddtsptrsvmt->evaluate();
+    auto ddt_analysismt = ddtsptrsvmt->get_analysis_bw();
 
 
 
@@ -88,7 +96,7 @@ int main(int argc, char* argv[]){
   std::cout<<"Matrix,Threads,Coarsening,";
   std::cout<<"SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, SpTRSV LS "
              "NOVec, SpTRSV Parallel,SpTRSV "
-             "Vec2 Parallel, SpTRSV DDT Executor, Inspector_Time";
+             "Vec2 Parallel, SpTRSV DDT Serial Executor, SpTRSV DDT Parallel Executor, Inspector_Time";
   std::cout<<"\n";
  }
 
@@ -99,7 +107,8 @@ int main(int argc, char* argv[]){
  std::cout<<sptrsv_ls_novec.elapsed_time<<",";
  std::cout<<sptrsv_par.elapsed_time<<",";
  std::cout << sptrsv_parv2.elapsed_time <<",";
- std::cout <<         ddt_exec.elapsed_time<<",";
+ std::cout <<         ddt_execst.elapsed_time<<",";
+    std::cout <<         ddt_execmt.elapsed_time<<",";
 // ddt_analysis.print_t_array();
  std::cout<<"\n";
 
