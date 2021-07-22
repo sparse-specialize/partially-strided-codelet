@@ -124,8 +124,11 @@ namespace DDT {
     auto o = mem+nTuples*2;
 
     // Determine bounds
-    getSpMVIterationThreadBounds(iba, nThreads, m);
-
+    if (nThreads > 1) {
+        getSpMVIterationThreadBounds(iba, nThreads, m);
+    } else {
+        iba[1] = m.r;
+    }
     // Convert matrix into Parallel SPMV Trace
 #pragma omp parallel for num_threads(nThreads)
     for (int t = 0; t < nThreads; t++) {
