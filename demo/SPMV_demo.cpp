@@ -40,21 +40,26 @@ int main(int argc, char* argv[]){
  spsp->set_num_threads(config.nThread);
  auto spmv_p =  spsp->evaluate();
 
- auto *ddtspmv = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT");
- auto ddt_exec =  ddtspmv->evaluate();
- auto ddt_analysis = ddtspmv->get_analysis_bw();
+ int nThread = config.nThread;
+ config.nThread = 1;
+ auto *ddtspmvst = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT ST");
+ auto ddt_execst =  ddtspmvst->evaluate();
+
+    config.nThread = nThread;
+    auto *ddtspmv = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT MT");
+    auto ddt_exec =  ddtspmv->evaluate();
 
  if (config.header){
   std::cout<<"Matrix,";
-  std::cout<<"SpMV Base,SpMV Parallel Base,SpMV DDT Executor,Inspector Time";
+  std::cout<<"SpMV Base,SpMV Parallel Base,SpMV DDT Serial Executor, SpMV DDT Parallel Executor";
   std::cout<<"\n";
  }
 
  std::cout<<config.matrixPath <<","<<
           spmv_baseline.elapsed_time<<","<<
           spmv_p.elapsed_time<<","<<
+          ddt_execst.elapsed_time <<","<<
           ddt_exec.elapsed_time<<",";
- ddt_analysis.print_t_array();
  std::cout<<"\n";
 
  delete A;
