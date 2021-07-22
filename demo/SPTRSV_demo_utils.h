@@ -124,9 +124,9 @@ namespace sparse_avx{
  void sptrsv_csr_levelset(int n, const int *Lp, const int *Li, const double *Lx,
                           double *x,
                           int levels, const int *levelPtr,
-                          const int *levelSet) {
+                          const int *levelSet, int nThreads) {
   for (int l = 0; l < levels; l++) {
-#pragma omp  parallel for schedule(auto)
+#pragma omp  parallel for schedule(auto) num_threads(nThreads)
    for (int k = levelPtr[l]; k < levelPtr[l + 1]; ++k) {
     int i = levelSet[k];
     auto r0 = _mm256_setzero_pd();
@@ -146,9 +146,9 @@ namespace sparse_avx{
   }
  }
  void sptrsv_csr_levelset_novec(int n, const int *Lp, const int *Li, const
- double *Lx, double *x, int levels, const int *levelPtr,const int *levelSet) {
+ double *Lx, double *x, int levels, const int *levelPtr,const int *levelSet, int nThreads) {
   for (int l = 0; l < levels; l++) {
-#pragma omp  parallel for default(shared) schedule(auto)
+#pragma omp  parallel for default(shared) schedule(auto) num_threads(nThreads)
    for (int k = levelPtr[l]; k < levelPtr[l + 1]; ++k) {
     int i = levelSet[k];
     for (int j = Lp[i]; j < Lp[i + 1] - 1; j++) {
@@ -346,7 +346,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    sym_lib::timing_measurement t1;
    t1.start_timer();
    sptrsv_csr_levelset(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_,
-                       level_no, level_ptr, level_set);
+                       level_no, level_ptr, level_set, num_threads_);
    t1.measure_elapsed_time();
    sym_lib::copy_vector(0,n_,x_in_,x_);
    return t1;
@@ -374,7 +374,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    sym_lib::timing_measurement t1;
    t1.start_timer();
    sptrsv_csr_levelset_novec(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_,
-                       level_no, level_ptr, level_set);
+                       level_no, level_ptr, level_set, num_threads_);
    t1.measure_elapsed_time();
    sym_lib::copy_vector(0,n_,x_in_,x_);
    return t1;
