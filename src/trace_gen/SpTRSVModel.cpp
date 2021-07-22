@@ -21,9 +21,10 @@ namespace sparse_avx {
  }
 
 
- SpTRSVModel::SpTRSVModel(int n, int m, int nnz, int *Ap, int *Ai, int lp,
-                          int cp, int ic)
- :_num_rows(n),_num_cols(m),_nnz(nnz),_Ap(Ap), _Ai(Ai), lp_(lp), cp_(cp), ic_
+ SpTRSVModel::SpTRSVModel(int n, int m, int nnz, int *Ap, int *Ai, int *Apt,
+                          int *Ait, int lp, int cp, int ic)
+ :_num_rows(n),_num_cols(m),_nnz(nnz),_Ap(Ap), _Ai(Ai), _Apt(Apt), _Ait(Ait),lp_
+ (lp), cp_(cp), ic_
    (ic) {}
 
 
@@ -51,7 +52,7 @@ namespace sparse_avx {
   for (int i = 0; i < _num_cols; ++i) {
    cost[i] = _Ap[i+1] - _Ap[i];
   }
-  sym_lib::get_coarse_levelSet_DAG_CSC(_num_cols, _Ap, _Ai,
+  sym_lib::get_coarse_levelSet_DAG_CSC(_num_cols, _Apt, _Ait,
                                    _final_level_no,
                                    _final_level_ptr,_final_part_no,
                                    _final_part_ptr,_final_node_ptr,

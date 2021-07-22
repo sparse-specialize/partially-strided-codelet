@@ -423,7 +423,9 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
   void build_set() override {
    // Allocate memory and generate global object
-      if (config.nThread != 1) { d = DDT::init(this->L1_csc_, config); } else {
+      if (config.nThread != 1) { d = DDT::init(this->L1_csr_, this->L1_csc_,
+                                               config); }
+      else {
           d = DDT::init(config);
       }
    analysis_breakdown.start_timer();

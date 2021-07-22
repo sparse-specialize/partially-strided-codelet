@@ -65,10 +65,12 @@ namespace DDT {
 
   void printTuple(int* t, std::string&& s);
 
-  template <typename Matrix>
-  DDT::GlobalObject allocateExternalSpTRSVMemoryTrace(const Matrix* m, const DDT::Config& cfg) {
+  template <typename M0, typename M1>
+  DDT::GlobalObject allocateExternalSpTRSVMemoryTrace(const M0* m0, const
+  M1* m1, const DDT::Config& cfg) {
       int lp = cfg.nThread, cp = 2, ic = 1;
-      auto *sm = new sparse_avx::SpTRSVModel(m->m, m->n, m->nnz, m->p, m->i, lp, cp, ic);
+      auto *sm = new sparse_avx::SpTRSVModel(m0->m, m0->n, m0->nnz, m0->p,
+                                             m0->i, m1->p, m1->i, lp, cp, ic);
       auto trs = sm->generate_3d_trace(cfg.nThread);
 
       for (int i = 0; i < sm->_final_level_no; ++i) {
@@ -80,12 +82,12 @@ namespace DDT {
       return GlobalObject{  {},  nullptr, nullptr, nullptr, 0, nullptr, sm, trs };
   }
 
-  template <typename Matrix>
-  DDT::GlobalObject init(const Matrix* m, const DDT::Config& cfg) {
+  template <typename M0, typename M1>
+  DDT::GlobalObject init(const M0* m0, const M1* m1, const DDT::Config& cfg) {
       // Allocate memory and generate trace
       DDT::GlobalObject d;
       if (cfg.op == OP_SPTRS) {
-          d = DDT::allocateExternalSpTRSVMemoryTrace(m, cfg);
+          d = DDT::allocateExternalSpTRSVMemoryTrace(m0, m1, cfg);
       } else {
           throw std::runtime_error("Error: Operation not currently supported");
       }
