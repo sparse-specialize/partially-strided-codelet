@@ -36,4 +36,4 @@ SCRIPTPATH=/scratch/m/mmehride/kazem/development/DDT/scripts/
 
 
 bash $SCRIPTPATH/run_exp.sh $BINPATH/sptrsv_demo $UFDB 2 20 > $LOGS/sptrsv.csv
-bash $SCRIPTPATH/run_exp.sh $BINPATH/spmv_demo $UFDB 3 20 > $LOGS/spv.csv
+bash $SCRIPTPATH/run_exp.sh $BINPATH/spmv_demo $UFDB 3 20 > $LOGS/spmv.csv
