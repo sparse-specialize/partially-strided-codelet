@@ -196,7 +196,6 @@ namespace sparse_avx {
      assert(cnt < trace_list[ii][wp]->_num_trace);
      cnt++; // next trace
     }
-    std::cout << iCnt << std::endl;
     trace_list[ii][wp]->_iter_pt[iCnt] = trace_list[ii][wp]->_mem_addr + 3 * cnt;
     wp++; // next w-partition
    }

@@ -3,6 +3,7 @@
 //
 #define DBG_LOG
 #define CSV_LOG
+#define PROFILE
 
 #include <cstring>
 #include <cmath>

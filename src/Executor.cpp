@@ -38,7 +38,7 @@ void executeSpTRSCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Confi
     }
 
     // Execute SpMV
-    DDT::sptrsv_generic(m.r, m.Lp, m.Li, m.Lx, x, cl, c);
+    DDT::sptrsv_generic(m.r, m.Lp, m.Li, m.Lx, x, cl[0], c);
 
     // Clean up memory
     delete[] x;
@@ -74,7 +74,17 @@ const double* x, double* y) {
  void executeSPTRSVCodelets(const std::vector<DDT::Codelet*>* cl, const
  DDT::Config& cfg, const int r, const int* Lp, const int *Li, const double*Lx,
                              double* x, double* y) {
-     sptrsv_generic(r, Lp, Li, Lx, x, cl, cfg);
+     sptrsv_generic(r, Lp, Li, Lx, x, cl[0], cfg);
+ }
+
+ void executeParallelSPTRSVCodelets(const DDT::GlobalObject& d, const DDT::Config& cfg, int r, const int* Lp, const int* Li, const double* Lx, double* x) {
+     for (int i = 0; i < d.sm->_final_level_no; ++i) {
+//#pragma omp parallel for num_threads(cfg.nThread)
+         for (int j = 0; j < d.sm->_wp_bounds[i]; ++j) {
+             auto& cc = d.sm->_cl[i][j];
+             sptrsv_generic(r, Lp, Li, Lx, x, cc, cfg);
+         }
+     }
  }
 
 
@@ -117,7 +127,7 @@ void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& cf
 //                        .y);
                 break;
             case DDT::OP_SPTRS:
-//                executeParallelSPTRSVCodelets(d, cfg, args.r, args.Lp, args.Li, args.Lx, args.x, args.y);
+                executeParallelSPTRSVCodelets(d, cfg, args.r, args.Lp, args.Li, args.Lx, args.x);
             default:
                 break;
         }

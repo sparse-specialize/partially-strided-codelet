@@ -9,7 +9,7 @@
 
 namespace DDT {
     void sptrsv_generic(const int n, const int* Lp, const int* Li, const double *Ax, double *x,
-                        const std::vector<DDT::Codelet *> *lst,
+                        const std::vector<DDT::Codelet *>& lst,
                         const DDT::Config &cfg);
 }
 

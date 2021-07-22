@@ -423,7 +423,9 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
   void build_set() override {
    // Allocate memory and generate global object
-   d = DDT::init(this->L1_csc_, config);
+      if (config.nThread != 1) { d = DDT::init(this->L1_csc_, config); } else {
+          d = DDT::init(config);
+      }
    analysis_breakdown.start_timer();
    sym_lib::timing_measurement t1;
    t1.start_timer();
@@ -431,6 +433,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    analysis_breakdown.start_timer();
 
    if (config.nThread == 1) {
+       this->cl = new std::vector<DDT::Codelet*>();
        DDT::inspectSerialTrace(d, this->cl, config);
    } else {
        DDT::inspectParallelTrace(d, config);
@@ -447,16 +450,20 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    DDT::Args args; args.x = x_; args.y = x_;
    args.r = L1_csr_->m; args.Lp=L1_csr_->p; args.Li=L1_csr_->i;
    args.Lx = L1_csr_->x;
-   t1.start_timer();
+
 
    // Execute codes
    if (config.nThread == 1) {
+       t1.start_timer();
        DDT::executeCodelets(this->cl, config, args);
+       t1.measure_elapsed_time();
    } else {
+       t1.start_timer();
        DDT::executeParallelCodelets(d, config, args);
+       t1.measure_elapsed_time();
    }
 
-   t1.measure_elapsed_time();
+
    //copy_vector(0,n_,x_in_,x_);
    return t1;
   }

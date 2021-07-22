@@ -19,29 +19,15 @@ namespace DDT {
 
     inline bool hasAdacentIteration(int i, int** ip);
 
+    void generateCodeletsFromParallelDag(const sparse_avx::Trace* tr, std::vector<DDT::Codelet*>& cc, const DDT::Config& cfg);
 
+    void generateFullRowCodeletType(int i, int** ip, int ips, DDT::PatternDAG* c, DDT::PatternDAG* cc, std::vector<Codelet*>& cl);
 
     template <DDT::CodeletType Type>
     void generateCodeletType(DDT::GlobalObject& d, DDT::PatternDAG* c, std::vector<Codelet*>& cl) {
         int TPR = 3;
 
         // Get codelet type
-        if constexpr (Type == DDT::TYPE_PSC3_V2) {
-            int colWidth = ((c->ct - c->pt) / TPR) + 1;
-
-            while (c->ct != c->pt) {
-                d.o[--d.onz] = c->ct[2];
-                c->ct -= TPR
-                        ;
-            }
-            d.o[--d.onz] = c->ct[2];
-
-            int oo = c->ct[0];
-            int mo = c->ct[1];
-
-            auto cornerT = c->ct+(colWidth-1)*TPR;
-            cl.emplace_back(new DDT::PSCT3V1(oo,colWidth,mo,d.o+d.onz,cornerT[0] == cornerT[2]));
-        }
         if constexpr (Type == DDT::TYPE_PSC3) {
             int colWidth = ((c->ct - c->pt) / TPR) + 1;
 
@@ -55,7 +41,7 @@ namespace DDT {
             int mo = c->ct[1];
 
             auto cornerT = c->ct+(colWidth-1)*TPR;
-            cl.emplace_back(new DDT::PSCT3V1(oo,colWidth,mo,d.o+d.onz,cornerT[0] == cornerT[2]));
+            cl.emplace_back(new DDT::PSCT3V1(oo, colWidth, mo,d.o+d.onz,cornerT[0] == cornerT[2]));
         }
 
         if constexpr (Type == DDT::TYPE_FSC) {

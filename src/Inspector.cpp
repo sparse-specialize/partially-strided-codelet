@@ -39,6 +39,88 @@ namespace DDT {
   std::cout<<"NOT IMPLEMENTED\n";
  }
 
+    void generateFullRowCodeletType(int i, int** ip, int ips, DDT::PatternDAG* c, DDT::PatternDAG* cc, std::vector<Codelet*>& cl) {
+        int TPR = 3;
+        auto type = cc->t;
+        // Get codelet type
+        if (type == DDT::TYPE_PSC3) {
+            int colWidth = ((cc->pt - cc->ct) / TPR) + 1;
+
+            int oo = cc->ct[0];
+            int mo = cc->ct[1];
+            auto cornerT = cc->ct+(colWidth-1)*TPR;
+            assert(cornerT[0] == cornerT[2]);
+
+            int cnt = 0;
+            auto o = new int[colWidth]();
+            while (cc->ct != cc->pt) {
+//                printTuple(cc->ct, "T: ");
+                o[cnt++] = cc->ct[2];
+                cc->ct += TPR;
+            }
+//            printTuple(cc->ct, "T: ");
+            o[cnt] = cc->ct[2];
+
+//            std::cout << std::endl;
+
+            cl.emplace_back(new DDT::PSCT3V1(oo, colWidth, mo,o,true));
+        }
+
+        if (type == DDT::TYPE_PSC3_V1) {
+            int rowCnt = 1;
+            auto ccc = cc;
+            while (ccc->ct != ccc->pt) {
+                int nc = (ccc->pt - ip[0])/TPR;
+                ccc = c + nc;
+                rowCnt++;
+            }
+            auto ro = new int[rowCnt]();
+            auto rls = new int[rowCnt]();
+
+            int cnt = rowCnt;
+            while (cc->ct != cc->pt) {
+                ro[cnt] = cc->ct[1];
+                rls[cnt--] = (ip[i+1] - ip[i])/TPR;
+                int nc = (cc->pt - ip[0])/TPR;
+                cc = c + nc;
+                --i;
+            }
+
+            int oo = c->ct[0];
+            int vo = c->ct[2];
+
+            cl.emplace_back(new DDT::PSCT3V2(oo, vo, rowCnt, c->sz, 0, ro, rls));
+        }
+
+        if (type == DDT::TYPE_PSC3_V2) {
+            int rowCnt = 0;
+            auto ccc = cc;
+            while (ccc->ct != ccc->pt) {
+                int nc = (ccc->pt - ip[0])/TPR;
+                ccc = c + nc;
+                rowCnt++;
+            }
+            auto ro = new int[rowCnt]();
+            auto rls = new int[rowCnt]();
+            auto rid = new int[rowCnt]();
+
+            int cnt = 0;
+            while (cc->ct != cc->pt) {
+                rid[cnt] = cc->ct[0];
+                ro[cnt] = cc->ct[1];
+                rls[cnt++] = (ip[i+1] - ip[i])/TPR;
+                int nc = (cc->pt - ip[0])/TPR;
+                cc = c + nc;
+                --i;
+            }
+
+            int oo = c->ct[0];
+            int vo = c->ct[2];
+
+            cl.emplace_back(new DDT::PSCT3V3(oo, vo, rowCnt, c->sz, 0, ro, rls, nullptr));
+        }
+    }
+
  int TPR = 3;
  /**
   * @brief Generates run-time codelet object based on type in DDT::PatternDAG
@@ -61,6 +143,9 @@ namespace DDT {
       case DDT::TYPE_PSC3:
         generateCodeletType<DDT::TYPE_PSC3>(d,c,cl);
         break;
+      case DDT::TYPE_PSC3_V1:
+        generateCodeletType<DDT::TYPE_PSC3_V1>(d,c,cl);
+        break;
       case DDT::TYPE_PSC3_V2:
         generateCodeletType<DDT::TYPE_PSC3_V2>(d,c,cl);
         break;
@@ -70,11 +155,14 @@ namespace DDT {
   }
 
   inline int nnzLessThan(int ii, int** ip, int ub) {
-      for (int i = 0; i < ip[ii+1]-ip[ii]; i++) {
-          if (ub < ip[ii][i*3]) {
+      auto tr = (ip[ii+1]-ip[ii])/TPR;
+      for (int i = 0; i < tr; i++) {
+          auto ro = ip[ii][i*3];
+          if (ub < ro) {
               return i;
           }
       }
+      return ip[ii+1]-ip[ii];
   }
 
   /**
@@ -88,19 +176,28 @@ namespace DDT {
       int cnl = ((ip[i])-ip[0]) / TPR;
       int VW = 4; // Vector width
 
+      if (0 == i) {
+          // TODO: FIX HERE FOR PREVIOUS TYPE
+          int cn = ((ip[i + 1]) - ip[0]) / TPR;
+          c[cnl].t = DDT::TYPE_PSC3;
+          c[cnl].pt = c[cn-1].ct;
+          return i;
+      }
+
       int ii = i;
-      bool hai = hasAdacentIteration(ii--, ip);
+      bool hai = hasAdacentIteration(ii, ip);
       auto TH = nnzLessThan(ii, ip,ip[ii-1][0]);
       TH = TH - (TH % VW);
-      if (hai) {
+      if (hai && TH) {
           while (nnzInIteration(ii, ip) > 8 &&
                  nnzLessThan(ii, ip, ip[ii - 1][0]) >
                          TH /* && nCodelets == 0 */) {
+              ii--;
               int cn = ((ip[ii]) - ip[0]) / TPR;
               c[cnl].pt = c[cn].ct;
               cnl = cn;
           }
-      } else {
+      } else if (TH) {
           while (nnzInIteration(ii, ip) > 8 && hasAdacentIteration(ii, ip) &&
                  nnzLessThan(ii, ip, ip[ii - 1][0]) >
                  TH /* && nCodelets == 0 */) {
@@ -113,7 +210,9 @@ namespace DDT {
 
       if (ii == i) {
           // TODO: FIX HERE FOR PREVIOUS TYPE
+          int cn = ((ip[ii+1]) - ip[0]) / TPR;
           c[cnl].t = DDT::TYPE_PSC3;
+          c[cnl].pt = c[cn-1].ct;
       } else if (hai) {
           c[cnl].ct = c[cnl].pt;
           c[cnl].t  = DDT::TYPE_PSC3_V1;
@@ -174,13 +273,11 @@ namespace DDT {
         return (ip[i+1] - ip[i]) / TPR;
     }
 
-    void generateCodeletsFromParallelDag(DDT::GlobalObject& d, const DDT::Config& cfg) {
-        //#pragma omp parallel for num_threads(c.nThread) default(none) shared(TPR, cl, d, c, std::cout)
-        for (int t = 0; t < d.sm->_final_level_no; t++) {
-            for (int ii = 0; ii < d.sm->_wp_bounds[t]; ++ii) {
-                auto tr = d.t[t][ii];
-                auto& cc = d.sm->_cl[t][ii];
+    void generateCodeletsFromParallelDag(const sparse_avx::Trace* tr, std::vector<DDT::Codelet*>& cc, const DDT::Config& cfg) {
                 for (int i = tr->_ni-1; i >= 0; --i) {
+                    for (int j = 0; j < tr->_iter_pt[i+1]-tr->_iter_pt[i]; j+=3) {
+                        printTuple(tr->_iter_pt[i]+j, "OT");
+                    }
                     for (int j = 0; j < tr->_iter_pt[i+1]-tr->_iter_pt[i]; ++j) {
                         int cn = ((tr->_iter_pt[i] + j) - tr->_iter_pt[0]) / TPR;
                         if (tr->_c[cn].pt != nullptr && tr->_c[cn].ct != nullptr) {
@@ -188,12 +285,17 @@ namespace DDT {
                             //  generateCodelet(d, d.c + cn, cc);
                             // j += (d.c[cn].sz + 1) * TPR;
                         } else if (tr->_c[cn].ct != nullptr) { // Generate (TYPE_PSC3)
-                            i  = findType3VBounds(tr->_iter_pt, tr->_c, i);
-                            cn = ((tr->_iter_pt[i] + j) - tr->_iter_pt[0]) / TPR;
-                            generateCodelet(d, tr->_c + cn, cc);
-                            break;
+                            if (/* nCodelets == 0*/ true) {
+                                int iEnd = findType3VBounds(tr->_iter_pt, tr->_c, i);
+                                cn = ((tr->_iter_pt[i]) - tr->_iter_pt[0]) / TPR;
+                                generateFullRowCodeletType(i, tr->_iter_pt, tr->_ni, tr->_c, tr->_c + cn, cc);
+                                i = iEnd;
+                                break;
+                            } else {
+                                // j = findType3Bounds(d, i, j, jbound)
+                            }
                         } else {
-                            j += TPR * (d.c[cn].sz + 1);
+                            j += TPR * (tr->_c[cn].sz + 1);
                         }
                     }
                 }
@@ -201,8 +303,6 @@ namespace DDT {
                   return lhs->first_nnz_loc < rhs->first_nnz_loc;
                 });
             }
-        }
-    }
 
     /**
      * @brief Generates runtime information for executor codes
@@ -224,9 +324,18 @@ namespace DDT {
                         j += (d.c[cn].sz + 1) * TPR;
                     } else if (d.c[cn].ct != nullptr) {
                         // Generate (TYPE_PSC3)
-                        j += findType3Bounds(d, i, j, d.mt.ip[i + 1] - d.mt.ip[i]);
-                        cn = ((d.mt.ip[i] + (j - TPR)) - d.mt.ip[0]) / TPR;
-                        generateCodelet(d, d.c + cn, cc);
+                        if (/* nCodelets == 0*/ true) {
+                            int iEnd = findType3VBounds(d.mt.ip, d.c, i);
+                            cn = ((d.mt.ip[i]) - d.mt.ip[0]) / TPR;
+                            generateFullRowCodeletType(i, d.mt.ip, d.mt.ips, d.c, d.c + cn, cc);
+                            i = iEnd;
+                            break;
+                        } else {
+                            j += findType3Bounds(d, i, j,
+                                                 d.mt.ip[i + 1] - d.mt.ip[i]);
+                            cn = ((d.mt.ip[i] + (j - TPR)) - d.mt.ip[0]) / TPR;
+                            generateCodelet(d, d.c + cn, cc);
+                        }
                     } else {
                         j += TPR * (d.c[cn].sz + 1);
                     }
@@ -245,8 +354,11 @@ namespace DDT {
     void inspectParallelTrace(DDT::GlobalObject& d, const DDT::Config& cfg) {
         for (int i = 0; i < d.sm->_final_level_no; i++) {
             for (int j = 0; j < d.sm->_wp_bounds[i]; ++j) {
+                auto tr = d.t[i][j];
+                auto& cc = d.sm->_cl[i][j];
+
                 // Calculate overlap for each iteration
-                DDT::pruneIterations(d.t[i][j]->_iter_pt, d.t[i][j]->_ni);
+                // DDT::pruneIterations(d.t[i][j]->_iter_pt, d.t[i][j]->_ni);
 #ifdef O3
                 // Compute first order differences
                 DDT::computeParallelizedFOD(d.t[i][j]->_iter_pt, d.t[i][j]->_ni, d.d, 1);
@@ -255,8 +367,7 @@ namespace DDT {
                 DDT::mineDifferences(d.mt.ip, d.c, d.d, cfg.nThread, d.tb);
 #endif
                 // Generate codelets from pattern DAG
-                DDT::generateCodeletsFromParallelDag(d, cfg);
-
+                DDT::generateCodeletsFromParallelDag(tr, cc, cfg);
             }
         }
     }
@@ -270,13 +381,13 @@ namespace DDT {
   void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
       // Calculate overlap for each iteration
       DDT::pruneIterations(d.mt.ip, d.mt.ips);
-
+#ifdef O3
       // Compute first order differences
       DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, cfg.nThread);
 
       // Mine trace for codelets
       DDT::mineDifferences(d.mt.ip, d.c, d.d, cfg.nThread, d.tb);
-
+#endif
       // Generate codelets from pattern DAG
       DDT::generateCodeletsFromPattern(d, cl, cfg);
 

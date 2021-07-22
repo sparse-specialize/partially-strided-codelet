@@ -71,6 +71,12 @@ namespace DDT {
       auto *sm = new sparse_avx::SpTRSVModel(m->m, m->n, m->nnz, m->p, m->i, lp, cp, ic);
       auto trs = sm->generate_3d_trace(cfg.nThread);
 
+      for (int i = 0; i < sm->_final_level_no; ++i) {
+          for (int j = 0; j < sm->_wp_bounds[i]; ++j) {
+              trs[i][j]->print();
+          }
+      }
+
       return GlobalObject{  {},  nullptr, nullptr, nullptr, 0, nullptr, sm, trs };
   }
 

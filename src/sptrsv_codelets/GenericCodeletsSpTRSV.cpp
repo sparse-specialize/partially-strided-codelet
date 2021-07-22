@@ -10,7 +10,7 @@
 #include <DDTDef.h>
 #include <vector>
 
-#ifdef _mm256_i32gather_pd
+#ifdef _mm256_i32gather_pdasf
 #define loadvx(of, x, ind, xv, vindex) \
   auto (vindex) = _mm_loadu_si128(reinterpret_cast<const __m128i *>(of+ind)); \
   (xv) = _mm256_i32gather_pd(x, vindex, 8);
@@ -32,7 +32,7 @@ inline double hsum_double_avx(__m256d v) {
 namespace DDT {
     void psc_t3_1D1R_sptrs(double *x, const double *Ax, const int *offset,
                            int lb, int fnl, int cw, bool ms) {
-        if (ms) {
+//        if (ms) {
             auto ax0 = Ax+fnl;
             int i = 0;
             auto r0 = _mm256_setzero_pd();
@@ -48,22 +48,22 @@ namespace DDT {
             }
             x[lb] -= tail + hsum_double_avx(r0);
             x[lb] /= Ax[fnl + cw-1];
-        } else {
-            int i = 0;
-            auto ax0 = Ax + fnl;
-            auto r0 = _mm256_setzero_pd();
-            for (; i < cw-3; i+=4) {
-                auto axv0 = _mm256_loadu_pd(ax0+i);
-                __m256d xv0;
-                loadvx(offset, x, i, xv0, msk)
-                r0 = _mm256_fmadd_pd(axv0, xv0, r0);
-            }
-            double tail = 0.;
-            for (; i < cw; ++i) {
-                tail += ax0[i] * x[offset[i]];
-            }
-            x[lb] -= tail + hsum_double_avx(r0);
-        }
+//        } else {
+//            int i = 0;
+//            auto ax0 = Ax + fnl;
+//            auto r0 = _mm256_setzero_pd();
+//            for (; i < cw-3; i+=4) {
+//                auto axv0 = _mm256_loadu_pd(ax0+i);
+//                __m256d xv0;
+//                loadvx(offset, x, i, xv0, msk)
+//                r0 = _mm256_fmadd_pd(axv0, xv0, r0);
+//            }
+//            double tail = 0.;
+//            for (; i < cw; ++i) {
+//                tail += ax0[i] * x[offset[i]];
+//            }
+//            x[lb] -= tail + hsum_double_avx(r0);
+//        }
     }
 
     void psc_t2_2D2R_sptrs(double *x, const double *Ax, const int *offset,
@@ -430,11 +430,9 @@ namespace DDT {
     }
 
     void sptrsv_generic(const int n, const int* Lp, const int* Li, const double *Ax, double *x,
-                        const std::vector<DDT::Codelet *> *lst,
+                        const std::vector<DDT::Codelet *>& lst,
                         const DDT::Config &cfg) {
-        //#pragma omp parallel for num_threads(cfg.nThread)
-        for (int i = 0; i < cfg.nThread; i++) {
-            for (auto const& c : lst[i]) {
+            for (auto const& c : lst) {
                 switch (c->get_type()) {
 #ifdef O3
                     case DDT::CodeletType::TYPE_FSC:
@@ -470,8 +468,6 @@ namespace DDT {
                  default:
                         break;
                 }
-            }
         }
-//        verify_sptrsv(n,x,Lp,Li,Ax);
     }
 }

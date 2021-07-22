@@ -16,6 +16,8 @@
 #include "metis_interface.h"
 #endif
 
+#define PROFILE
+
 using namespace sparse_avx;
 int main(int argc, char* argv[]){
  auto config = DDT::parseInput(argc, argv);
@@ -28,7 +30,7 @@ int main(int argc, char* argv[]){
  std::fill_n(sol, A->n, 1);
  sym_lib::CSC *A_full=NULLPNTR;
 
-#ifdef METIS
+#ifdef METISA
     //We only reorder L since dependency matters more in l-solve.
     A_full = sym_lib::make_full(A);
     sym_lib::metis_perm_general(A_full, perm);
@@ -38,6 +40,7 @@ int main(int argc, char* argv[]){
     delete A_full;
     delete[]perm;
 #endif
+    auto L1_ord = A;
    sym_lib::CSR *L1_ord_csr = sym_lib::csc_to_csr(L1_ord);
 
 
@@ -60,6 +63,8 @@ int main(int argc, char* argv[]){
  auto ddt_exec =  ddtsptrsv->evaluate();
  auto ddt_analysis = ddtsptrsv->get_analysis_bw();
 
+
+
  auto* sptrsv_vec1 = new SpTRSVSerialVec1(L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec1");
  auto sptrsv_vec1_exec = sptrsv_vec1->evaluate();
 
@@ -79,11 +84,11 @@ int main(int argc, char* argv[]){
                                                         << sptrsv_vec2_exec.elapsed_time << ",";
  std::cout<<sptrsv_par.elapsed_time<<",";
  std::cout << sptrsv_parv2.elapsed_time <<",";
-// std::cout <<         ddt_exec.elapsed_time<<",";
+ std::cout <<         ddt_exec.elapsed_time<<",";
 // ddt_analysis.print_t_array();
  std::cout<<"\n";
 
- delete A;
+// delete A;
  delete L1_ord;
  delete L1_ord_csr;
  delete []sol;

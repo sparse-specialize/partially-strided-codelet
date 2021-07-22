@@ -28,6 +28,8 @@
 
 namespace DDT {
 
+    void executeParallelSPTRSVCodelets(const DDT::GlobalObject& d, const DDT::Config& cfg, int r, const int* Lp, const int* Li, const double* Lx, double* x);
+
     void executeParallelCodelets(const DDT::GlobalObject& d, const DDT::Config&
     cfg, Args& args);
 
