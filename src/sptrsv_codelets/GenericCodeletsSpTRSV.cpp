@@ -335,16 +335,16 @@ namespace DDT {
      }
     }
 
- void psc_t3_v1_2D1D(double *x, const double *Ax, const int *Ai,
+
+ void t3_two_rows(double *x, const double *Ax, const int *Ai,
                      const int *Ap,
                      const int *rs_off, const int *rl_off,
-                     const int lb, const int ub, int min_iter){
+                     const int i1, const int i2, int min_iter){
   v4df_t Lx_reg, Lx_reg2, result, result2, x_reg, x_reg2;
-  for (int i = lb; i < ub; i+=2) {
    result.v = _mm256_setzero_pd();
    result2.v = _mm256_setzero_pd();
-   for (int j1 = rs_off[i], j2 = rs_off[i+1]; j1 < rs_off[i] + min_iter;
-   j1+=4, j2+=4) {
+   for (int j1 = rs_off[i1], j2 = rs_off[i2]; j1 < rs_off[i1] + min_iter;
+        j1+=4, j2+=4) {
     //x[i] += Ax[j1] * x[Ai[j1]];
     x_reg.v = _mm256_loadu_pd((double *) (x+Ai[j1]));
     x_reg2.v = _mm256_loadu_pd((double *) (x+Ai[j2]));
@@ -354,37 +354,45 @@ namespace DDT {
     result.v = _mm256_fmadd_pd(Lx_reg.v,x_reg.v,result.v);//Skylake	4	0.5
     result2.v = _mm256_fmadd_pd(Lx_reg2.v,x_reg.v,result2.v);//Skylake	4	0.5
    }
-   // 1D row i
-   int rs_p_rl_i = rs_off[i] + rl_off[i];
+   // 1D row i1
+   int rs_p_rl_i = rs_off[i1] + rl_off[i1];
    int m_i = rs_p_rl_i % 4;
-   for (int j = rs_off[i] + min_iter; j < rs_p_rl_i - m_i; j+=4) {
+   for (int j = rs_off[i1] + min_iter; j < rs_p_rl_i - m_i; j+=4) {
     //x[i] += Ax[j] * x[Ai[j]];
     x_reg.v = _mm256_loadu_pd((double *) (x+Ai[j]));
     Lx_reg.v = _mm256_loadu_pd((double *) (Ax + j));
     result.v = _mm256_fmadd_pd(Lx_reg.v,x_reg.v,result.v);
    }
    double t=0;
-   for (int j = rs_p_rl_i - m_i; j < rs_off[i] + rl_off[i]; j++) {
+   for (int j = rs_p_rl_i - m_i; j < rs_off[i1] + rl_off[i1]; j++) {
     t += Ax[j] * x[Ai[j]];
    }
-   x[i] -= t + hsum_double_avx(result.v);
-   x[i] /= Ax[Ap[i + 1] - 1];
+   x[i1] -= t + hsum_double_avx(result.v);
+   x[i1] /= Ax[Ap[i1 + 1] - 1];
 
-   // 1D row i+1
-   int rs_p_rl_ip = rs_off[i+1] + rl_off[i+1];
+   // 1D row i2
+   int rs_p_rl_ip = rs_off[i2] + rl_off[i2];
    int m_ip = rs_p_rl_ip % 4;
-   for (int j = rs_off[i+1] + min_iter; j < rs_p_rl_ip + m_ip; j+=4) {
+   for (int j = rs_off[i2] + min_iter; j < rs_p_rl_ip + m_ip; j+=4) {
     //x[i+1] -= Ax[j] * x[Ai[j]];
     x_reg.v = _mm256_loadu_pd((double *) (x+Ai[j]));
     Lx_reg.v = _mm256_loadu_pd((double *) (Ax + j));
     result2.v = _mm256_fmsub_pd(Lx_reg.v,x_reg.v,result.v);
    }
    t=0;
-   for (int j = rs_p_rl_ip - m_ip; j < rs_off[i] + rl_off[i]; j++) {
+   for (int j = rs_p_rl_ip - m_ip; j < rs_off[i2] + rl_off[i2]; j++) {
     t += Ax[j] * x[Ai[j]];
    }
-   x[i+1] -= t + hsum_double_avx(result2.v);
-   x[i+1] /= Ax[Ap[i + 2] - 1];
+   x[i2] -= t + hsum_double_avx(result2.v);
+   x[i2] /= Ax[Ap[i2 + 2] - 1];
+ }
+
+ void psc_t3_v1_2D1D(double *x, const double *Ax, const int *Ai,
+                     const int *Ap,
+                     const int *rs_off, const int *rl_off,
+                     const int lb, const int ub, int min_iter){
+  for (int i = lb; i < ub; i+=2) {
+   t3_two_rows(x,Ax,Ai,Ap,rs_off,rl_off,i,i+1,min_iter);
   }
  }
 
@@ -400,6 +408,17 @@ namespace DDT {
      x[i] /= Ax[Ap[i + 1] - 1];
     }
    }
+
+ void psc_t3_v2_2D1D(double *x, const double *Ax, const int *Ai,
+                     const int *Ap, const int *row_id,
+                     const int *rs_off, const int *rl_off,
+                     const int iter_len, int min_iter){
+  for (int l = 0; l < iter_len; l+=2) {
+   int i = row_id[l];
+   int i2 = row_id[l+1];
+   t3_two_rows(x,Ax,Ai,Ap,rs_off,rl_off,i,i2,min_iter);
+  }
+ }
 
  template<class type>
  bool is_float_equal(const type x, const type y, double absTol, double relTol) {
@@ -457,13 +476,25 @@ namespace DDT {
                                           c->first_nnz_loc, c->col_width,c->multi_stmt);
                         break;
                     case DDT::CodeletType::TYPE_PSC3_V1:
+#ifdef VERIF
                         psc_t3_v1_base(x, Ax, Li, Lp,  c->offsets,
                                        c->offsets2, c->lbr, c->lbr +
                                        c->row_width, -1);
+#else
+                       psc_t3_v1_2D1D(x, Ax, Li, Lp,  c->offsets,
+                                 c->offsets2, c->lbr, c->lbr +
+                                                      c->row_width, c->col_width);
+#endif
                         break;
                     case DDT::CodeletType::TYPE_PSC3_V2:
+#ifdef VERIF
                         psc_t3_v2_base(x, Ax, Li, Lp, c->offset3,  c->offsets,
                                     c->offsets2, c->row_width, -1);
+#else
+                  psc_t3_v2_2D1D(x, Ax, Li, Lp, c->offset3,  c->offsets,
+                                 c->offsets2, c->row_width, c->col_width);
+
+#endif
                         break;
                  default:
                         break;
