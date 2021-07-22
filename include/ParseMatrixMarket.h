@@ -355,6 +355,14 @@ void copySymLibMatrix(Matrix& m, T symLibMat) {
     m.r  = symLibMat->m;
     m.c  = symLibMat->n;
 
+    delete m.Lp;
+    delete m.Lx;
+    delete m.Li;
+
+    m.Lp = new int[m.r+1]();
+    m.Lx = new double[m.nz]();
+    m.Li = new int[m.nz]();
+
     std::copy(symLibMat->p, symLibMat->p+symLibMat->m+1, m.Lp);
     std::copy(symLibMat->i, symLibMat->i+symLibMat->nnz, m.Li);
     std::copy(symLibMat->x, symLibMat->x+symLibMat->nnz, m.Lx);

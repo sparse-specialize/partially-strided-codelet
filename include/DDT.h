@@ -19,6 +19,7 @@
 #ifndef DDT_DDT
 #define DDT_DDT
 
+#include "ParseMatrixMarket.h"
 #include "SpTRSVModel.h"
 
 #include <iostream>
@@ -75,6 +76,27 @@ namespace DDT {
       auto trs = sm->generate_3d_trace(cfg.nThread);
 
       return GlobalObject{  {},  nullptr, nullptr, nullptr, 0, nullptr, sm, trs };
+  }
+
+    DDT::GlobalObject allocateSpTRSVMemoryTrace(const Matrix& m, int nThreads);
+
+    template <typename M0>
+  DDT::GlobalObject init(const M0* m0, const DDT::Config& cfg) {
+        // Convert matrix into regular form
+        Matrix m{};
+        copySymLibMatrix(m, m0);
+
+        // Allocate memory and generate trace
+        DDT::GlobalObject d;
+        if (cfg.op == OP_SPMV) {
+//            d = DDT::allocateSpMVMemoryTrace(m, cfg.nThread);
+        } else if (cfg.op == OP_SPTRS) {
+            d = DDT::allocateSpTRSVMemoryTrace(m, cfg.nThread);
+        } else {
+            throw std::runtime_error("Error: Operation not currently supported");
+        }
+
+        return d;
   }
 
   template <typename M0, typename M1>
