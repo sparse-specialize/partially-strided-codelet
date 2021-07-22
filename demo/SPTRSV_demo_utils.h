@@ -145,6 +145,19 @@ namespace sparse_avx{
    }
   }
  }
+ void sptrsv_csr_levelset_novec(int n, const int *Lp, const int *Li, const
+ double *Lx, double *x, int levels, const int *levelPtr,const int *levelSet) {
+  for (int l = 0; l < levels; l++) {
+#pragma omp  parallel for default(shared) schedule(auto)
+   for (int k = levelPtr[l]; k < levelPtr[l + 1]; ++k) {
+    int i = levelSet[k];
+    for (int j = Lp[i]; j < Lp[i + 1] - 1; j++) {
+     x[i] -= Lx[j] * x[Li[j]];
+    }
+    x[i] /= Lx[Lp[i + 1] - 1];
+   }
+  }
+ }
 
 
  void sptrsv_csr_lbc_vec_2(int n, int *Lp, int *Li, double *Lx, double *x,
@@ -352,6 +365,28 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    delete []level_ptr;
    delete []level_set;
   };
+ };
+
+
+ class SptrsvLevelSetNovec : public SptrsvLevelSet {
+ protected:
+  sym_lib::timing_measurement fused_code() override {
+   sym_lib::timing_measurement t1;
+   t1.start_timer();
+   sptrsv_csr_levelset_novec(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_,
+                       level_no, level_ptr, level_set);
+   t1.measure_elapsed_time();
+   sym_lib::copy_vector(0,n_,x_in_,x_);
+   return t1;
+  }
+
+ public:
+  SptrsvLevelSetNovec (sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                  double *correct_x, std::string name) :
+    SptrsvLevelSet(L, L_csc, correct_x, name) {
+  };
+
+  ~SptrsvLevelSetNovec () override = default;
  };
 
  class SpTRSVParallel : public SpTRSVSerial {

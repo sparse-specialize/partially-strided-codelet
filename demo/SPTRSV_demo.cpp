@@ -57,6 +57,9 @@ int main(int argc, char* argv[]){
                                   "Parallel Levelset");
  auto sptrsv_ls =  spsls->evaluate();
 
+ auto *spslsnv = new SptrsvLevelSetNovec(L1_ord_csr, L1_ord, sol_sptrsv,
+                                  "Parallel Levelset NoVec");
+ auto sptrsv_ls_novec =  spslsnv->evaluate();
 
  auto *spsp = new SpTRSVParallel(L1_ord_csr, L1_ord, sol_sptrsv, "Parallel "
                     "LBC",num_threads,coarsening_p, initial_cut);
@@ -83,15 +86,17 @@ int main(int argc, char* argv[]){
 
  if (config.header) {
   std::cout<<"Matrix,Threads,Coarsening,";
-  std::cout<<"SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV Parallel,SpTRSV Vec2 Parallel, SpTRSV DDT Executor, Inspector_Time";
+  std::cout<<"SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, SpTRSV LS "
+             "NOVec, SpTRSV Parallel,SpTRSV "
+             "Vec2 Parallel, SpTRSV DDT Executor, Inspector_Time";
   std::cout<<"\n";
  }
 
  std::cout<<config.matrixPath <<","<< config.nThread<<","<<config.coarsening<<","
           <<sptrsv_baseline.elapsed_time<<"," << sptrsv_vec1_exec.elapsed_time
-          << ","
-                                                        << sptrsv_vec2_exec.elapsed_time << ",";
+          << ","<< sptrsv_vec2_exec.elapsed_time << ",";
  std::cout<<sptrsv_ls.elapsed_time<<",";
+ std::cout<<sptrsv_ls_novec.elapsed_time<<",";
  std::cout<<sptrsv_par.elapsed_time<<",";
  std::cout << sptrsv_parv2.elapsed_time <<",";
  std::cout <<         ddt_exec.elapsed_time<<",";
@@ -106,6 +111,7 @@ int main(int argc, char* argv[]){
  delete sps;
  delete spsp;
  delete spsls;
+ delete spslsnv;
  delete spspv2;
  //delete ddtsptrsv;
  delete sptrsv_vec1;
