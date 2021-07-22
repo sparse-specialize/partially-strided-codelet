@@ -50,12 +50,12 @@ int main(int argc, char* argv[]){
     auto ddt_exec =  ddtspmv->evaluate();
 
  if (config.header){
-  std::cout<<"Matrix,";
+  std::cout<<"Matrix,Threads,";
   std::cout<<"SpMV Base,SpMV Parallel Base,SpMV DDT Serial Executor, SpMV DDT Parallel Executor";
   std::cout<<"\n";
  }
 
- std::cout<<config.matrixPath <<","<<
+ std::cout<<config.matrixPath <<","<<config.nThread<<","<<
           spmv_baseline.elapsed_time<<","<<
           spmv_p.elapsed_time<<","<<
           ddt_execst.elapsed_time <<","<<

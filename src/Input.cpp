@@ -41,6 +41,7 @@ namespace DDT {
                                 "matrix.", cxxopts::value<std::string>())
       ("s,storage_format", "Storage format for matrix", cxxopts::value<std::string>())
       ("t,threads", "Number of parallel threads", cxxopts::value<int>()->default_value("1"))
+      ("c,coarsening", "coarsening levels", cxxopts::value<int>()->default_value("5"))
       ("d,header", "prints header or not.");
 
     auto result = options.parse(argc, argv);
@@ -67,6 +68,7 @@ namespace DDT {
     auto operation = result["numerical_operation"].as<std::string>();
     auto storageFormat = result["storage_format"].as<std::string>();
     auto nThreads = result["threads"].as<int>();
+    auto coarsening = result["coarsening"].as<int>();
 
     NumericalOperation op;
     if (operation == "SPMV") {
@@ -92,6 +94,6 @@ namespace DDT {
     header = 1;
    }
 
-   return Config{ matrixPath, op, header, nThreads, sf };
+   return Config{ matrixPath, op, header, nThreads, sf, coarsening };
   }
 }
