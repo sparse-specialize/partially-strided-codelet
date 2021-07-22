@@ -53,6 +53,11 @@ int main(int argc, char* argv[]){
  double *sol_sptrsv = sps->solution();
  //std::copy(sol_spmv, sol_spmv+A->n, )
 
+ auto *spsls = new SptrsvLevelSet(L1_ord_csr, L1_ord, sol_sptrsv,
+                                  "Parallel Levelset");
+ auto sptrsv_ls =  spsls->evaluate();
+
+
  auto *spsp = new SpTRSVParallel(L1_ord_csr, L1_ord, sol_sptrsv, "Parallel "
                     "LBC",num_threads,coarsening_p, initial_cut);
  auto sptrsv_par =  spsp->evaluate();
@@ -85,6 +90,7 @@ int main(int argc, char* argv[]){
  std::cout<<config.matrixPath <<","<<
           sptrsv_baseline.elapsed_time<<"," << sptrsv_vec1_exec.elapsed_time << ","
                                                         << sptrsv_vec2_exec.elapsed_time << ",";
+ std::cout<<sptrsv_ls.elapsed_time<<",";
  std::cout<<sptrsv_par.elapsed_time<<",";
  std::cout << sptrsv_parv2.elapsed_time <<",";
  std::cout <<         ddt_exec.elapsed_time<<",";
@@ -98,6 +104,12 @@ int main(int argc, char* argv[]){
 
  delete sps;
  delete spsp;
+ delete spsls;
+ delete spspv2;
+ //delete ddtsptrsv;
+ delete sptrsv_vec1;
+ delete sptrsv_vec2;
+
 // delete ddtsptrsv;
 
  return 0;

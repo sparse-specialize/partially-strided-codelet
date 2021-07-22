@@ -43,7 +43,7 @@ fi
 
 
 if [ "$TUNED" == 2 ]; then
-for mat in $MATS/*.mtx; do
+for mat in $PATHMAIN/*.mtx; do
 	if [ $header -eq 1 ]; then
 	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -d
      header=0
@@ -53,7 +53,7 @@ for mat in $MATS/*.mtx; do
 done
 
 #Lfactors
-for mat in $MATS/l_factors/*.mtx; do
+for mat in $PATHMAIN/l_factors/*.mtx; do
 	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS
 done
 
@@ -62,7 +62,7 @@ fi
 
 ### SPMV
 if [ "$TUNED" == 3 ]; then
-for mat in $MATS/*.mtx; do
+for mat in $PATHMAIN/*.mtx; do
 	if [ $header -eq 1 ]; then
 	  $BINLIB  -m $mat -n SPMV -t $THRDS -d
      header=0
@@ -72,7 +72,7 @@ for mat in $MATS/*.mtx; do
 done
 
 #Lfactors
-for mat in $MATS/l_factors/*.mtx; do
+for mat in $PATHMAIN/l_factors/*.mtx; do
 	  $BINLIB  -m $mat -n SPMV -t $THRDS
 done
 
