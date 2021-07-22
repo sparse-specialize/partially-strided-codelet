@@ -15,14 +15,14 @@ header=1
 
 if [ "$TUNED" ==  1 ]; then
 for mat in $PATHMAIN/*.mtx; do
-for k in {-4,-3,-2,-1,0,1,2,3,4}; do
+for k in {2,3,4,5,6,7,8,9}; do
 #for lparm in {1..10}; do
 #	for cparm in {1,2,3,4,5,10,20}; do
 	if [ $header -eq 1 ]; then
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -d
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -d
      header=0
   else
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k
   fi
 #done
 #done
@@ -34,7 +34,7 @@ for mat in $PATHMAIN/l_factors/*.mtx; do
 for k in {-4,-3,-2,-1,0,1,2,3,4}; do
 #for lparm in {1..10}; do
 #	for cparm in {1,2,3,4,5,10,20}; do
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k
 #done
 #done
 done
@@ -43,7 +43,7 @@ fi
 
 
 if [ "$TUNED" == 2 ]; then
-for mat in $MATS/*.mtx; do
+for mat in $PATHMAIN/*.mtx; do
 	if [ $header -eq 1 ]; then
 	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -d
      header=0
@@ -53,7 +53,7 @@ for mat in $MATS/*.mtx; do
 done
 
 #Lfactors
-for mat in $MATS/l_factors/*.mtx; do
+for mat in $PATHMAIN/l_factors/*.mtx; do
 	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS
 done
 
@@ -62,18 +62,18 @@ fi
 
 ### SPMV
 if [ "$TUNED" == 3 ]; then
-for mat in $MATS/*.mtx; do
+for mat in $PATHMAIN/*.mtx; do
 	if [ $header -eq 1 ]; then
-	  $BINLIB  -m $mat -n SPMV -t $THRDS -d
+	  $BINLIB  -m $mat -n SPMV -s CSR -t $THRDS -d
      header=0
   else
-	  $BINLIB  -m $mat -n SPMV -t $THRDS
+	  $BINLIB  -m $mat -n SPMV -s CSR -t $THRDS
   fi
 done
 
 #Lfactors
-for mat in $MATS/l_factors/*.mtx; do
-	  $BINLIB  -m $mat -n SPMV -t $THRDS
+for mat in $PATHMAIN/l_factors/*.mtx; do
+	  $BINLIB  -m $mat -n SPMV -s CSR -t $THRDS
 done
 
 fi

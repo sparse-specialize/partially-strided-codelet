@@ -18,6 +18,7 @@
 #include <iostream>
 #include <SpTRSVModel.h>
 #include <lbc.h>
+#include <sparse_inspector.h>
 
 
 namespace sparse_avx{
@@ -120,9 +121,34 @@ namespace sparse_avx{
   }
  }
 
+ void sptrsv_csr_levelset(int n, const int *Lp, const int *Li, const double *Lx,
+                          double *x,
+                          int levels, const int *levelPtr,
+                          const int *levelSet) {
+  for (int l = 0; l < levels; l++) {
+#pragma omp  parallel for schedule(auto)
+   for (int k = levelPtr[l]; k < levelPtr[l + 1]; ++k) {
+    int i = levelSet[k];
+    auto r0 = _mm256_setzero_pd();
+    int j = Lp[i];
+    for (; j < Lp[i+1]-4; j+=4) {
+     auto ax0 = _mm256_loadu_pd(Lx+j);
+     auto x0 = set1(x,Li,j);
+     r0 = _mm256_fmadd_pd(ax0,x0,r0);
+    }
+    double tail = hsum_double_avx(r0);
+    for (; j < Lp[i+1]-1; j++) {
+     tail += Lx[j] * x[Li[j]];
+    }
+    x[i] -= tail;
+    x[i] /= Lx[Lp[i+1]-1];
+   }
+  }
+ }
 
-void sptrsv_csr_lbc_vec_2(int n, int *Lp, int *Li, double *Lx, double *x,
-                     int level_no, int *level_ptr,
+
+ void sptrsv_csr_lbc_vec_2(int n, int *Lp, int *Li, double *Lx, double *x,
+                           int level_no, int *level_ptr,
                      int *par_ptr, int *partition, int nThreads) {
     for (int i1 = 0; i1 < level_no; ++i1) {
 #pragma omp  parallel num_threads(nThreads)
@@ -294,6 +320,39 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   ~SpTRSVSerial() override = default;
  };
 
+ class SptrsvLevelSet : public SpTRSVSerial {
+ protected:
+  int *level_set, *level_ptr, level_no;
+  void build_set() override {
+
+   level_no = sym_lib::build_levelSet_CSC(L1_csc_->n, L1_csc_->p, L1_csc_->i,
+                                 level_ptr, level_set);
+  }
+
+  sym_lib::timing_measurement fused_code() override {
+   sym_lib::timing_measurement t1;
+   t1.start_timer();
+   sptrsv_csr_levelset(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_,
+                       level_no, level_ptr, level_set);
+   t1.measure_elapsed_time();
+   sym_lib::copy_vector(0,n_,x_in_,x_);
+   return t1;
+  }
+
+ public:
+  SptrsvLevelSet (sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                  double *correct_x, std::string name) :
+    SpTRSVSerial(L, L_csc, correct_x, name) {
+   L1_csr_ = L;
+   L1_csc_ = L_csc;
+   correct_x_ = correct_x;
+  };
+
+  ~SptrsvLevelSet () override {
+   delete []level_ptr;
+   delete []level_set;
+  };
+ };
 
  class SpTRSVParallel : public SpTRSVSerial {
  protected:

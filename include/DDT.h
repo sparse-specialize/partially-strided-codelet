@@ -48,6 +48,7 @@ namespace DDT {
     int header;
     int nThread;
     StorageFormat sf;
+   int coarsening;
   };
 
   struct GlobalObject {
