@@ -72,14 +72,16 @@ int main(int argc, char* argv[]){
 
     config.nThread = 1;
  auto *ddtsptrsvst = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
-                                 "SpMV DDT", 1, coarsening_p, initial_cut);
+                                 "SpTRSV DDT Serial", 1, coarsening_p,
+                                 initial_cut);
  auto ddt_execst =  ddtsptrsvst->evaluate();
  auto ddt_analysisst = ddtsptrsvst->get_analysis_bw();
 
  config.nThread = num_threads;
 
     auto *ddtsptrsvmt = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
-                                    "SpMV DDT", num_threads, coarsening_p, initial_cut);
+                                    "SpTRSV DDT", num_threads, coarsening_p,
+                                    initial_cut);
     auto ddt_execmt =  ddtsptrsvmt->evaluate();
     auto ddt_analysismt = ddtsptrsvmt->get_analysis_bw();
 
