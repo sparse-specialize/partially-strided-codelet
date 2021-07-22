@@ -64,16 +64,16 @@ fi
 if [ "$TUNED" == 3 ]; then
 for mat in $PATHMAIN/*.mtx; do
 	if [ $header -eq 1 ]; then
-	  $BINLIB  -m $mat -n SPMV -t $THRDS -d
+	  $BINLIB  -m $mat -n SPMV -s CSR -t $THRDS -d
      header=0
   else
-	  $BINLIB  -m $mat -n SPMV -t $THRDS
+	  $BINLIB  -m $mat -n SPMV -s CSR -t $THRDS
   fi
 done
 
 #Lfactors
 for mat in $PATHMAIN/l_factors/*.mtx; do
-	  $BINLIB  -m $mat -n SPMV -t $THRDS
+	  $BINLIB  -m $mat -n SPMV -s CSR -t $THRDS
 done
 
 fi
