@@ -80,7 +80,11 @@ namespace DDT {
     auto o = mem+nTuples*2;
   
     // Determine bounds
-    getSpTRSVIterationThreadBounds(iba, nThreads, m);
+    if (nThreads > 1) {
+        getSpTRSVIterationThreadBounds(iba, nThreads, m);
+    } else {
+        iba[1] = m.r;
+    }
 
     // Fill Memory
     for (int t = 0; t < nThreads; t++) {
