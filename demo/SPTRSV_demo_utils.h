@@ -409,9 +409,9 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
          MKL_INT expected_calls = 5;
 
-         LLI = new MKL_INT[n_+1]();
-         for (int l = 0; l < n_+1; ++l) {
-             LLI[l] = this->L1_csr_->i[l];
+         LLI = new MKL_INT[this->L1_csr_->m+1]();
+         for (int l = 0; l < this->L1_csr_->m+1; ++l) {
+             LLI[l] = this->L1_csr_->p[l];
          }
          mkl_sparse_d_create_csr(&m, SPARSE_INDEX_BASE_ZERO, this->L1_csr_->m, this->L1_csr_->n,
                                  LLI, LLI+1, this->L1_csr_->i, this->L1_csr_->x);
