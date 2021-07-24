@@ -10,7 +10,7 @@
 
 namespace sym_lib {
 
-    struct EventCounterBundle{
+    struct EventCounterBundle {
         int event_code;
         std::string event_name;
         std::vector<long long> counters;
@@ -30,6 +30,9 @@ namespace sym_lib {
         }
 
     public:
+        PAPIWrapper() {
+            event_set_ = 0;
+        }
         std::vector<EventCounterBundle> counter_bundles_;
         PAPIWrapper(const std::vector<int>& event_list, int num_instances){
             num_events_ = event_list.size();
@@ -57,20 +60,24 @@ namespace sym_lib {
                 std::cerr << "PAPI error initializing " << retval << "\n";
                 return 0;
             }
+
             if((retval = PAPI_create_eventset(&event_set_)) != PAPI_OK) {
                 std::cerr << "PAPI error creating event set " << retval << "\n";
                 return 0;
             }
+
             if((retval = PAPI_add_events(event_set_, event_list_, num_events_)) != PAPI_OK) {
                 std::cerr << "PAPI error adding events " << retval << "\n";
                 return 0;
             }
+
             for (int i = 0; i < num_events_; ++i)
                 event_counters_[i] = 0;
             if((retval = PAPI_reset(event_set_)) != PAPI_OK)
                 std::cerr << "PAPI error " << retval << "\n";
             if((retval = PAPI_start(event_set_)) != PAPI_OK)
                 std::cerr << "PAPI error " << retval << "\n";
+            return 0;
         }
 
         void finish_profiling(){
@@ -97,3 +104,4 @@ namespace sym_lib {
     };
 }
 
+#endif

@@ -20,6 +20,12 @@
 #include <lbc.h>
 #include <sparse_inspector.h>
 
+#ifdef MKL
+#include <mkl.h>
+#include <mkl_spblas.h>
+#include <mkl_types.h>
+#endif
+
 
 namespace sparse_avx{
 
@@ -41,6 +47,7 @@ namespace sparse_avx{
         __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
         return _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
     }
+
 #define set1(x,a,ind) _mm256_set_pd(x[a[ind+3]],x[a[ind+2]],x[a[ind+1]],x[a[ind]])
 
     void sptrsv_csr_vec256_1(int n, const int *Ap, const int *Ai, const double *Ax,
@@ -221,8 +228,6 @@ namespace sparse_avx{
         }
     }
 
-
-
 void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
                         int level_no, int *level_ptr,
                         int *par_ptr, int *partition, int nThreads) {
@@ -389,6 +394,51 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   ~SptrsvLevelSetNovec () override = default;
  };
 
+#ifdef MKL
+ class SpTRSVMKL : public SpTRSVSerial {
+     MKL_INT* LLI;
+     matrix_descr d;
+     sparse_matrix_t m;
+     int num_threads;
+
+     void build_set() override {
+         sparse_operation_t opr = SPARSE_OPERATION_NON_TRANSPOSE;
+         d.type = SPARSE_MATRIX_TYPE_TRIANGULAR;
+         d.diag = SPARSE_DIAG_NON_UNIT;
+         d.mode = SPARSE_FILL_MODE_LOWER;
+
+         MKL_INT expected_calls = 5;
+
+         LLI = new MKL_INT[n_+1]();
+         for (int l = 0; l < n_+1; ++l) {
+             LLI[l] = this->L1_csr_->i[l];
+         }
+         mkl_sparse_d_create_csr(&m, SPARSE_INDEX_BASE_ZERO, this->L1_csr_->m, this->L1_csr_->n,
+                                 LLI, LLI+1, this->L1_csr_->i, this->L1_csr_->x);
+         mkl_sparse_set_mv_hint(m, opr, d, expected_calls);
+
+         mkl_set_num_threads(num_threads);
+     }
+     sym_lib::timing_measurement fused_code() override {
+         sym_lib::timing_measurement t1;
+         t1.start_timer();
+         mkl_sparse_d_trsv(SPARSE_OPERATION_NON_TRANSPOSE, 1, m, this->d, this->x_in_, this->x_);
+         t1.measure_elapsed_time();
+         sym_lib::copy_vector(0,n_,x_in_,x_);
+         return t1;
+     }
+
+     ~SpTRSVMKL() override {
+         delete[] this->LLI;
+     }
+ public:
+     SpTRSVMKL(int nThreads, sym_lib::CSR *L, sym_lib::CSC *L_csc,
+     double *correct_x,
+             std::string name) :
+     SpTRSVSerial(L, L_csc, correct_x, name), num_threads(nThreads) {};
+ };
+#endif
+
  class SpTRSVParallel : public SpTRSVSerial {
  protected:
 
@@ -493,19 +543,6 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
         }
     };
 
-
- void pruneIterations(DDT::MemoryTrace mt, int density) {
-  auto t0 = std::chrono::steady_clock::now();
-  for (int i = 0; i < mt.ips; i++) {
-   int oneD = 0;
-   while (mt.ip[i+1] - mt.ip[i] == 1) {
-    ++oneD;
-   }
-//    mt.a.nt = i+oneD;
-//    mt.a.t  = 0;
-  }
-  auto t1 = std::chrono::steady_clock::now();
- }
 
  class SpTRSVDDT : public SpTRSVSerial {
  protected:

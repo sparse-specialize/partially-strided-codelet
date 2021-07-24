@@ -14,14 +14,11 @@ set(SPARSE_UTIL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/utils/")
 set(SYMPILER_UTIL_INC "${SYMPILER_UTIL}/includes/")
 
 find_package(METIS OPTIONAL_COMPONENTS)
+find_package(MKL OPTIONAL_COMPONENTS)
+find_package(PAPI OPTIONAL_COMPONENTS)
+
 if(NOT METIS_FOUND)
     message(STATUS  "METIS not detected, downloading it..." )
-    #    find_program(MAKE_EXE NAMES gmake nmake make)
-    #    set(metis_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/metis")
-    #    set(metis_CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${metis_INSTALL_DIR})
-    #set(EXTERNAL_INSTALL_LOCATION ${CMAKE_CURRENT_LIST_DIR}/external)
-    # set(GKLIB_PATH ${SYMPILER_EXTERNAL}/metis/metis-src/GKLIB/ CACHE PATH "d")
-
     set(SHARED  TRUE CACHE BOOL "shared library" FORCE)
     set(METIS_INCLUDE_DIRS ${SYMPILER_LBC_ROOT}/external/metis/metis_shared-src/include)
     set(METIS_INCLUDES ${SYMPILER_LBC_ROOT}/external/metis/metis_shared-src/include)
@@ -30,20 +27,37 @@ if(NOT METIS_FOUND)
     set(METIS_FOUND TRUE)
     message(STATUS "METIS library is found at ${METIS_LIBRARY}")
 endif()
+
 if(METIS_FOUND)
     add_definitions(-DMETIS)
     set(METIS_SOURCE_FILES "${SPARSE_UTIL_SRC}/metis_interface.cpp")
-    #message("===> ${METIS_SOURCE_FILES}")
+endif()
+
+if (MKL_FOUND)
+  add_definitions(-DMKL)
+endif()
+
+if (PAPI_FOUND)
+    message('nice')
+    add_definitions(-DPAPI)
+endif()
+
+if ($ENV{PROFILE})
+    add_definitions(-DPROFILE)
 endif()
 
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/include")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/src/trace_gen")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/lib/cxxopts/include")
-include_directories(${SYMPILER_LBC_ROOT}/src/includes/
+include_directories(
+        ${SYMPILER_LBC_ROOT}/src/includes/
         ${SYMPILER_UTIL}/external/includes/
         ${SYMPILER_UTIL_INC}
-        ${METIS_INCLUDE_DIRS} ${METIS_INCLUDES}
+        ${METIS_INCLUDE_DIRS}
+        ${METIS_INCLUDES}
+        ${MKL_INCLUDE_DIR}
+        ${PAPI_INCLUDE_DIRS}
         )
 
 set(Sympiler_Libs

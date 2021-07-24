@@ -14,6 +14,14 @@
 #include "PatternMatching.h"
 
 #include <iostream>
+#ifdef MKL
+#include <mkl.h>
+#endif
+#ifdef PAPI
+#include "PAPIWrapper.h"
+#include "Profiler.h"
+#endif
+
 namespace sparse_avx{
 
  ///// SPMV
@@ -61,6 +69,7 @@ namespace sparse_avx{
    L1_csr_ = L;
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
+   this->pw_ = nullptr;
   };
 
   ~SpMVSerial() override = default;
@@ -102,6 +111,55 @@ namespace sparse_avx{
   auto t1 = std::chrono::steady_clock::now();
  }
 
+#ifdef MKL
+ class SpMVMKL : public SpMVSerial {
+     sparse_matrix_t m;
+     matrix_descr d;
+     MKL_INT* LLI;
+     int num_threads;
+
+     void build_set() override {
+         if (this->LLI != nullptr)
+             return;
+         d.type = SPARSE_MATRIX_TYPE_GENERAL;
+//         d.diag = SPARSE_DIAG_NON_UNIT;
+//         d.mode = SPARSE_FILL_MODE_FULL;
+
+         MKL_INT expected_calls = 5;
+
+         LLI = new MKL_INT[this->L1_csr_->m+1]();
+         for (int l = 0; l < this->L1_csr_->m+1; ++l) {
+             LLI[l] = this->L1_csr_->p[l];
+         }
+
+         auto  stat = mkl_sparse_d_create_csr(&m, SPARSE_INDEX_BASE_ZERO, this->L1_csr_->m, this->L1_csr_->n,
+                                 LLI, LLI+ 1, this->L1_csr_->i, this->L1_csr_->x);
+         mkl_sparse_set_mv_hint(m, SPARSE_OPERATION_NON_TRANSPOSE, d, expected_calls);
+         mkl_sparse_set_memory_hint(m, SPARSE_MEMORY_AGGRESSIVE);
+
+         mkl_set_num_threads(num_threads);
+         mkl_set_num_threads_local(num_threads);
+     }
+     sym_lib::timing_measurement fused_code() override {
+         sym_lib::timing_measurement t1;
+         t1.start_timer();
+         mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, 1, m, this->d, this->x_in_, 1, this->x_);
+         t1.measure_elapsed_time();
+         return t1;
+     }
+
+ public:
+     SpMVMKL(int nThreads, sym_lib::CSR *L, sym_lib::CSC *L_csc,
+     double *correct_x,
+     std::string name) :
+     SpMVSerial(L, L_csc, correct_x, name), num_threads(nThreads), LLI(nullptr) {}
+
+     ~SpMVMKL() override {
+         delete[] LLI;
+     }
+ };
+#endif
+
  class SpMVDDT : public SpMVSerial {
  protected:
   DDT::Config config;
@@ -109,13 +167,15 @@ namespace sparse_avx{
   DDT::GlobalObject d;
   sym_lib::timing_measurement analysis_breakdown;
 
-  void build_set() override{
+  void build_set() override {
    // Allocate memory and generate global object
-   this->cl = new std::vector<DDT::Codelet*>[config.nThread];
-   d = DDT::init(config);
-   analysis_breakdown.start_timer();
-   DDT::inspectSerialTrace(d, cl, config);
-   analysis_breakdown.measure_elapsed_time();
+   if (this->cl == nullptr) {
+       this->cl = new std::vector<DDT::Codelet *>[config.nThread];
+       d = DDT::init(config);
+       analysis_breakdown.start_timer();
+       DDT::inspectSerialTrace(d, cl, config);
+       analysis_breakdown.measure_elapsed_time();
+   }
   }
 
   sym_lib::timing_measurement fused_code() override {
@@ -135,7 +195,7 @@ namespace sparse_avx{
   SpMVDDT(sym_lib::CSR *L, sym_lib::CSC *L_csc,
            double *correct_x, DDT::Config &conf,
            std::string name) :
-    SpMVSerial(L, L_csc, correct_x, name), config(conf) {
+    SpMVSerial(L, L_csc, correct_x, name), config(conf), cl(nullptr) {
    L1_csr_ = L;
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
@@ -148,6 +208,7 @@ namespace sparse_avx{
    delete[] cl;
   }
  };
+
 
 
 }

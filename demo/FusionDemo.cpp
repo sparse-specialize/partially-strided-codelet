@@ -3,7 +3,6 @@
 //
 #define DBG_LOG
 #define CSV_LOG
-#define PROFILE
 
 #include <cstring>
 #include <cmath>
@@ -14,7 +13,7 @@
 #endif
 
 
-namespace sym_lib{
+namespace sym_lib {
 
 
 
@@ -35,7 +34,7 @@ namespace sym_lib{
    if (std::isnan(vec1[i]) || std::isnan(vec2[i]))
     return false;
    if constexpr (std::is_same_v<type, double> || std::is_same_v<type, float>) {
-        if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { std::cout << i << '\n' << vec1[i] << "," << vec2[i] << std::endl; return false; }
+        if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { return false; }
    } else {
        if (!is_generic_equal(vec1[i],vec2[i], eps))
            return false;
@@ -62,6 +61,7 @@ namespace sym_lib{
   name_ = name;
   x_in_ = new double[n]();
   x_ = new double[n]();
+  pw_ = nullptr;
  }
 
 #ifdef PROFILE
@@ -103,15 +103,15 @@ namespace sym_lib{
   analysis_time_.start_timer();
   build_set();
   analysis_time_.measure_elapsed_time();
-  for (int i = 0; i < num_test_; ++i) {
+     for (int i = 0; i < num_test_; ++i) {
    setting_up();
 #ifdef PROFILE
-   if(pw_)
-    pw_->begin_profiling();
+   if (pw_ != nullptr) { pw_->begin_profiling(); }
 #endif
-   timing_measurement t1 = fused_code();
+
+         timing_measurement t1 = fused_code();
 #ifdef PROFILE
-   if(pw_)
+   if (pw_ != nullptr)
     pw_->finish_profiling();
 #endif
    time_array.emplace_back(t1);
@@ -119,10 +119,6 @@ namespace sym_lib{
   testing();
 
   median_t = sym_lib::time_median(time_array);
-/*  for (int j = 0; j < time_array.size(); ++j) {
-   std::cout<<" :"<<time_array[j].elapsed_time<<";";
-  }
-  std::cout<<"\n";*/
   return median_t;
  }
 

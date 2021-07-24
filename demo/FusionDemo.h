@@ -6,12 +6,8 @@
 #define PROJECT_FUSIONDEMO_H
 
 #include "def.h"
-#ifdef PROFILE
 #ifdef PAPI
 #include "PAPIWrapper.h"
-#else
-#undef PROFILE
-#endif
 #endif
 
 namespace sym_lib{
@@ -46,8 +42,8 @@ namespace sym_lib{
   explicit  FusionDemo(int, std::string);
   virtual ~FusionDemo();
 
-#ifdef PROFILE
-  PAPIWrapper *pw_;
+#ifdef PAPI
+  PAPIWrapper *pw_ = nullptr;
   explicit  FusionDemo(int, std::string, PAPIWrapper *pw);
   FusionDemo(CSR *L, CSC* L_csc, CSR *A, CSC *A_csc,
              double *correct_x, std::string name, PAPIWrapper *pw);
