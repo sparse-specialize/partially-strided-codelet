@@ -56,7 +56,7 @@ namespace sparse_avx {
                                    _final_level_no,
                                    _final_level_ptr,_final_part_no,
                                    _final_part_ptr,_final_node_ptr,
-                                   parts, cp_, ic_, cost);
+                                   parts, ic_, cp_, cost);
 
      if (true) {
          auto part_no = _final_level_ptr[_final_level_no];
