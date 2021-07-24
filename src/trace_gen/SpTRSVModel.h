@@ -18,6 +18,7 @@ namespace sparse_avx{
   int _final_part_no, *_final_level_ptr, *_final_part_ptr,
   *_final_node_ptr;
   int lp_, cp_, ic_;
+  bool _bpack;
  protected:
 
   void iteration_space_prunning(int parts) override;
@@ -26,6 +27,8 @@ namespace sparse_avx{
   ~SpTRSVModel();
   SpTRSVModel(int n, int m, int nnz, int *Ap, int *Ai, int *Apt, int *Ait, int
   lp, int cp, int ip);
+  SpTRSVModel(int n, int m, int nnz, int *Ap, int *Ai, int *Apt, int *Ait, int
+  lp, int cp, int ip, bool bp);
 
   Trace* generate_trace() override;
   Trace** generate_trace(int num_threads) override;

@@ -50,6 +50,7 @@ namespace DDT {
     int nThread;
     StorageFormat sf;
    int coarsening;
+   bool bin_packing;
   };
 
   struct GlobalObject {
@@ -70,9 +71,10 @@ namespace DDT {
   template <typename M0, typename M1>
   DDT::GlobalObject allocateExternalSpTRSVMemoryTrace(const M0* m0, const
   M1* m1, const DDT::Config& cfg) {
-      int lp = cfg.nThread, cp = cfg.coarsening, ic = 1;
+      int lp = cfg.nThread, cp = cfg.coarsening, ic = 1, bp = cfg.bin_packing;
       auto *sm = new sparse_avx::SpTRSVModel(m0->m, m0->n, m0->nnz, m0->p,
-                                             m0->i, m1->p, m1->i, lp, cp, ic);
+                                             m0->i, m1->p, m1->i, lp, cp, ic,
+                                             bp);
       auto trs = sm->generate_3d_trace(cfg.nThread);
 
       return GlobalObject{  {},  nullptr, nullptr, nullptr, 0, nullptr, sm, trs };
