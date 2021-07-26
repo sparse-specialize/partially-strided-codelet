@@ -61,7 +61,9 @@ namespace sym_lib {
   name_ = name;
   x_in_ = new double[n]();
   x_ = new double[n]();
+#ifdef PROFILE
   pw_ = nullptr;
+#endif
  }
 
 #ifdef PROFILE

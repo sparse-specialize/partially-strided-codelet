@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.1)
 project(DDT)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -24,7 +24,7 @@ if(NOT METIS_FOUND)
     set(METIS_INCLUDE_DIRS ${SYMPILER_LBC_ROOT}/external/metis/metis_shared-src/include)
     set(METIS_INCLUDES ${SYMPILER_LBC_ROOT}/external/metis/metis_shared-src/include)
     set(METIS_LIBRARY_DIRS ${SYMPILER_LBC_ROOT}/lib/)
-    set(METIS_LIBRARIES ${SYMPILER_LBC_ROOT}/lib/libmetis.so)
+    set(METIS_LIBRARIES metis)
     set(METIS_FOUND TRUE)
     message(STATUS "METIS library is found at ${METIS_LIBRARY}")
 endif()
@@ -45,6 +45,9 @@ endif()
 
 if ($ENV{PROFILE})
     add_definitions(-DPROFILE)
+    include_directories(
+            ${PAPI_INCLUDE_DIRS}
+    )
 endif()
 
 
@@ -58,12 +61,13 @@ include_directories(
         ${METIS_INCLUDE_DIRS}
         ${METIS_INCLUDES}
         ${MKL_INCLUDE_DIR}
-        ${PAPI_INCLUDE_DIRS}
+ #       ${PAPI_INCLUDE_DIRS}
         ${MIS_DIR}
         )
 
 set(Sympiler_Libs
-        "lbc;metis;")
+        lbc
+       ${METIS_LIBRARIES} )
 
 set(Sympiler_SRC
         "${SYMPILER_UTIL}/BCSCMatrix.cpp"
