@@ -14,17 +14,16 @@ header=1
 #MATS="gyro_k.mtx Dubcova2.mtx msc23052.mtx Pres_Poisson.mtx cbuckle.mtx thermomech_dM.mtx olafu.mtx Dubcova3.mtx parabolic_fem.mtx ecology2.mtx gyro.mtx raefsky4.mtx"
 
 if [ "$TUNED" ==  1 ]; then
+for bp in {0,1}; do
 for mat in $PATHMAIN/*.mtx; do
 for k in {2,3,4,5,6,7,8,9}; do
-#for lparm in {1..10}; do
 #	for cparm in {1,2,3,4,5,10,20}; do
 	if [ $header -eq 1 ]; then
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -d
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -d -p $bp
      header=0
   else
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -p $bp
   fi
-#done
 #done
 done
 done
@@ -34,9 +33,10 @@ for mat in $PATHMAIN/l_factors/*.mtx; do
 for k in {-4,-3,-2,-1,0,1,2,3,4}; do
 #for lparm in {1..10}; do
 #	for cparm in {1,2,3,4,5,10,20}; do
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -p $bp
 #done
 #done
+done
 done
 done
 fi
