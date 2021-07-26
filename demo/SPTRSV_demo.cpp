@@ -12,7 +12,6 @@
 #include "metis_interface.h"
 #endif
 
-#define PROFILE
 
 using namespace sparse_avx;
 int main(int argc, char *argv[]) {

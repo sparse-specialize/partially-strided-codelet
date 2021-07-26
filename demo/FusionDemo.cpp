@@ -12,11 +12,7 @@
 #include <metis_interface.h>
 #endif
 
-
 namespace sym_lib {
-
-
-
  template<class type>
  bool is_float_equal(const type x, const type y, double absTol, double relTol) {
      return std::abs(x - y) <= std::max(absTol, relTol * std::max(std::abs(x), std::abs(y)));

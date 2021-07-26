@@ -45,6 +45,145 @@ namespace sparse_avx{
   }
  }
 
+
+    inline double hsum_double_avx(__m256d v) {
+        __m128d vlow = _mm256_castpd256_pd128(v);
+        __m128d vhigh = _mm256_extractf128_pd(v, 1);  // high 128
+        vlow = _mm_add_pd(vlow, vhigh);      // reduce down to 128
+
+        __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+        return _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
+    }
+
+void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
+                           const double *x, double *y, int nThreads) {
+        for (int i = 0; i < n; i++) {
+            auto r0 = _mm256_setzero_pd();
+            int j = Ap[i];
+            for (; j < Ap[i+1] - 3; j += 4) {
+                auto xv = _mm256_set_pd(x[Ai[j+3]],x[Ai[j+2]],x[Ai[j+1]],x[Ai[j]]);
+                auto axv0 = _mm256_loadu_pd(Ax + j);
+                r0 = _mm256_fmadd_pd(axv0, xv, r0);
+            }
+
+            // Compute tail
+            double tail = 0.;
+            for (; j < Ap[i+1]; j++) { tail += Ax[j] * x[Ai[j]]; }
+
+            // H-Sum
+            y[i] += tail + hsum_double_avx(r0);
+        }
+    }
+    void spmv_vec1_16(int n, const int *Ap, const int *Ai, const double *Ax,
+                   const double *x, double *y, int nThreads) {
+        for (int i = 0; i < n; i++) {
+            auto r0 = _mm256_setzero_pd();
+            int j = Ap[i];
+            for (; j < Ap[i+1] - 15; j += 16) {
+                auto xv0 = _mm256_set_pd(x[Ai[j+3]],x[Ai[j+2]],x[Ai[j+1]],x[Ai[j]]);
+                auto xv1 = _mm256_set_pd(x[Ai[j+7]],x[Ai[j+6]],x[Ai[j+5]],x[Ai[j+4]]);
+                auto xv2 = _mm256_set_pd(x[Ai[j+11]],x[Ai[j+10]],x[Ai[j+9]],x[Ai[j+8]]);
+                auto xv3 = _mm256_set_pd(x[Ai[j+15]],x[Ai[j+14]],x[Ai[j+13]],x[Ai[j+12]]);
+
+                auto axv0 = _mm256_loadu_pd(Ax + j);
+                auto axv1 = _mm256_loadu_pd(Ax + j + 4);
+                auto axv2 = _mm256_loadu_pd(Ax + j + 8);
+                auto axv3 = _mm256_loadu_pd(Ax + j + 12);
+
+                r0 = _mm256_fmadd_pd(axv0, xv0, r0);
+                r0 = _mm256_fmadd_pd(axv1, xv1, r0);
+                r0 = _mm256_fmadd_pd(axv2, xv2, r0);
+                r0 = _mm256_fmadd_pd(axv3, xv3, r0);
+            }
+
+            // Compute tail
+            double tail = 0.;
+            for (; j < Ap[i+1]; j++) { tail += Ax[j] * x[Ai[j]]; }
+
+            // H-Sum
+            y[i] += tail + hsum_double_avx(r0);
+        }
+    }
+    void spmv_vec1_8(int n, const int *Ap, const int *Ai, const double *Ax,
+                      const double *x, double *y, int nThreads) {
+        for (int i = 0; i < n; i++) {
+            auto r0 = _mm256_setzero_pd();
+            int j = Ap[i];
+            for (; j < Ap[i+1] - 7; j += 8) {
+                auto xv0 = _mm256_set_pd(x[Ai[j+3]],x[Ai[j+2]],x[Ai[j+1]],x[Ai[j]]);
+                auto xv1 = _mm256_set_pd(x[Ai[j+8]],x[Ai[j+7]],x[Ai[j+6]],x[Ai[j+5]]);
+
+                auto axv0 = _mm256_loadu_pd(Ax + j);
+                auto axv1 = _mm256_loadu_pd(Ax + j + 4);
+
+                r0 = _mm256_fmadd_pd(axv0, xv0, r0);
+                r0 = _mm256_fmadd_pd(axv1, xv1, r0);
+            }
+
+            // Compute tail
+            double tail = 0.;
+            for (; j < Ap[i+1]; j++) { tail += Ax[j] * x[Ai[j]]; }
+
+            // H-Sum
+            y[i] += tail + hsum_double_avx(r0);
+        }
+    }
+    void spmv_vec2(int n, const int *Ap, const int *Ai, const double *Ax,
+                   const double *x, double *y, int nThreads) {
+        int i = 0;
+        for (; i < n-1; i += 2) {
+            auto r0 = _mm256_setzero_pd();
+            auto r1 = _mm256_setzero_pd();
+
+            int j0 = Ap[i];
+            int j1 = Ap[i+1];
+            for (; j0 < Ap[i+1] - 3 && j1 < Ap[i+2] - 3; j0 += 4, j1 += 4) {
+                auto xv0 = _mm256_set_pd(x[Ai[j0+3]],x[Ai[j0+2]],x[Ai[j0+1]],x[Ai[j0]]);
+                auto xv1 = _mm256_set_pd(x[Ai[j1+3]],x[Ai[j1+2]],x[Ai[j1+1]],x[Ai[j1]]);
+
+                auto axv0 = _mm256_loadu_pd(Ax + j0);
+                auto axv1 = _mm256_loadu_pd(Ax + j1);
+
+                r0 = _mm256_fmadd_pd(axv0, xv0, r0);
+                r1 = _mm256_fmadd_pd(axv1, xv1, r1);
+            }
+
+            // Compute tail
+            __m128d tail = _mm_loadu_pd(y+i);
+            for (; j0 < Ap[i+1]; j0++) {
+                tail[0] += Ax[j0] * x[Ai[j0]];
+            }
+            for (; j1 < Ap[i+2]; j1++) {
+                tail[1] += Ax[j1] * x[Ai[j1]];
+            }
+
+            // H-Sum
+            auto h0 = _mm256_hadd_pd(r0, r1);
+            __m128d vlow = _mm256_castpd256_pd128(h0);
+            __m128d vhigh = _mm256_extractf128_pd(h0, 1);// high 128
+            vlow = _mm_add_pd(vlow, vhigh);              // reduce down to 128
+            vlow = _mm_add_pd(vlow, tail);
+            // Store
+            _mm_storeu_pd(y + i, vlow);
+        }
+        for (; i < n; i++) {
+            auto r0 = _mm256_setzero_pd();
+            int j = Ap[i];
+            for (; j < Ap[i+1] - 3; j += 4) {
+                auto xv = _mm256_set_pd(x[Ai[j+3]],x[Ai[j+2]],x[Ai[j+1]],x[Ai[j]]);
+                auto axv0 = _mm256_loadu_pd(Ax + j);
+                r0 = _mm256_fmadd_pd(axv0, xv, r0);
+            }
+
+            // Compute tail
+            double tail = 0.;
+            for (; j < Ap[i+1]; j++) { tail += Ax[j] * x[Ai[j]]; }
+
+            // H-Sum
+            y[i] += tail + hsum_double_avx(r0);
+        }
+    }
+
  class SpMVSerial : public sym_lib::FusionDemo {
  protected:
   void setting_up() override {
@@ -98,18 +237,94 @@ namespace sparse_avx{
  };
 
 
- void pruneIterations(DDT::MemoryTrace mt, int density) {
-  auto t0 = std::chrono::steady_clock::now();
-  for (int i = 0; i < mt.ips; i++) {
-   int oneD = 0;
-   while (mt.ip[i+1] - mt.ip[i] == 1) {
-    ++oneD;
-   }
-//    mt.a.nt = i+oneD;
-//    mt.a.t  = 0;
-  }
-  auto t1 = std::chrono::steady_clock::now();
- }
+
+    class SpMVVec1 : public SpMVSerial {
+    protected:
+        sym_lib::timing_measurement fused_code() override {
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            spmv_vec1(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_, num_threads_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+
+    public:
+        SpMVVec1(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                     double *correct_x,
+                     std::string name) :
+                SpMVSerial(L, L_csc, correct_x, name) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+    };
+
+    class SpMVVec1_8 : public SpMVSerial {
+    protected:
+        sym_lib::timing_measurement fused_code() override {
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            spmv_vec1_8(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_, num_threads_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+
+    public:
+        SpMVVec1_8(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                 double *correct_x,
+                 std::string name) :
+                SpMVSerial(L, L_csc, correct_x, name) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+    };
+
+    class SpMVVec1_16 : public SpMVSerial {
+    protected:
+        sym_lib::timing_measurement fused_code() override {
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            spmv_vec1_16(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_, num_threads_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+
+    public:
+        SpMVVec1_16(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                 double *correct_x,
+                 std::string name) :
+                SpMVSerial(L, L_csc, correct_x, name) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+    };
+
+    class SpMVVec2 : public SpMVSerial {
+    protected:
+        sym_lib::timing_measurement fused_code() override {
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            spmv_vec2(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_, num_threads_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+
+    public:
+        SpMVVec2(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                 double *correct_x,
+                 std::string name) :
+                SpMVSerial(L, L_csc, correct_x, name) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+    };
 
 #ifdef MKL
  class SpMVMKL : public SpMVSerial {
