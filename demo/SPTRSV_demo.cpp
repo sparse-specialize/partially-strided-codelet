@@ -18,7 +18,8 @@ int main(int argc, char *argv[]) {
     auto config = DDT::parseInput(argc, argv);
     int num_threads = config.nThread;
     int coarsening_p = config.coarsening;
-    int initial_cut = 1;
+    bool bpack = config.bin_packing;
+    int initial_cut = config.coarsening;
     sym_lib::CSC *A;
     A = sym_lib::read_mtx(config.matrixPath);
     auto *sol = new double[A->n]();
@@ -58,17 +59,17 @@ int main(int argc, char *argv[]) {
     auto *spsp = new SpTRSVParallel(L1_ord_csr, L1_ord, sol_sptrsv,
                                     "Parallel "
                                     "LBC",
-                                    num_threads, coarsening_p, initial_cut);
+                                    num_threads, coarsening_p, initial_cut, bpack);
     auto sptrsv_par = spsp->evaluate();
 
     auto *spspv2 =
             new SpTRSVParallelVec2(L1_ord_csr, L1_ord, sol_sptrsv,
                                    "Parallel Vec2"
                                    "LBC",
-                                   num_threads, coarsening_p, initial_cut);
+                                   num_threads, coarsening_p, initial_cut, bpack);
     auto sptrsv_parv2 = spspv2->evaluate();
 
-
+//#ifdef DDTT
     config.nThread = 1;
  auto *ddtsptrsvst = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
                                  "SpTRSV DDT Serial", 1, coarsening_p,
@@ -84,7 +85,7 @@ int main(int argc, char *argv[]) {
     auto ddt_execmt =  ddtsptrsvmt->evaluate();
     auto ddt_analysismt = ddtsptrsvmt->get_analysis_bw();
 
-
+//#endif
     auto *sptrsv_vec1 =
             new SpTRSVSerialVec1(L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec1");
     auto sptrsv_vec1_exec = sptrsv_vec1->evaluate();
@@ -104,7 +105,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     if (config.header) {
-        std::cout << "Matrix,Threads,Coarsening,";
+        std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
         std::cout << "SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, "
                      "SpTRSV LS "
                      "NOVec, SpTRSV Parallel,SpTRSV "
@@ -118,7 +119,7 @@ int main(int argc, char *argv[]) {
         std::cout << "\n";
     }
 
-    std::cout << config.matrixPath << "," << config.nThread << ","
+    std::cout << config.matrixPath << "," << config.nThread << ","<< config.bin_packing<<","
               << config.coarsening << "," << sptrsv_baseline.elapsed_time << ","
               << sptrsv_vec1_exec.elapsed_time << ","
               << sptrsv_vec2_exec.elapsed_time << ",";
@@ -130,8 +131,10 @@ int main(int argc, char *argv[]) {
     std::cout << sptrsv_mkl_execst.elapsed_time << ",";
     std::cout << sptrsv_mkl_execmt.elapsed_time << ",";
 #endif
+//#ifdef DDTT
     std::cout << ddt_execst.elapsed_time << ",";
     std::cout << ddt_execmt.elapsed_time << ",";
+//#endif
     std::cout << "\n";
 
     // delete A;

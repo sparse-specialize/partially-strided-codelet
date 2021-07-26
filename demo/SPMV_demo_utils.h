@@ -208,7 +208,9 @@ void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
    L1_csr_ = L;
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
+#ifdef PROFILE
    this->pw_ = nullptr;
+#endif
   };
 
   ~SpMVSerial() override = default;

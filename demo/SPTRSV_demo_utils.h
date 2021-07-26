@@ -20,6 +20,7 @@
 #include <lbc.h>
 #include <sparse_inspector.h>
 
+#include <lbc_csc_dag.h>
 #ifdef MKL
 #include <mkl.h>
 #include <mkl_spblas.h>
@@ -445,16 +446,35 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   int final_level_no, *fina_level_ptr, *final_part_ptr, *final_node_ptr;
   int part_no;
   int lp_, cp_, ic_;
+  bool b_pack;
   void build_set() override {
    auto *cost = new double[n_]();
    for (int i = 0; i < n_; ++i) {
     cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
    }
+#define OLD
+#ifdef OLD
    sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
-                                    final_level_no,
-                                    fina_level_ptr,part_no,
-                                    final_part_ptr,final_node_ptr,
-                                    lp_,cp_, ic_, cost);
+                                                    final_level_no,
+                                                    fina_level_ptr,part_no,
+                                                    final_part_ptr,final_node_ptr,
+                                                    lp_,ic_, cp_, cost, b_pack);
+#else
+   sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(n_, L1_csc_->p, L1_csc_->i,
+                                                    final_level_no,
+                                                    fina_level_ptr,part_no,
+                                                    final_part_ptr,final_node_ptr,
+                                                    lp_,ic_, cp_, cost,lp_,
+                                                    b_pack);
+#endif
+   if (true) {
+    auto part_no = fina_level_ptr[final_level_no];
+    // Sorting the w partitions
+    for (int i = 0; i < part_no; ++i) {
+     std::sort(final_node_ptr + final_part_ptr[i],
+               final_node_ptr + final_part_ptr[i + 1]);
+    }
+   }
 
    delete []cost;
   }
@@ -473,8 +493,8 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
  public:
   SpTRSVParallel(sym_lib::CSR *L, sym_lib::CSC *L_csc,
                double *correct_x,
-               std::string name, int lp, int cp, int ic) :
-    SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp), ic_(ic) {
+               std::string name, int lp, int cp, int ic, int bp) :
+    SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp), ic_(ic), b_pack(bp) {
    L1_csr_ = L;
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
@@ -493,24 +513,36 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
         int final_level_no, *fina_level_ptr, *final_part_ptr, *final_node_ptr;
         int part_no;
         int lp_, cp_, ic_;
+        bool b_pack;
         void build_set() override {
             auto *cost = new double[n_]();
             for (int i = 0; i < n_; ++i) {
                 cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
             }
-            sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
-                                                 final_level_no,
-                                                 fina_level_ptr,part_no,
-                                                 final_part_ptr,final_node_ptr,
-                                                 lp_,cp_, ic_, cost);
-            if (true){
-                auto part_no = fina_level_ptr[final_level_no];
-                // Sorting the w partitions
-                for (int i = 0; i < part_no; ++i) {
-                    std::sort(final_node_ptr + final_part_ptr[i],
-                              final_node_ptr + final_part_ptr[i + 1]);
-                }
-            }
+#define OLD
+#ifdef OLD
+         sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
+                                              final_level_no,
+                                              fina_level_ptr,part_no,
+                                              final_part_ptr,final_node_ptr,
+                                              lp_,ic_, cp_, cost, b_pack);
+#else
+         sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(n_, L1_csc_->p, L1_csc_->i,
+                                                          final_level_no,
+                                                          fina_level_ptr,part_no,
+                                                          final_part_ptr,final_node_ptr,
+                                                          lp_,ic_, cp_, cost,
+                                                          lp_, b_pack);
+#endif
+         if (true) {
+          auto part_no = fina_level_ptr[final_level_no];
+          // Sorting the w partitions
+          for (int i = 0; i < part_no; ++i) {
+           std::sort(final_node_ptr + final_part_ptr[i],
+                     final_node_ptr + final_part_ptr[i + 1]);
+          }
+         }
+
 
             delete []cost;
         }
@@ -529,11 +561,12 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
     public:
         SpTRSVParallelVec2(sym_lib::CSR *L, sym_lib::CSC *L_csc,
                        double *correct_x,
-                       std::string name, int lp, int cp, int ic) :
+                       std::string name, int lp, int cp, int ic, int bp) :
                 SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp), ic_(ic) {
             L1_csr_ = L;
             L1_csc_ = L_csc;
             correct_x_ = correct_x;
+            b_pack = bp;
         };
 
         ~SpTRSVParallelVec2(){

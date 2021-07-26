@@ -7,6 +7,7 @@
 #include <Inspector.h>
 #include <cassert>
 #include <lbc.h>
+#include <lbc_csc_dag.h>
 #include <sparse_io.h>
 
 namespace sparse_avx {
@@ -25,7 +26,13 @@ namespace sparse_avx {
                           int *Ait, int lp, int cp, int ic)
  :_num_rows(n),_num_cols(m),_nnz(nnz),_Ap(Ap), _Ai(Ai), _Apt(Apt), _Ait(Ait),lp_
  (lp), cp_(cp), ic_
-   (ic) {}
+   (ic) {_bpack=true;}
+
+   SpTRSVModel::SpTRSVModel(int n, int m, int nnz, int *Ap, int *Ai, int *Apt,
+                          int *Ait, int lp, int cp, int ic, bool bp)
+   :_num_rows(n),_num_cols(m),_nnz(nnz),_Ap(Ap), _Ai(Ai), _Apt(Apt), _Ait(Ait),lp_
+   (lp), cp_(cp), ic_
+      (ic), _bpack(bp) {}
 
 
  Trace* SpTRSVModel::generate_trace() {
@@ -52,12 +59,20 @@ namespace sparse_avx {
   for (int i = 0; i < _num_cols; ++i) {
    cost[i] = _Ap[i+1] - _Ap[i];
   }
+#define OLD
+#ifdef OLD
   sym_lib::get_coarse_levelSet_DAG_CSC(_num_cols, _Apt, _Ait,
                                    _final_level_no,
                                    _final_level_ptr,_final_part_no,
                                    _final_part_ptr,_final_node_ptr,
-                                   parts, ic_, cp_, cost);
-
+                                   parts, ic_, cp_, cost, _bpack);
+#else
+  sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(_num_cols, _Apt, _Ait,
+                                       _final_level_no,
+                                       _final_level_ptr,_final_part_no,
+                                       _final_part_ptr,_final_node_ptr,
+                                       parts, ic_, cp_, cost,parts, _bpack);
+#endif
      if (true) {
          auto part_no = _final_level_ptr[_final_level_no];
          // Sorting the w partitions

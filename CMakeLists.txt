@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.1)
 project(DDT)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -12,6 +12,7 @@ set(SYMPILER_LBC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/")
 set(SYMPILER_UTIL "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/utils/")
 set(SPARSE_UTIL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/utils/")
 set(SYMPILER_UTIL_INC "${SYMPILER_UTIL}/includes/")
+set(MIS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/")
 
 find_package(METIS OPTIONAL_COMPONENTS)
 find_package(MKL OPTIONAL_COMPONENTS)
@@ -23,7 +24,7 @@ if(NOT METIS_FOUND)
     set(METIS_INCLUDE_DIRS ${SYMPILER_LBC_ROOT}/external/metis/metis_shared-src/include)
     set(METIS_INCLUDES ${SYMPILER_LBC_ROOT}/external/metis/metis_shared-src/include)
     set(METIS_LIBRARY_DIRS ${SYMPILER_LBC_ROOT}/lib/)
-    set(METIS_LIBRARIES ${SYMPILER_LBC_ROOT}/lib/libmetis.so)
+    set(METIS_LIBRARIES metis)
     set(METIS_FOUND TRUE)
     message(STATUS "METIS library is found at ${METIS_LIBRARY}")
 endif()
@@ -44,6 +45,9 @@ endif()
 
 if ($ENV{PROFILE})
     add_definitions(-DPROFILE)
+    include_directories(
+            ${PAPI_INCLUDE_DIRS}
+    )
 endif()
 
 
@@ -57,17 +61,20 @@ include_directories(
         ${METIS_INCLUDE_DIRS}
         ${METIS_INCLUDES}
         ${MKL_INCLUDE_DIR}
-        ${PAPI_INCLUDE_DIRS}
+ #       ${PAPI_INCLUDE_DIRS}
+        ${MIS_DIR}
         )
 
 set(Sympiler_Libs
-        "lbc;metis;")
+        lbc
+       ${METIS_LIBRARIES} )
 
 set(Sympiler_SRC
         "${SYMPILER_UTIL}/BCSCMatrix.cpp"
         "${SYMPILER_UTIL}/sparse_io.cpp"
         "${SYMPILER_UTIL}/metis_interface.cpp"
-        "${SYMPILER_UTIL}/external/mmio.cpp")
+        "${SYMPILER_UTIL}/external/mmio.cpp"
+        "${MIS_DIR}/lbc_csc_dag.cpp")
 
 
 aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src" SRC)
