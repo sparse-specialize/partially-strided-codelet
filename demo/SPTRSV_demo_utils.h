@@ -452,8 +452,8 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    for (int i = 0; i < n_; ++i) {
     cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
    }
-#define ooo
-#ifdef ooo
+#define OLD
+#ifdef OLD
    sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
                                                     final_level_no,
                                                     fina_level_ptr,part_no,
@@ -519,8 +519,8 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
             for (int i = 0; i < n_; ++i) {
                 cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
             }
-#define ooo
-#ifdef ooo
+#define OLD
+#ifdef OLD
          sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
                                               final_level_no,
                                               fina_level_ptr,part_no,

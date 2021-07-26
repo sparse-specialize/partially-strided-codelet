@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
                                    num_threads, coarsening_p, initial_cut, bpack);
     auto sptrsv_parv2 = spspv2->evaluate();
 
-#ifdef DDTT
+//#ifdef DDTT
     config.nThread = 1;
  auto *ddtsptrsvst = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
                                  "SpTRSV DDT Serial", 1, coarsening_p,
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
     auto ddt_execmt =  ddtsptrsvmt->evaluate();
     auto ddt_analysismt = ddtsptrsvmt->get_analysis_bw();
 
-#endif
+//#endif
     auto *sptrsv_vec1 =
             new SpTRSVSerialVec1(L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec1");
     auto sptrsv_vec1_exec = sptrsv_vec1->evaluate();
@@ -132,10 +132,10 @@ int main(int argc, char *argv[]) {
     std::cout << sptrsv_mkl_execst.elapsed_time << ",";
     std::cout << sptrsv_mkl_execmt.elapsed_time << ",";
 #endif
-#ifdef DDTT
+//#ifdef DDTT
     std::cout << ddt_execst.elapsed_time << ",";
     std::cout << ddt_execmt.elapsed_time << ",";
-#endif
+//#endif
     std::cout << "\n";
 
     // delete A;

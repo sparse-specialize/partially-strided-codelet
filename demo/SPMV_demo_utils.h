@@ -69,7 +69,9 @@ namespace sparse_avx{
    L1_csr_ = L;
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
+#ifdef PROFILE
    this->pw_ = nullptr;
+#endif
   };
 
   ~SpMVSerial() override = default;

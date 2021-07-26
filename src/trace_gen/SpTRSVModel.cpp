@@ -59,13 +59,13 @@ namespace sparse_avx {
   for (int i = 0; i < _num_cols; ++i) {
    cost[i] = _Ap[i+1] - _Ap[i];
   }
-//#define OLD
+#define OLD
 #ifdef OLD
   sym_lib::get_coarse_levelSet_DAG_CSC(_num_cols, _Apt, _Ait,
                                    _final_level_no,
                                    _final_level_ptr,_final_part_no,
                                    _final_part_ptr,_final_node_ptr,
-                                   parts, ic_, cp_, cost);
+                                   parts, ic_, cp_, cost, _bpack);
 #else
   sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(_num_cols, _Apt, _Ait,
                                        _final_level_no,
