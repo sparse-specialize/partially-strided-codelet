@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
     auto config = DDT::parseInput(argc, argv);
     int num_threads = config.nThread;
     int coarsening_p = config.coarsening;
+    bool bpack = config.bin_packing;
     int initial_cut = 1;
     sym_lib::CSC *A;
     A = sym_lib::read_mtx(config.matrixPath);
@@ -59,14 +60,14 @@ int main(int argc, char *argv[]) {
     auto *spsp = new SpTRSVParallel(L1_ord_csr, L1_ord, sol_sptrsv,
                                     "Parallel "
                                     "LBC",
-                                    num_threads, coarsening_p, initial_cut);
+                                    num_threads, coarsening_p, initial_cut, bpack);
     auto sptrsv_par = spsp->evaluate();
 
     auto *spspv2 =
             new SpTRSVParallelVec2(L1_ord_csr, L1_ord, sol_sptrsv,
                                    "Parallel Vec2"
                                    "LBC",
-                                   num_threads, coarsening_p, initial_cut);
+                                   num_threads, coarsening_p, initial_cut, bpack);
     auto sptrsv_parv2 = spspv2->evaluate();
 
 
