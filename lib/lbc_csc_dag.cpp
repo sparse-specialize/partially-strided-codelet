@@ -14,7 +14,7 @@ namespace sym_lib {
                  int *levelPtr, int *levelSet, int *node2partition,
                  double *outCost, double *nodeCost, int &curLeveledParCost,
                  int numNodes, int *nodes, int numThreads) {
-#pragma omp parallel for num_threads(numThreads)
+//#pragma omp parallel for num_threads(numThreads)
   for (int i = 0; i < numNodes; ++i) {
    int node = nodes[i];
    node2partition[node] = i;
@@ -24,7 +24,7 @@ namespace sym_lib {
   while (change) {
    change = false;
 
-#pragma omp parallel for num_threads(numThreads)
+//#pragma omp parallel for num_threads(numThreads)
    for (int i = 0; i < numNodes; ++i) {
     int u = nodes[i];
     // Now we go over all neighbors of u
@@ -48,7 +48,7 @@ namespace sym_lib {
     }
    }
 
-#pragma omp parallel for num_threads(numThreads)
+//#pragma omp parallel for num_threads(numThreads)
    for (int i = 0; i < numNodes; ++i) {
     int node = nodes[i];
     while (node2partition[node] != node2partition[nodes[node2partition[node]]]) {
@@ -58,7 +58,7 @@ namespace sym_lib {
   }
 
   int max_cc = -1;
-#pragma omp parallel for num_threads(numThreads) reduction(max : max_cc)
+//#pragma omp parallel for num_threads(numThreads) reduction(max : max_cc)
   for (int i = 0; i < numNodes; ++i) {
    int node = nodes[i];
    int cc = node2partition[node];
@@ -220,7 +220,7 @@ namespace sym_lib {
    memset(outCost, 0.0, n * sizeof(double));
    memset(newOutCost, 0.0, n * sizeof(double));
 
-#pragma omp for schedule(dynamic, 1)
+//#pragma omp for schedule(dynamic, 1)
    for (int i = 0; i < largePartitions.size(); ++i) {
     process_l_partition(
       largePartitions[i], n, lC, lR, partition2Level, inDegree, levelPtr,
@@ -239,7 +239,7 @@ namespace sym_lib {
    delete[] nodesAtCurLevel;
   }
 
-#pragma omp parallel num_threads(numThreads) reduction(+ : totalCC)
+//#pragma omp parallel num_threads(numThreads) reduction(+ : totalCC)
   {
    bool *visited = new bool[n]();
    int *xi = new int[2 * n];
@@ -253,7 +253,7 @@ namespace sym_lib {
    memset(outCost, 0.0, n * sizeof(double));
    memset(newOutCost, 0.0, n * sizeof(double));
 
-#pragma omp for schedule(dynamic, 1)
+//#pragma omp for schedule(dynamic, 1)
    for (int i = 0; i < smallPartitions.size(); ++i) {
     process_l_partition(smallPartitions[i], n, lC, lR, partition2Level, inDegree,
                         levelPtr, levelSet, node2partition, node2Level,
@@ -349,7 +349,7 @@ namespace sym_lib {
                            levelPtr, levelSet, numThreads, binPacking);
 
   finaLevelNo = lClusterCnt;
-  if (true) { // Verification of the set.
+  if (false) { // Verification of the set.
    bool *checkExist = new bool[n];
    for (int i = 0; i < n; ++i)
     checkExist[i] = false;

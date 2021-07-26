@@ -452,11 +452,21 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    for (int i = 0; i < n_; ++i) {
     cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
    }
+#define ooo
+#ifdef ooo
+   sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
+                                                    final_level_no,
+                                                    fina_level_ptr,part_no,
+                                                    final_part_ptr,final_node_ptr,
+                                                    lp_,ic_, cp_, cost, b_pack);
+#else
    sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(n_, L1_csc_->p, L1_csc_->i,
                                                     final_level_no,
                                                     fina_level_ptr,part_no,
                                                     final_part_ptr,final_node_ptr,
-                                                    lp_,cp_, ic_, cost,lp_, b_pack);
+                                                    lp_,ic_, cp_, cost,lp_,
+                                                    b_pack);
+#endif
    if (true) {
     auto part_no = fina_level_ptr[final_level_no];
     // Sorting the w partitions
@@ -509,11 +519,21 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
             for (int i = 0; i < n_; ++i) {
                 cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
             }
+#define ooo
+#ifdef ooo
+         sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
+                                              final_level_no,
+                                              fina_level_ptr,part_no,
+                                              final_part_ptr,final_node_ptr,
+                                              lp_,ic_, cp_, cost, b_pack);
+#else
          sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(n_, L1_csc_->p, L1_csc_->i,
                                                           final_level_no,
                                                           fina_level_ptr,part_no,
                                                           final_part_ptr,final_node_ptr,
-                                                          lp_,cp_, ic_, cost,lp_, b_pack);
+                                                          lp_,ic_, cp_, cost,
+                                                          lp_, b_pack);
+#endif
          if (true) {
           auto part_no = fina_level_ptr[final_level_no];
           // Sorting the w partitions
