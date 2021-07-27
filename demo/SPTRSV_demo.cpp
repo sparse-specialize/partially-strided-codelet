@@ -60,14 +60,16 @@ int main(int argc, char *argv[]) {
     auto *spsp = new SpTRSVParallel(L1_ord_csr, L1_ord, sol_sptrsv,
                                     "Parallel "
                                     "LBC",
-                                    num_threads, coarsening_p, initial_cut, bpack);
+                                    num_threads, coarsening_p, initial_cut,
+                                    bpack, tuning);
     auto sptrsv_par = spsp->evaluate();
 
     auto *spspv2 =
             new SpTRSVParallelVec2(L1_ord_csr, L1_ord, sol_sptrsv,
                                    "Parallel Vec2"
                                    "LBC",
-                                   num_threads, coarsening_p, initial_cut, bpack);
+                                   num_threads, coarsening_p, initial_cut,
+                                   bpack, tuning);
     auto sptrsv_parv2 = spspv2->evaluate();
 
 //#ifdef DDTT
@@ -107,7 +109,7 @@ int main(int argc, char *argv[]) {
 
     if (config.header) {
         std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
-        std::cout << "Dimension,NNZ,";
+        std::cout << "Tuning Mode,Dimension,NNZ,";
         std::cout << "SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, "
                      "SpTRSV LS "
                      "NOVec, SpTRSV Parallel,SpTRSV "
@@ -121,8 +123,13 @@ int main(int argc, char *argv[]) {
         std::cout << "\n";
     }
 
-    std::cout << config.matrixPath << "," << config.nThread << ","
-              << config.coarsening << ","<< config.bin_packing<<","
+    std::cout << config.matrixPath << "," << config.nThread << ",";
+    if(tuning > 0)
+       std::cout<< config.coarsening << ","<< config.bin_packing<<",";
+    else
+       std::cout<< spsp->CP() << ","<< spsp->BP() <<",";
+
+    std::cout<< tuning << ","
               << L1_ord->n<<","<<L1_ord->nnz<<","
                << sptrsv_baseline.elapsed_time << ","
               << sptrsv_vec1_exec.elapsed_time << ","
