@@ -106,6 +106,7 @@ int main(int argc, char *argv[]) {
 
     if (config.header) {
         std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
+        std::cout << "Dimension,NNZ,";
         std::cout << "SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, "
                      "SpTRSV LS "
                      "NOVec, SpTRSV Parallel,SpTRSV "
@@ -119,8 +120,10 @@ int main(int argc, char *argv[]) {
         std::cout << "\n";
     }
 
-    std::cout << config.matrixPath << "," << config.nThread << ","<< config.bin_packing<<","
-              << config.coarsening << "," << sptrsv_baseline.elapsed_time << ","
+    std::cout << config.matrixPath << "," << config.nThread << ","
+              << config.coarsening << ","<< config.bin_packing<<","
+              << L1_ord->n<<","<<L1_ord->nnz<<","
+               << sptrsv_baseline.elapsed_time << ","
               << sptrsv_vec1_exec.elapsed_time << ","
               << sptrsv_vec2_exec.elapsed_time << ",";
     std::cout << sptrsv_ls.elapsed_time << ",";
