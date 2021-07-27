@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 #ifdef PROFILE
     /// Profiling
     int event_limit =1, instance_per_run = 5;
-    auto event_list = get_available_counter_codes();
+//    auto event_list = get_available_counter_codes();
 #endif
 
 

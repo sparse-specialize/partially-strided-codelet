@@ -126,7 +126,7 @@ namespace DDT {
         //int *row_offsets; //RO
 
         PSCT3V2(int br, int bc, int rw, int cw, int co, int *ros, int *rls): Codelet
-                                                                                     (br,-1,rw,cw,-1,-1,co,ros,rls,NULL){};
+                                                                                     (br,-1,rw,cw,ros[0],-1,co,ros,rls,NULL){};
 
         PSCT3V2(int br, int bc, int rw, int cw, int co, int *ros, int *rls, bool ms):
                 Codelet(br,-1,rw,cw,-1,-1,co,ros,rls,NULL,ms){};
@@ -146,7 +146,7 @@ namespace DDT {
         //int *row_offsets; //RO
 
         PSCT3V3(int br, int bc, int rw, int cw, int co, int *ros, int *rls, int
-        *lbr): Codelet(br,-1,rw,cw,-1,-1,co,ros,rls,lbr){};
+        *lbr): Codelet(br,-1,rw,cw,ros[0],-1,co,ros,rls,lbr){};
 
         PSCT3V3(int br, int bc, int rw, int cw, int co, int *ros, int *rls, int *lbr,
                 bool ms):Codelet(br,-1,rw,cw,-1,-1,co,ros,rls,lbr,ms){};

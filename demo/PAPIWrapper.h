@@ -7,14 +7,36 @@
 
 #include <papi.h>
 #include <utility>
+#include <vector>
 
 namespace sym_lib {
-
     struct EventCounterBundle {
         int event_code;
         std::string event_name;
         std::vector<long long> counters;
     };
+
+//    void get__codes() {
+////        std::vector<int> cc;
+////        PAPI_library_init(PAPI_VER_CURRENT);
+////        PAPI_event_info_t info;
+////        int retval;
+////        int mask = PAPI_PRESET_ENUM_AVAIL;
+////        int start = 0 | PAPI_PRESET_MASK;
+////        int i = start;
+////
+////        do {
+////            retval = PAPI_get_event_info(i, &info);
+////
+////            if (retval == PAPI_OK) {
+////                cc.push_back(info.event_code);
+////            }
+////            retval = PAPI_enum_event(&i, mask);
+////        }  while (retval == PAPI_OK);
+////        PAPI_shutdown();
+////
+////        return cc;
+//    }
 
 
     class PAPIWrapper {
@@ -106,27 +128,6 @@ namespace sym_lib {
     };
 
 
-    std::vector<int> get_available_counter_codes() {
-        std::vector<int> cc;
-        PAPI_library_init(PAPI_VER_CURRENT);
-        PAPI_event_info_t info;
-        int retval;
-        int mask = PAPI_PRESET_ENUM_AVAIL;
-        int start = 0 | PAPI_PRESET_MASK;
-        int i = start;
-
-        do {
-            retval = PAPI_get_event_info(i, &info);
-
-            if (retval == PAPI_OK) {
-                cc.push_back(info.event_code);
-            }
-            retval = PAPI_enum_event(&i, mask);
-        }  while (retval == PAPI_OK);
-        PAPI_shutdown();
-
-        return cc;
-    }
 }
 
 #endif

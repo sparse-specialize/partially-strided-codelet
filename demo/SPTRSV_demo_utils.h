@@ -249,65 +249,6 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
         }
     }
 
- class SpTRSVSerialVec1 : public sym_lib::FusionDemo {
- protected:
-     void setting_up() override {
-         std::fill_n(x_,n_,0.0);
-         std::fill_n(x_in_,n_,1.0);
-     }
-
-     sym_lib::timing_measurement fused_code() override {
-         std::copy(x_in_, x_in_+n_, x_);
-         sym_lib::timing_measurement t1;
-         t1.start_timer();
-         sparse_avx::sptrsv_csr_vec256_1(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_,x_);
-         t1.measure_elapsed_time();
-         //copy_vector(0,n_,x_in_,x_);
-         return t1;
-     }
-
- public:
-     SpTRSVSerialVec1(sym_lib::CSR *L, sym_lib::CSC *L_csc,
-     double *correct_x,
-             std::string name) :
-     FusionDemo(L_csc->n, name) {
-         L1_csr_ = L;
-         L1_csc_ = L_csc;
-         correct_x_ = correct_x;
-     };
-
-     ~SpTRSVSerialVec1() override = default;
- };
-
-    class SpTRSVSerialVec2 : public sym_lib::FusionDemo {
-    protected:
-        void setting_up() override {
-            std::fill_n(x_,n_,0.0);
-            std::fill_n(x_in_,n_,1.0);
-        }
-
-        sym_lib::timing_measurement fused_code() override {
-            std::copy(x_in_, x_in_+n_, x_);
-            sym_lib::timing_measurement t1;
-            t1.start_timer();
-            sparse_avx::sptrsv_csr_vec256_2(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_,x_);
-            t1.measure_elapsed_time();
-            //copy_vector(0,n_,x_in_,x_);
-            return t1;
-        }
-
-    public:
-        SpTRSVSerialVec2(sym_lib::CSR *L, sym_lib::CSC *L_csc,
-                         double *correct_x,
-                         std::string name) :
-                FusionDemo(L_csc->n, name) {
-            L1_csr_ = L;
-            L1_csc_ = L_csc;
-            correct_x_ = correct_x;
-        };
-
-        ~SpTRSVSerialVec2() override = default;
-    };
 
  class SpTRSVSerial : public sym_lib::FusionDemo {
  protected:
@@ -339,7 +280,68 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   ~SpTRSVSerial() override = default;
  };
 
- class SptrsvLevelSet : public SpTRSVSerial {
+    class SpTRSVSerialVec1 : public SpTRSVSerial {
+    protected:
+        void setting_up() override {
+            std::fill_n(x_,n_,0.0);
+            std::fill_n(x_in_,n_,1.0);
+        }
+
+        sym_lib::timing_measurement fused_code() override {
+            std::copy(x_in_, x_in_+n_, x_);
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            sparse_avx::sptrsv_csr_vec256_1(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_,x_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+
+    public:
+        SpTRSVSerialVec1(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                         double *correct_x,
+                         std::string name) :
+                SpTRSVSerial(L, L_csc, correct_x, name) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+
+        ~SpTRSVSerialVec1() override = default;
+    };
+
+    class SpTRSVSerialVec2 : public SpTRSVSerial {
+    protected:
+        void setting_up() override {
+            std::fill_n(x_,n_,0.0);
+            std::fill_n(x_in_,n_,1.0);
+        }
+
+        sym_lib::timing_measurement fused_code() override {
+            std::copy(x_in_, x_in_+n_, x_);
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            sparse_avx::sptrsv_csr_vec256_2(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_,x_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+
+    public:
+        SpTRSVSerialVec2(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                         double *correct_x,
+                         std::string name) :
+                SpTRSVSerial(L, L_csc, correct_x, name) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+
+        ~SpTRSVSerialVec2() override = default;
+    };
+
+
+    class SptrsvLevelSet : public SpTRSVSerial {
  protected:
   int *level_set, *level_ptr, level_no;
   void build_set() override {
@@ -458,7 +460,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
                                                     final_level_no,
                                                     fina_level_ptr,part_no,
                                                     final_part_ptr,final_node_ptr,
-                                                    lp_,ic_, cp_, cost, b_pack);
+                                                    lp_,ic_, cp_, cost);
 #else
    sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(n_, L1_csc_->p, L1_csc_->i,
                                                     final_level_no,
@@ -525,7 +527,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
                                               final_level_no,
                                               fina_level_ptr,part_no,
                                               final_part_ptr,final_node_ptr,
-                                              lp_,ic_, cp_, cost, b_pack);
+                                              lp_,ic_, cp_, cost);
 #else
          sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(n_, L1_csc_->p, L1_csc_->i,
                                                           final_level_no,

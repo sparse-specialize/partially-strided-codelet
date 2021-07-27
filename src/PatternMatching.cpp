@@ -22,7 +22,7 @@
 
 #include <chrono>
 
-int THRESHOLDS[4] = { 2, 100000, 1, 0 };
+int THRESHOLDS[4] = { 2, 100000, 3, 0 };
 int UNIT_THRESHOLDS[4] = { 2, 2, 2, 2 };
 
 const int TPD = 3;

@@ -54,14 +54,11 @@ namespace DDT {
             int cnt = 0;
             auto o = new int[colWidth]();
             while (cc->ct != cc->pt) {
-//                printTuple(cc->ct, "T: ");
                 o[cnt++] = cc->ct[2];
                 cc->ct += TPR;
             }
-//            printTuple(cc->ct, "T: ");
             o[cnt] = cc->ct[2];
 
-//            std::cout << std::endl;
 
             cl.emplace_back(new DDT::PSCT3V1(oo, colWidth, mo,o,true));
         }
@@ -77,7 +74,9 @@ namespace DDT {
             auto ro = new int[rowCnt]();
             auto rls = new int[rowCnt]();
 
-            int cnt = rowCnt;
+            assert((ip[i+1] - ip[i]) / TPR > 4);
+
+            int cnt = rowCnt-1;
             while (cc->ct != cc->pt) {
                 ro[cnt] = cc->ct[1];
                 rls[cnt--] = (ip[i+1] - ip[i])/TPR;
@@ -85,15 +84,17 @@ namespace DDT {
                 cc = c + nc;
                 --i;
             }
+            ro[cnt] = cc->ct[1];
+            rls[cnt] = (ip[i+1] - ip[i])/TPR;
 
-            int oo = c->ct[0];
-            int vo = c->ct[2];
+            int oo = cc->ct[0];
+            int vo = cc->ct[2];
 
-            cl.emplace_back(new DDT::PSCT3V2(oo, vo, rowCnt, c->sz, 0, ro, rls));
+            cl.emplace_back(new DDT::PSCT3V2(oo, vo, rowCnt, cc->sz, 0, ro, rls));
         }
 
         if (type == DDT::TYPE_PSC3_V2) {
-            int rowCnt = 0;
+            int rowCnt = 1;
             auto ccc = cc;
             while (ccc->ct != ccc->pt) {
                 int nc = (ccc->pt - ip[0])/TPR;
@@ -104,20 +105,23 @@ namespace DDT {
             auto rls = new int[rowCnt]();
             auto rid = new int[rowCnt]();
 
-            int cnt = 0;
+            int cnt = rowCnt-1;
             while (cc->ct != cc->pt) {
                 rid[cnt] = cc->ct[0];
                 ro[cnt] = cc->ct[1];
-                rls[cnt++] = (ip[i+1] - ip[i])/TPR;
+                rls[cnt--] = (ip[i+1] - ip[i])/TPR;
                 int nc = (cc->pt - ip[0])/TPR;
                 cc = c + nc;
                 --i;
             }
+            rid[cnt] = cc->ct[0];
+            ro[cnt] = cc->ct[1];
+            rls[cnt] = (ip[i+1] - ip[i])/TPR;
 
-            int oo = c->ct[0];
-            int vo = c->ct[2];
+            int oo = cc->ct[0];
+            int vo = cc->ct[2];
 
-            cl.emplace_back(new DDT::PSCT3V3(oo, vo, rowCnt, c->sz, 0, ro, rls, nullptr));
+            cl.emplace_back(new DDT::PSCT3V3(oo, vo, rowCnt, cc->sz, 0, ro, rls, rid));
         }
     }
 
@@ -157,8 +161,8 @@ namespace DDT {
   inline int nnzLessThan(int ii, int** ip, int ub) {
       auto tr = (ip[ii+1]-ip[ii])/TPR;
       for (int i = 0; i < tr; i++) {
-          auto ro = ip[ii][i*3];
-          if (ub < ro) {
+          auto ro = ip[ii][i*3+2];
+          if (ub <= ro) {
               return i;
           }
       }
@@ -174,52 +178,72 @@ namespace DDT {
    */
   int findType3VBounds(int** ip, DDT::PatternDAG* c, int i) {
       int cnl = ((ip[i])-ip[0]) / TPR;
+      int cnlt = cnl;
       int VW = 4; // Vector width
 
       if (0 == i) {
-          // TODO: FIX HERE FOR PREVIOUS TYPE
           int cn = ((ip[i + 1]) - ip[0]) / TPR;
           c[cnl].t = DDT::TYPE_PSC3;
           c[cnl].pt = c[cn-1].ct;
           return i;
       }
 
+
+      int NNZ_P_R = 5;
       int ii = i;
       bool hai = hasAdacentIteration(ii, ip);
-      auto TH = nnzLessThan(ii, ip,ip[ii-1][0]);
+      auto TH = nnzLessThan(ii, ip,ip[ii][-1]);
       TH = TH - (TH % VW);
+
       if (hai && TH) {
-          while (nnzInIteration(ii, ip) > 8 &&
-                 nnzLessThan(ii, ip, ip[ii - 1][0]) >
-                         TH /* && nCodelets == 0 */) {
+          while (ii > 0 &&
+                 nnzInIteration(ii-1, ip) > TH &&
+                 hasAdacentIteration(ii, ip) &&
+                 nnzLessThan(ii, ip, ip[ii][-1]) > TH
+                 /* && nCodelets == 0 */ ) {
               ii--;
-              int cn = ((ip[ii]) - ip[0]) / TPR;
-              c[cnl].pt = c[cn].ct;
-              cnl = cn;
+          }
+          if (i != ii) {
+              int iii = i;
+              ii += (i - (ii - 1)) % 2;
+              while (iii-- != ii) {
+                  int cn = ((ip[iii]) - ip[0]) / TPR;
+                  c[cnl].pt = c[cn].ct;
+                  cnl = cn;
+              }
+              assert((i-ii+1)%2 == 0);
           }
       } else if (TH) {
-          while (nnzInIteration(ii, ip) > 8 && hasAdacentIteration(ii, ip) &&
-                 nnzLessThan(ii, ip, ip[ii - 1][0]) >
-                 TH /* && nCodelets == 0 */) {
+          while (ii > 0 &&
+                 nnzInIteration(ii-1, ip) > TH  &&
+                 nnzLessThan(ii, ip, ip[ii][-1]) >TH
+                 /* && nCodelets == 0 */) {
               ii--;
-              int cn = ((ip[ii]) - ip[0]) / TPR;
-              c[cnl].pt = c[cn].ct;
-              cnl = cn;
+          }
+          if (i != ii) {
+              int iii = i;
+              ii += (i - (ii - 1)) % 2;
+              while (iii-- != ii) {
+                  int cn = ((ip[iii]) - ip[0]) / TPR;
+                  c[cnl].pt = c[cn].ct;
+                  cnl = cn;
+              }
+              assert((i-ii+1)%2 == 0);
           }
       }
 
       if (ii == i) {
           // TODO: FIX HERE FOR PREVIOUS TYPE
           int cn = ((ip[ii+1]) - ip[0]) / TPR;
-          c[cnl].t = DDT::TYPE_PSC3;
+          c[cnlt].t = DDT::TYPE_PSC3;
           c[cnl].pt = c[cn-1].ct;
       } else if (hai) {
-          c[cnl].ct = c[cnl].pt;
-          c[cnl].t  = DDT::TYPE_PSC3_V1;
+          c[cnl].pt = c[cnl].ct;
+          c[cnlt].t  = DDT::TYPE_PSC3_V1;
           c[cnl].sz = TH;
       } else {
-          c[cnl].ct = c[cnl].pt;
-          c[cnl].t  = DDT::TYPE_PSC3_V2;
+          c[cnl].pt = c[cnl].ct;
+          c[cnlt].t  = DDT::TYPE_PSC3_V2;
           c[cnl].sz = TH;
       }
 
@@ -266,7 +290,7 @@ namespace DDT {
     }
 
     inline bool hasAdacentIteration(int i, int** ip) {
-        return ip[i][0] - ip[i-1][0];
+        return (ip[i][0] - ip[i-1][0]) == 1;
     }
 
     inline int nnzInIteration(int i, int** ip) {

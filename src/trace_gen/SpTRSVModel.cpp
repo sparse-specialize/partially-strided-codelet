@@ -65,7 +65,7 @@ namespace sparse_avx {
 #define OLD
 #ifdef OLD
         // @TODO: Separate LBC and levelset depending on the number of nnz per row
-        if (false) {
+        if (true) {
             sym_lib::get_coarse_levelSet_DAG_CSC(
                     _num_cols, _Apt, _Ait, _final_level_no, _final_level_ptr,
                     _final_part_no, _final_part_ptr, _final_node_ptr, parts,
