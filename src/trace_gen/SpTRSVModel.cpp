@@ -139,45 +139,39 @@ namespace sparse_avx {
 
  Trace*** SpTRSVModel::generate_3d_trace(int num_threads) {
      iteration_space_prunning(num_threads);
+     auto num_parts = _final_level_ptr[_final_level_no];
   Trace*** trace_list = new Trace**[_final_level_no];
   this->_cl = new std::vector<DDT::Codelet*>*[_final_level_no]();
   for (int i = 0; i < _final_level_no; ++i) {
-   trace_list[i] = new Trace*[num_threads];
-   _cl[i] = new std::vector<DDT::Codelet*>[num_threads]();
+   trace_list[i] = new Trace*[_final_level_ptr[i+1]-_final_level_ptr[i]];
+   _cl[i] = new std::vector<DDT::Codelet*>[_final_level_ptr[i+1]-_final_level_ptr[i]]();
   }
+
   auto *tr_list_mm_array = new int[3*_nnz + 3*_num_cols]();
   auto *tr_list_oc_array = new int[_nnz + _num_cols]();
-  //std::fill_n(tr_list_oc_array, _nnz, TRACE_OP::AddM);
-  auto *nnz_bounds = new int[_final_level_no*num_threads+1]();
+  auto *nnz_bounds = new int[_final_level_no*num_parts+1]();
   int n_part = 1;
   for (int i = 0; i < _final_level_no; ++i) {
-   int j,wp=0;
+   int j, wp=0;
    for ( j = _final_level_ptr[i]; j < _final_level_ptr[i + 1]; ++j) {
     int cols_wp = _final_part_ptr[j+1] - _final_part_ptr[j];
     if(cols_wp <= 0)
      continue;
     int nnz_wp = 0;
-    //trace_list[i][wp] = new Trace()
     for (int k = _final_part_ptr[j]; k < _final_part_ptr[j + 1]; ++k) {
      int cn = _final_node_ptr[k];
      nnz_wp += (_Ap[cn+1]-1) - _Ap[cn];
     }
     nnz_bounds[n_part] = nnz_bounds[n_part-1] + nnz_wp + cols_wp;
-    //std::cout<<"created for: "<<i<<" , "<< wp<< " at: "<<
-    //3*nnz_bounds[n_part-1] << " - " << nnz_bounds[n_part-1]<<
-    //"\n";
     trace_list[i][wp] = new Trace(nnz_bounds[n_part]-nnz_bounds[n_part-1],
                                   tr_list_mm_array+3*nnz_bounds[n_part-1],
                                tr_list_oc_array+nnz_bounds[n_part-1],
-                              num_threads, cols_wp);
+                                  num_parts, cols_wp);
     n_part++;
     wp++;
    }
    _wp_bounds.push_back(wp);
   }
-  //sym_lib::print_vec("bounds: \n", 0, num_threads*_final_level_no+1,nnz_bounds);
-//#pragma omp parallel for //default(none) shared(num_threads, bnd_row_array, \
-  trace_list)
   for (int ii = 0; ii < _final_level_no; ++ii) {
    int l, wp=0;
    for (l = _final_level_ptr[ii]; l < _final_level_ptr[ii + 1]; ++l) {
@@ -198,9 +192,7 @@ namespace sparse_avx {
       cur_adr[2] = _Ai[j];
       auto cur_op = trace_list[ii][wp]->_op_codes + cnt;
       cur_op[0] = AddM;
-      //trace->_tuple[j] = new AddMul(cur_adr);
       cnt++;
-      //std::cout<<ii<<" - "<<cnt<<" : "<<i <<", "<<j<<", "<<_Ai[j]<<"\n";
      }
      auto cur_adr = trace_list[ii][wp]->_mem_addr + 3 * cnt;
      trace_list[ii][wp]->_c[cnt].ct = cur_adr;
@@ -210,10 +202,10 @@ namespace sparse_avx {
      auto cur_op = trace_list[ii][wp]->_op_codes + cnt;
      cur_op[0] = DIV;
      assert(cnt < trace_list[ii][wp]->_num_trace);
-     cnt++; // next trace
+     cnt++;
     }
     trace_list[ii][wp]->_iter_pt[iCnt] = trace_list[ii][wp]->_mem_addr + 3 * cnt;
-    wp++; // next w-partition
+    wp++;
    }
   }
 
