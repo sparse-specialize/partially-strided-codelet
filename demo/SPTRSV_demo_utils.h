@@ -449,10 +449,16 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   int part_no;
   int lp_, cp_, ic_;
   bool b_pack;
+  int tuning;
   void build_set() override {
    auto *cost = new double[n_]();
    for (int i = 0; i < n_; ++i) {
     cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
+   }
+   if(tuning == 0){
+    sym_lib::lbc_config(n_, L1_csc_->nnz, lp_, lp_, ic_, cp_,
+                        b_pack); // Fixme: inconsistent naming for
+    // ic/cp in lbc
    }
 #define OLD
 #ifdef OLD
@@ -495,8 +501,9 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
  public:
   SpTRSVParallel(sym_lib::CSR *L, sym_lib::CSC *L_csc,
                double *correct_x,
-               std::string name, int lp, int cp, int ic, int bp) :
-    SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp), ic_(ic), b_pack(bp) {
+               std::string name, int lp, int cp, int ic, int bp, int tun) :
+    SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp), ic_(ic),
+    b_pack(bp), tuning(tun) {
    L1_csr_ = L;
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
@@ -507,6 +514,10 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    delete []final_node_ptr;
    delete []final_part_ptr;
   }
+
+  int CP(){return cp_;}
+  int BP(){return b_pack;}
+
  };
 
     class SpTRSVParallelVec2 : public SpTRSVSerial {
@@ -516,10 +527,16 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
         int part_no;
         int lp_, cp_, ic_;
         bool b_pack;
+        int tuning;
         void build_set() override {
             auto *cost = new double[n_]();
             for (int i = 0; i < n_; ++i) {
                 cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
+            }
+            if(tuning == 0){
+             sym_lib::lbc_config(n_, L1_csc_->nnz, lp_, lp_, ic_, cp_,
+                                 b_pack); // Fixme: inconsistent naming for
+                                 // ic/cp in lbc
             }
 #define OLD
 #ifdef OLD
@@ -563,8 +580,10 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
     public:
         SpTRSVParallelVec2(sym_lib::CSR *L, sym_lib::CSC *L_csc,
                        double *correct_x,
-                       std::string name, int lp, int cp, int ic, int bp) :
-                SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp), ic_(ic) {
+                       std::string name, int lp, int cp, int ic, int bp, int
+                       tun) :
+                SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp),
+                ic_(ic), tuning(tun) {
             L1_csr_ = L;
             L1_csc_ = L_csc;
             correct_x_ = correct_x;

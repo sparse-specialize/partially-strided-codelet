@@ -19,10 +19,10 @@ for mat in $PATHMAIN/*.mtx; do
 for k in {2,3,4,5,6,7,8,9}; do
 #	for cparm in {1,2,3,4,5,10,20}; do
 	if [ $header -eq 1 ]; then
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -d -p $bp
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -d -p $bp -u 1
      header=0
   else
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -p $bp
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -p $bp -u 1
   fi
 #done
 done
@@ -30,10 +30,10 @@ done
 
 #lfactors
 for mat in $PATHMAIN/l_factors/*.mtx; do
-for k in {-4,-3,-2,-1,0,1,2,3,4}; do
+for k in {2,3,4,5,6,7,8,9}; do
 #for lparm in {1..10}; do
 #	for cparm in {1,2,3,4,5,10,20}; do
-	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -p $bp
+	  $BINLIB  -m $mat -n SPTRS -s CSR -t $THRDS -c $k -p $bp -u 1
 #done
 #done
 done

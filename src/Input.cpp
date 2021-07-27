@@ -43,6 +43,7 @@ namespace DDT {
       ("t,threads", "Number of parallel threads", cxxopts::value<int>()->default_value("1"))
       ("c,coarsening", "coarsening levels", cxxopts::value<int>()->default_value("5"))
       ("p,packing", "bin-packing", cxxopts::value<int>()->default_value("1"))
+      ("u,tuning", "Tuning enabled", cxxopts::value<int>()->default_value("0"))
       ("d,header", "prints header or not.");
 
     auto result = options.parse(argc, argv);
@@ -71,6 +72,7 @@ namespace DDT {
     auto nThreads = result["threads"].as<int>();
     auto coarsening = result["coarsening"].as<int>();
     auto bpacking = result["packing"].as<int>();
+    auto tuning_en = result["tuning"].as<int>();
 
     NumericalOperation op;
     if (operation == "SPMV") {
@@ -96,6 +98,7 @@ namespace DDT {
     header = 1;
    }
 
-   return Config{ matrixPath, op, header, nThreads, sf, coarsening, bpacking };
+   return Config{ matrixPath, op, header, nThreads, sf, coarsening, bpacking,
+    tuning_en              };
   }
 }

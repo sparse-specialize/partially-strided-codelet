@@ -20,6 +20,7 @@ int main(int argc, char *argv[]) {
     int coarsening_p = config.coarsening;
     bool bpack = config.bin_packing;
     int initial_cut = config.coarsening;
+    int tuning = config.tuning_mode;
     sym_lib::CSC *A;
     A = sym_lib::read_mtx(config.matrixPath);
     auto *sol = new double[A->n]();
@@ -59,14 +60,16 @@ int main(int argc, char *argv[]) {
     auto *spsp = new SpTRSVParallel(L1_ord_csr, L1_ord, sol_sptrsv,
                                     "Parallel "
                                     "LBC",
-                                    num_threads, coarsening_p, initial_cut, bpack);
+                                    num_threads, coarsening_p, initial_cut,
+                                    bpack, tuning);
     auto sptrsv_par = spsp->evaluate();
 
     auto *spspv2 =
             new SpTRSVParallelVec2(L1_ord_csr, L1_ord, sol_sptrsv,
                                    "Parallel Vec2"
                                    "LBC",
-                                   num_threads, coarsening_p, initial_cut, bpack);
+                                   num_threads, coarsening_p, initial_cut,
+                                   bpack, tuning);
     auto sptrsv_parv2 = spspv2->evaluate();
 
 //#ifdef DDTT
@@ -106,6 +109,7 @@ int main(int argc, char *argv[]) {
 
     if (config.header) {
         std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
+        std::cout << "Tuning Mode,Dimension,NNZ,";
         std::cout << "SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, "
                      "SpTRSV LS "
                      "NOVec, SpTRSV Parallel,SpTRSV "
@@ -119,8 +123,15 @@ int main(int argc, char *argv[]) {
         std::cout << "\n";
     }
 
-    std::cout << config.matrixPath << "," << config.nThread << ","<< config.bin_packing<<","
-              << config.coarsening << "," << sptrsv_baseline.elapsed_time << ","
+    std::cout << config.matrixPath << "," << config.nThread << ",";
+    if(tuning > 0)
+       std::cout<< config.coarsening << ","<< config.bin_packing<<",";
+    else
+       std::cout<< spsp->CP() << ","<< spsp->BP() <<",";
+
+    std::cout<< tuning << ","
+              << L1_ord->n<<","<<L1_ord->nnz<<","
+               << sptrsv_baseline.elapsed_time << ","
               << sptrsv_vec1_exec.elapsed_time << ","
               << sptrsv_vec2_exec.elapsed_time << ",";
     std::cout << sptrsv_ls.elapsed_time << ",";
