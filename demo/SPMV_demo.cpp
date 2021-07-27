@@ -8,10 +8,9 @@
 #include <sparse_utilities.h>
 
 #ifdef PAPI
-#include "papi.h"
+#include "Profiler.h"
 #endif
 
-//#define PROFILE
 
 using namespace sparse_avx;
 int main(int argc, char *argv[]) {
@@ -33,13 +32,8 @@ int main(int argc, char *argv[]) {
 
 #ifdef PROFILE
     /// Profiling
- int event_limit =1, instance_per_run = 5;
- std::vector<int> event_list = {PAPI_L1_DCM, PAPI_L1_TCM, PAPI_L2_DCM,
-                                PAPI_L2_DCA,PAPI_L2_TCM,PAPI_L2_TCA,
-                                PAPI_L3_TCM, PAPI_L3_TCA,
-                                PAPI_TLB_DM, PAPI_TOT_CYC, PAPI_LST_INS,
-                                PAPI_TOT_INS, PAPI_REF_CYC, PAPI_RES_STL,
-                                PAPI_BR_INS, PAPI_BR_MSP};
+    int event_limit =1, instance_per_run = 5;
+    auto event_list = get_available_counter_codes();
 #endif
 
 
@@ -52,6 +46,19 @@ int main(int argc, char *argv[]) {
     spsp->set_num_threads(config.nThread);
     auto spmv_p = spsp->evaluate();
 
+    auto *spmv1 = new SpMVVec1(B, A, sol_spmv, "SpMVVec1");
+    auto spmv1e = spmv1->evaluate();
+
+    auto *spmv1_8 = new SpMVVec1_8(B, A, sol_spmv, "SpMVVec1_8");
+    auto spmv1_8e = spmv1_8->evaluate();
+
+    auto *spmv1_16 = new SpMVVec1_16(B, A, sol_spmv, "SpMVVec1_16");
+    auto spmv1_16e = spmv1_16->evaluate();
+
+    auto *spmv2 = new SpMVVec2(B, A, sol_spmv, "SpMVVec2");
+    auto spmv2e = spmv2->evaluate();
+
+
 #ifdef MKL
     auto mklspmvst = new SpMVMKL(1, B, A, sol_spmv, "MKL SPMV ST");
     auto mkl_exec_st = mklspmvst->evaluate();
@@ -63,23 +70,43 @@ int main(int argc, char *argv[]) {
     int nThread = config.nThread;
     config.nThread = 1;
 #ifdef PROFILE
+    auto matrixName = config.matrixPath;
     auto *ddt_profiler = new sym_lib::ProfilerWrapper<SpMVDDT>(event_list, event_limit, 1,B,A, sol_spmv, config, "SpMV DDT ST");
     ddt_profiler->profile(1);
-    ddt_profiler->print_headers();
-    std::cout << "\n";
+    matrixName.erase(std::remove(matrixName.begin(), matrixName.end(), '\n'), matrixName.end());
+    if (config.header) { std::cout << "MATRIX_NAME" << "," << "KERNEL_TYPE,"; ddt_profiler->print_headers(); }
+    std::cout << matrixName << "," << "DDT,";
     ddt_profiler->print_counters();
-    std::cout << "\n\n";
+    std::cout << "\n";
+
+    auto *spmv_profiler = new sym_lib::ProfilerWrapper<SpMVSerial>(event_list, event_limit, 1,B,A, sol_spmv, "CSR SPMV BASELINE");
+    spmv_profiler->profile(1);
+    std::cout << matrixName << "," << "BASELINE,";
+    spmv_profiler->print_counters();
+    std::cout << "\n";
+
+    auto *mkl_spmv_profiler = new sym_lib::ProfilerWrapper<SpMVMKL>(event_list, event_limit, 1,1,B,A, sol_spmv, "CSR SPMV BASELINE");
+    mkl_spmv_profiler->profile(1);
+    std::cout << matrixName << "," << "MKL,";
+    mkl_spmv_profiler->print_counters();
+    std::cout << "\n";
+
+    delete ddt_profiler;
+    delete spmv_profiler;
+    delete mkl_spmv_profiler;
+
+    exit(0);
 #endif
     auto *ddtspmvst = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT ST");
     auto ddt_execst = ddtspmvst->evaluate();
-
+//
     config.nThread = nThread;
     auto *ddtspmv = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT MT");
     auto ddt_exec = ddtspmv->evaluate();
 
     if (config.header) {
         std::cout << "Matrix,Threads,";
-        std::cout << "SpMV Base,SpMV Parallel Base,";
+        std::cout << "SpMV Base,SpMV Parallel Base, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2";
 #ifdef MKL
         std::cout << "SpMV MKL Serial Executor, SpMV MKL Parallel Executor,";
 #endif
@@ -90,11 +117,14 @@ int main(int argc, char *argv[]) {
 
     std::cout << config.matrixPath << "," << config.nThread << ","
               << spmv_baseline.elapsed_time << "," << spmv_p.elapsed_time << ",";
+    std::cout << spmv1e.elapsed_time << "," << spmv2e.elapsed_time << ",";
+    std::cout << spmv1_8e.elapsed_time << "," << spmv1_16e.elapsed_time << ",";
 #ifdef MKL
     std::cout << mkl_exec_st.elapsed_time << "," << mkl_exec_mt.elapsed_time << ",";
 #endif
     std::cout
-              << ddt_execst.elapsed_time << "," << ddt_exec.elapsed_time << ",";
+              << ddt_execst.elapsed_time << "," << ddt_exec.elapsed_time << ", ";// <<
+//                    std::cout << spg3e.elapsed_time;
     std::cout << "\n";
 
     delete A;
@@ -103,7 +133,7 @@ int main(int argc, char *argv[]) {
     delete L_csr;
     delete[] sol;
 
-//    delete spsp;
+    delete spsp;
     delete sps;
     delete ddtspmv;
 
