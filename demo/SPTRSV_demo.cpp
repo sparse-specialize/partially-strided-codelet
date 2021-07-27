@@ -20,6 +20,7 @@ int main(int argc, char *argv[]) {
     int coarsening_p = config.coarsening;
     bool bpack = config.bin_packing;
     int initial_cut = config.coarsening;
+    int tuning = config.tuning_mode;
     sym_lib::CSC *A;
     A = sym_lib::read_mtx(config.matrixPath);
     auto *sol = new double[A->n]();

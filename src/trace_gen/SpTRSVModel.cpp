@@ -26,7 +26,7 @@ namespace sparse_avx {
     SpTRSVModel::SpTRSVModel(int n, int m, int nnz, int *Ap, int *Ai, int *Apt,
                              int *Ait, int lp, int cp, int ic)
         : _num_rows(n), _num_cols(m), _nnz(nnz), _Ap(Ap), _Ai(Ai), _Apt(Apt),
-          _Ait(Ait), lp_(lp), cp_(cp), ic_(ic) {
+          _Ait(Ait), lp_(lp), cp_(cp), ic_(ic), _tuning_mode(0) {
         _bpack = true;
     }
 
@@ -58,14 +58,19 @@ namespace sparse_avx {
     }
 
 
-    void SpTRSVModel::iteration_space_prunning(int parts) {
+ void SpTRSVModel::iteration_space_prunning(int parts) {
 
-        auto *cost = new double[_num_cols]();
+  auto *cost = new double[_num_cols]();
         for (int i = 0; i < _num_cols; ++i) { cost[i] = _Ap[i + 1] - _Ap[i]; }
 #define OLD
 #ifdef OLD
-        // @TODO: Separate LBC and levelset depending on the number of nnz per row
-        if (false) {
+        if(_tuning_mode == 0){
+
+         sym_lib::lbc_config(_num_cols, _nnz, parts, lp_, ic_, cp_,
+                             _bpack); // Fixme: inconsistent naming for ic/cpin lbc
+        }
+  // Separate LBC and levelset depending on the number of nnz per row
+        if (ic_ > 0) {
             sym_lib::get_coarse_levelSet_DAG_CSC(
                     _num_cols, _Apt, _Ait, _final_level_no, _final_level_ptr,
                     _final_part_no, _final_part_ptr, _final_node_ptr, parts,

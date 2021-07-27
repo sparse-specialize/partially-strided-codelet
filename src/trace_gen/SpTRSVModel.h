@@ -36,6 +36,7 @@ namespace sparse_avx{
   int _final_level_no;
   std::vector<int> _wp_bounds;
   std::vector<DDT::Codelet*>** _cl;
+  int _tuning_mode;// zero disable
  };
 
 }
