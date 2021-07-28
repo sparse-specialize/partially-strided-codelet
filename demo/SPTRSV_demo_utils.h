@@ -69,6 +69,7 @@ namespace sparse_avx{
             x[i] /= Ax[Ap[i+1]-1];
         }
     }
+
     void sptrsv_csr_vec256_2(int n, const int *Ap, const int *Ai, const double *Ax,
                              double *x, double *y) {
         int i = 0;
@@ -462,11 +463,21 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    }
 #define OLD
 #ifdef OLD
-   sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
-                                                    final_level_no,
-                                                    fina_level_ptr,part_no,
-                                                    final_part_ptr,final_node_ptr,
-                                                    lp_,ic_, cp_, cost);
+      if (ic_ > 0) {
+          sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
+                                               final_level_no,
+                                               fina_level_ptr,part_no,
+                                               final_part_ptr,final_node_ptr,
+                                               lp_,ic_, cp_, cost);
+      } else {
+          // Build level set in-place
+          final_level_no = sym_lib::build_levelSet_CSC(n_, L1_csc_->p, L1_csc_->i, final_part_ptr, final_node_ptr);
+          fina_level_ptr = new int[final_level_no + 1];
+          for (int i = 0; i < final_level_no+1; i++) {
+              fina_level_ptr[i] = i;
+          }
+      }
+
 #else
    sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(n_, L1_csc_->p, L1_csc_->i,
                                                     final_level_no,
@@ -533,11 +544,11 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
             for (int i = 0; i < n_; ++i) {
                 cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
             }
-            if(tuning == 0){
-             sym_lib::lbc_config(n_, L1_csc_->nnz, lp_, lp_, ic_, cp_,
-                                 b_pack); // Fixme: inconsistent naming for
-                                 // ic/cp in lbc
-            }
+//            if(tuning == 0){
+//             sym_lib::lbc_config(n_, L1_csc_->nnz, lp_, lp_, ic_, cp_,
+//                                 b_pack); // Fixme: inconsistent naming for
+//                                 // ic/cp in lbc
+//            }
 #define OLD
 #ifdef OLD
          sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
