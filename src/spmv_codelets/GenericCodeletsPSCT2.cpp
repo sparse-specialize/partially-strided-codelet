@@ -29,6 +29,7 @@ namespace DDT {
   xv = _mm256_set_pd(x[of[ind+3]], x[of[ind+2]], x[of[ind+1]], x[of[ind]]);
 #endif
 
+    const __m256i MASK_3 = _mm256_set_epi64x(0, -1, -1, -1);
 
  inline double hsum_double_avx(__m256d v) {
   __m128d vlow = _mm256_castpd256_pd128(v);
@@ -193,5 +194,46 @@ namespace DDT {
 
   // H-Sum
   y[ub - 1] = hsum_double_avx(r0);
+ }
+
+ /**
+  * Executes fused PSC type 2 codelets
+  *
+  * @param cw
+  * @param fnl
+  * @param tsc
+  * @param lb
+  * @param ub
+  * @param p
+  * @param o
+  * @param Ax
+  * @param x
+  * @param y
+  */
+ void f_psc_t2(int cw, int fnl, int tsc, int lb, int ub, int p, const int* o, const double* Ax, const double* x, double* y) {
+     auto np = o;
+     auto ch = o + p;
+     auto cs = ch+tsc;
+     auto cl = ch+tsc*p;
+     auto axo = Ax + fnl;
+
+     for (int i = 0; i < ub-lb; i += p) {
+         for (int j = 0; j < p; ++j) {        // For each period
+             auto r0 = _mm256_setzero_pd();
+             double tail = 0.;
+
+             auto chp = ch + np[j];
+             auto csp = cs + np[j];
+             auto clp = cl + np[j];
+
+             for (int k = 0, axl = 0; k < np[j]; axl+=csp[k], ++k) { // For each set of line codelets
+                 for (int l = 0; l < csp[k]; l++) {
+                     tail += axo[axl+l] * x[clp[k]+chp[k]*i+l];
+                 }
+             }
+             y[lb+i] += hsum_double_avx(r0) + tail;
+         }
+         axo += cw;
+     }
  }
 }

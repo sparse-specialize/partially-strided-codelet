@@ -67,6 +67,9 @@ for (int i = 0; i < cfg.nThread; i++) {
           psc_t3_1D1R(y, Ax, Ai, x, c->offsets, c->lbr, c->first_nnz_loc,
               c->col_width);
           break;
+        case CodeletType::TYPE_F_PSC:
+            f_psc_t2(c->col_width, c->first_nnz_loc, c->col_offset, c->lbr, c->lbr+c->row_width, c->row_offset, c->offsets, Ax, x, y);
+            break;
         default:
           break;
       }

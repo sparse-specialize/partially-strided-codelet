@@ -19,6 +19,7 @@
 #define MAX_THREADS 1028
 
 #include "DDT.h"
+#include "DDTDef.h"
 #include "ParseMatrixMarket.h"
 #include "SpTRSVModel.h"
 
@@ -112,7 +113,6 @@ namespace DDT {
 
   DDT::GlobalObject allocateSpMVMemoryTrace(const Matrix& m, int nThreads) {
     // Calculate memory needed
-    int TPR = 3;
     int dps = m.r;
     int nd = m.nz*TPR;
     int nTuples = nd%4+nd+1;
@@ -149,7 +149,14 @@ namespace DDT {
     }
     dp[iba[nThreads]] = tuples + m.Lp[iba[nThreads]] * 3;
 
-    return GlobalObject{ MemoryTrace{dp, dps}, codelets, df, o, m.nz, iba };
+    return GlobalObject{ MemoryTrace{dp, dps}, codelets, df, o, m.nz, iba, nullptr, nullptr,
+            new bool[dps],    // Array to mark sparse iterations
+            new int[TPR](),   // Array to mark dimensions with reuse between iterations
+            new int[dps](), // Array of types associated with pruned bound
+            new int[dps](),  // Array containing pruned bounds on mt.ip
+            1,              // Current Size of ipb
+             new int[dps]()  // Number of codelets at iteration
+    };
   }
 
   void runSpTRSVModel(const Matrix& m) {

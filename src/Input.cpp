@@ -44,6 +44,7 @@ namespace DDT {
       ("c,coarsening", "coarsening levels", cxxopts::value<int>()->default_value("5"))
       ("p,packing", "bin-packing", cxxopts::value<int>()->default_value("1"))
       ("u,tuning", "Tuning enabled", cxxopts::value<int>()->default_value("0"))
+      ("iteration_limit", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("0"))
       ("d,header", "prints header or not.");
 
     auto result = options.parse(argc, argv);
@@ -73,6 +74,9 @@ namespace DDT {
     auto coarsening = result["coarsening"].as<int>();
     auto bpacking = result["packing"].as<int>();
     auto tuning_en = result["tuning"].as<int>();
+    auto lim = result["iteration_limit"].as<int>();
+
+    assert(lim <= MAX_LIM);
 
     NumericalOperation op;
     if (operation == "SPMV") {
@@ -99,6 +103,6 @@ namespace DDT {
    }
 
    return Config{ matrixPath, op, header, nThreads, sf, coarsening, bpacking,
-    tuning_en              };
+    tuning_en, lim };
   }
 }

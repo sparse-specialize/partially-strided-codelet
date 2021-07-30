@@ -15,21 +15,25 @@
  *
  * =====================================================================================
  */
-#include "DDT.h"
 #include "PatternMatching.h"
+#include "DDT.h"
+#include "DDTUtils.h"
 
 #include <immintrin.h>
 
 #include <chrono>
 
-int THRESHOLDS[4] = { 2, 100000, 3, 0 };
-int UNIT_THRESHOLDS[4] = { 2, 2, 2, 2 };
+int THRESHOLDS[4] = {5, 100000, 3, 0};
+int UNIT_THRESHOLDS[4] = {2, 2, 2, 2};
 
 const int TPD = 3;
 int ZERO_MASK = 0x0FFF;
-int FSC_MASK  = 0x0FFF;
+int FSC_MASK = 0x0FFF;
 int PSC1_MASK = 0x0F0F;
 int PSC2_MASK = 0x0FFF;
+
+__m128i unitThresholds = _mm_set_epi32(UNIT_THRESHOLDS[3], UNIT_THRESHOLDS[2],
+                                       UNIT_THRESHOLDS[1], UNIT_THRESHOLDS[0]);
 
 namespace DDT {
     /**
@@ -87,6 +91,55 @@ namespace DDT {
     }
 
     /**
+     * @brief Generates codelets from differences and tuple information within
+     * bounds found in pruning.
+     *
+     * @param d Global memory object containing all pointers and information
+     * required for mining
+     */
+    void minePrunedDifferences(DDT::GlobalObject& d) {
+        int rd = 2;
+
+        for (int ib = 0; ib < d.ipbs; ++ib) {
+            auto type = d.ipbt[ib];
+
+            if (d.ipb[ib+1] - d.ipb[ib] == 1)
+                continue;
+
+            // Normal Search
+            if (type == 0) {
+                for (int i = d.ipb[ib]; i < d.ipb[ib+1]-1; ++i) {
+                    auto ip = d.mt.ip;
+                    auto c  = d.c;
+                    int* df = d.d;
+
+                    auto lhscp = (ip[i] - ip[0]) / TPD;
+                    auto rhscp = (ip[i + 1] - ip[0]) / TPD;
+                    auto lhstps = (ip[i + 1] - ip[i]) / TPD;
+                    auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
+                    findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp,
+                                   c + rhscp, df + lhscp * TPD, df + rhscp * TPD, rd);
+                }
+            }
+            // Skewed search
+            if (type > 0) {
+                for (int i = d.ipb[ib]; i < d.ipb[ib+1]-type-1; ++i) {
+                    auto ip = d.mt.ip;
+                    auto c  = d.c;
+                    int* df = d.d;
+
+                    auto lhscp = (ip[i] - ip[0]) / TPD;
+                    auto rhscp = (ip[i + 1 + type] - ip[0]) / TPD;
+                    auto lhstps = (ip[i + 1] - ip[i]) / TPD;
+                    auto rhstps = (ip[i + 2 + type] - ip[i + 1 + type]) / TPD;
+                    findCLCS(TPD, ip[i], ip[i + 1 + type], lhstps, rhstps, c + lhscp,
+                             c + rhscp, df + lhscp * TPD, df + rhscp * TPD, rd);
+                }
+            }
+        }
+    }
+
+    /**
  *
  * Generates codelets from differences and tuple information.
  *
@@ -97,6 +150,7 @@ namespace DDT {
  */
     void mineDifferences(int **ip, DDT::PatternDAG *c, int *d, int nThreads,
                          const int *tBound) {
+        int rd = 2;
         int tc = 0;
 #pragma omp parallel for num_threads(nThreads) reduction(+ : tc)
         for (int ii = 0; ii < nThreads; ++ii) {
@@ -107,29 +161,18 @@ namespace DDT {
                 auto lhstps = (ip[i + 1] - ip[i]) / TPD;
                 auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
                 nc += findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp,
-                               c + rhscp, d + lhscp * TPD, d + rhscp * TPD);
+                               c + rhscp, d + lhscp * TPD, d + rhscp * TPD, rd);
             }
             tc += nc;
         }
     }
 
+    inline bool isUnit(__m128i dv) {
+        uint16_t unitMask =
+                _mm_movemask_epi8(_mm_cmplt_epi32(dv, unitThresholds));
 
-    /**
- * Determines if memory location is part of codelet
- *
- * @param c Codelet memory location associated with tuple
- * @return True if c->pt == nullptr
- */
-    inline bool isInCodelet(DDT::PatternDAG *c) { return c->pt != nullptr; }
-
-    /**
- * Determines if DDT::Codelet is origin for codelet
- *
- * @param c Memory location of codelet pointer
- * @return True if codelet pointer is start of codelet
- */
-    inline bool isCodeletOrigin(DDT::PatternDAG *c) { return c->pt == c->ct; }
-
+        return (unitMask | 0xF000) == 0xFFFF;
+    }
 
     /**
  *
@@ -147,11 +190,14 @@ namespace DDT {
  * @param rhscp  Right pointer to codelet
  * @param lhstpd Left pointer to first order differences
  * @param rhstpd Right pointer to first order differences
+ * @param rd     Dimension that has reuse between iterations
  *
  */
     int findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps,
                  DDT::PatternDAG *lhscp, DDT::PatternDAG *rhscp, int *lhstpd,
-                 int *rhstpd) {
+                 int *rhstpd, int rd) {
+        const int REUSE_DIMENSION = rd;
+        const int PSC1_RD_DIM = 0;
         __m128i thresholds = _mm_set_epi32(THRESHOLDS[3], THRESHOLDS[2],
                                            THRESHOLDS[1], THRESHOLDS[0]);
         __m128i unitThresholds =
@@ -177,8 +223,10 @@ namespace DDT {
                         reinterpret_cast<const __m128i *>(rhstpd + j * tpd));
                 __m128i xordv = _mm_cmpeq_epi32(rhsdv, lhsdv);
 
+
                 __m128i odv = lhsdv;// originalDifferenceVector
                 bool hsad = true;   // hasSameAdjacentDifferences
+                bool iu = isUnit(lhsdv);
 
                 int iStart = i;
                 int jStart = j;
@@ -201,7 +249,7 @@ namespace DDT {
 
                 // Adjust pointers to form codelet
                 int sz = i - iStart;
-                if (sz != 0) {
+                if (sz != 0 && sz > 4) {
                     DDT::CodeletType t;
                     uint16_t unitMask = _mm_movemask_epi8(
                             _mm_cmplt_epi32(odv, unitThresholds));
@@ -221,7 +269,7 @@ namespace DDT {
                         // Checks for PSC Type 1 and PSC Type 2
                         // @TODO: FIX HACK sub[0] == 0
                         if (!((MASK == PSC1_MASK && hsad &&
-                               (unitMask | 0xF000) == 0xFFFF && sub[0] == 0) ||
+                               (unitMask | 0xF000) == 0xFFFF && sub[PSC1_RD_DIM] == 0) ||
                               MASK == FSC_MASK)) {
                             i = lhscp[iStart].sz + iStart + 1;
                             lhs = _mm_loadu_si128(
@@ -247,12 +295,12 @@ namespace DDT {
                     continue;
                 }
             }
-            if (lhstp[i * tpd + 2] <= rhstp[j * tpd + 2]) {
+            if (lhstp[i * tpd + REUSE_DIMENSION] <= rhstp[j * tpd + REUSE_DIMENSION]) {
                 // Since lhscp->sz is number of tuples in codelet not including itself
                 i += lhscp[i].sz + 1;
                 lhs = _mm_loadu_si128(
                         reinterpret_cast<const __m128i *>(lhstp + i * tpd));
-            } else if (lhstp[i * tpd + 2] > rhstp[j * tpd + 2]) {
+            } else if (lhstp[i * tpd + REUSE_DIMENSION] > rhstp[j * tpd + REUSE_DIMENSION]) {
                 j += rhscp[j].sz + 1;
                 rhs = _mm_loadu_si128(
                         reinterpret_cast<const __m128i *>(rhstp + j * tpd));
@@ -306,4 +354,4 @@ namespace DDT {
                                                                          t1)
                 .count();
     }
-}
+}// namespace DDT

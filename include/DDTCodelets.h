@@ -45,6 +45,13 @@ namespace DDT {
 
     };
 
+    struct FUSED_PSCT2 : public Codelet {
+        FUSED_PSCT2(int ro, int fnl, int cw, int lb, int ub, int co, int* offsets) :
+                                    Codelet(lb,0,ub-lb,cw,fnl,ro,co,offsets){};
+        CodeletType get_type() override{return CodeletType::TYPE_F_PSC; }
+        void print()override;
+    };
+
     struct FSCCodelet:public Codelet{
         /**
          * y[lbr:lbr+row_width] = Ax[FNL:FNL+CW, ..., FNL+RO:FNL+RO+CW]*x[lbc:lbc+CW];

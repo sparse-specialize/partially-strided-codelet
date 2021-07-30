@@ -2,10 +2,15 @@
 // Created by Kazem on 7/12/21.
 //
 
-#include "Inspector.h"
 #include "DDT.h"
+#include "DDTDef.h"
+#include "DDTUtils.h"
+#include "Inspector.h"
 #include "PatternMatching.h"
+
 #include <algorithm>
+#include <DDTCodelets.h>
+
 
 namespace DDT {
 
@@ -40,7 +45,6 @@ namespace DDT {
  }
 
     void generateFullRowCodeletType(int i, int** ip, int ips, DDT::PatternDAG* c, DDT::PatternDAG* cc, std::vector<Codelet*>& cl) {
-        int TPR = 3;
         auto type = cc->t;
         // Get codelet type
         if (type == DDT::TYPE_PSC3) {
@@ -125,7 +129,6 @@ namespace DDT {
         }
     }
 
- int TPR = 3;
  /**
   * @brief Generates run-time codelet object based on type in DDT::PatternDAG
   *
@@ -274,18 +277,125 @@ namespace DDT {
       return j - jStart;
   }
 
-/**
- * @brief Different iteration sections processed differently
- *
- */
-    void pruneIterations(int** ip, int ips) {
-        // @TODO: CALCULATE MIN-MAX OVERLAP TO GET DIMENSION OF REUSE
-        for (int i = 0; i < ips-1; i++) {
-            if (ip[i+1]-ip[i] == 1) {
-//                adj[i+1] = true;
+  /**
+   * @brief Calculates if two integer ranges overlap [x1:x2], [y1:y2]
+   *
+   * @param x1 Lower bound for first range
+   * @param x2 Upper bound for first range
+   * @param y1 Lower bound for second range
+   * @param y2 Upper bound for second range
+   *
+   * @return True if ranges overlap
+   */
+    inline bool isOverlapping(int x1, int x2, int y1, int y2) {
+        return std::max(x1, y1) <= std::min(x2, y2);
+    }
+
+    /**
+     * @brief Determines if iteration under sparsity threshold
+     * @param ip
+     * @param i
+     * @return
+     */
+    inline bool isIterationSparse(int** ip, int i) {
+        return (ip[i+1]-ip[i]) < SP_ITER_THRESHOLD;
+    }
+
+    /**
+     * @brief Calculates periodic patterns in iteration sizes
+     *
+     * @param ipbt Type associated with lower bound
+     * @param ipb  Pointer containing bounds of iterations
+     * @param ipbc Size of current pruned iteration bounds
+     * @param m0   Pointer to memoized differentials
+     * @param m1
+     * @param ip
+     * @param ips
+     * @param i
+     * @param lim
+     *
+     * @return    New iteration # if detected period is > 1
+     */
+     int findIterationDifferential(int* ipbt, int* ipb, int& ipbs, bool* m0, bool* m1, int** ip, int ips, int i, int lim) {
+        assert(i == 0 ? ipbs == 1 : true);
+
+        int nb = i;
+        bool st = false;
+        for (int j = 0; j < std::min(ips-i, lim); ++j) {
+            m0[j] = (ip[i+2+j]-ip[i+1+j]) == (ip[i+1]-ip[i]);
+            st = st || (m1[j] && m0[j]);
+        }
+        if (!st || i == ips-2) {
+            // This makes sure we have a minimum # iterations to indicate a pattern
+            if ((i-ipb[ipbs-1]) < MIN_LIM_ITERATIONS) {
+                ipb[ipbs] = i;
+                ipbt[ipbs-1] = -1;
+                for (int j = 0; j < lim; ++j) { m1[j] = m0[j]; }
+                ipbs++;
+            } else {
+                // Check how many iterations the pattern is offset
+                for (int j = 0; j < lim; ++j) {
+                    if (m1[j]) { ipbt[ipbs - 1] = j; }
+                    m1[j] = m0[j];
+                }
+                // Make sure offset pattern contains number of iterations
+                // divisible by the period
+                // (ie. period of 3 should have iterations % 3 == 0)
+                if (int off = (i+ipbt[ipbs - 1]-ipb[ipbs-1]) % (ipbt[ipbs-1]+1) != 0) {
+                    ipb[ipbs++] = i - off;
+                    for (int j = 0; j < lim; ++j) {
+                        m1[j] = true;
+                    }
+                    ipb[ipbs++] = i;
+                } else {
+                    ipb[ipbs] = i + ipbt[ipbs - 1];
+                    nb = ipb[ipbs++];
+                }
             }
-//            while (ip[i+1] - ip[i] == 1) {
-//            }
+            ipbt[ipbs-1] = -1;
+        } else {
+            for (int j = 0; j < lim; ++j) { m1[j] = m1[j] && m0[j]; }
+        }
+        return nb;
+    }
+
+    /**
+     * @brief Prunes iteration space into segments based on patterns
+     *
+     * @param ip  Pointer to start first tuple at iteration ip[i]
+     * @param ips Size of ip
+     * @param lim Calculate iteration differences with offset up to lim
+     */
+    void pruneIterations(DDT::GlobalObject& d, int** ip, int ips, int lim = 1) {
+        bool m0[MAX_LIM] = { true }, m1[MAX_LIM] = { true };
+
+        for (int i = 0; i < ips-1; i++) {
+            // 1) Detect n-order differences
+            auto nb = findIterationDifferential(d.ipbt, d.ipb, d.ipbs, m0, m1, ip, ips, i, lim);
+
+            // 2) Detect sparse iterations
+            if (isIterationSparse(ip,i)) {
+                d.sp[i] = true;
+            }
+
+            // 3) Detect overlapping dimensions
+            for (int k = 0; k < TPR; k++) {
+                d.rd[k] = d.rd[k] || isOverlapping(ip[i][k],ip[i+1][-3+k], ip[i+1][k], ip[i+2][-3+k]);
+            }
+
+            while (nb > i && nb != ips - 1) {
+                i++;
+                if (isIterationSparse(ip,i)) {
+                    d.sp[i] = true;
+                }
+                for (int k = 0; k < TPR; k++) {
+                    d.rd[k] = d.rd[k] || isOverlapping(ip[i][k],ip[i+1][-3+k], ip[i+1][k], ip[i+2][-3+k]);
+                }
+            }
+        }
+        d.ipb[d.ipbs] = d.mt.ips;
+        if (isIterationSparse(ip,ips-1)) {
+            d.sp[ips-1] = true;
         }
     }
 
@@ -323,7 +433,147 @@ namespace DDT {
                 std::sort(cc.begin(), cc.end(), [](DDT::Codelet* lhs, DDT::Codelet* rhs) {
                   return lhs->first_nnz_loc < rhs->first_nnz_loc;
                 });
+    }
+
+    bool traceSkewedCodelets(int** ip, DDT::PatternDAG* p, DDT::PatternDAG** ts, int tsn) {
+        for (int i = 0; i < tsn; ++i) {
+            auto cn = DDT::getTupleIndexFromRM(ip, ts[i]->pt);
+            assert(p[cn].ct == ts[i]->pt);
+            if (isCodeletOrigin(p+cn)) {
+                return false;
             }
+            ts[i] = p+cn;
+        }
+        return true;
+    }
+
+    void generateCodeletsFromSkewedIteration(
+            DDT::PatternDAG* p,
+            int** ip,
+            int lb,
+            int ub,
+            int type,
+            std::vector<DDT::Codelet*>& cc
+    ) {
+        DDT::PatternDAG* ts[MAX_CODELETS_PER_ITERATION] = {0};
+        int ps[MAX_LIM] = {0};
+        int tsc = 0;
+
+        // 1) Find skew locations
+        for (int j = type; j >= 0; --j) {
+            for (int k = 0; k < getIterationSize(ip, ub-j-1);) {
+                auto cn = getTupleIndex(ip, ub-1, k);
+                if (DDT::isInCodelet(p+cn)) {
+                    ts[tsc] = p+cn;
+                    tsc++;
+                    k += p[cn].sz + 1;
+                } else {
+                    throw std::runtime_error("Error: Skewed codelet has holes");
+                }
+            }
+            ps[type-j] = j == type ? tsc : tsc - ps[type-j-1];
+        }
+
+        auto pl = new int[tsc*3+(type+1)]();
+        auto ch = pl + type+1;
+        auto cs = ch+tsc;
+        auto cl = cs+tsc;
+
+        for (int i = 0; i < type+1; ++i) {
+            pl[i] = ps[i];
+        }
+
+        // 2) Get column hops and sizes
+        int cw = 0;
+        for (int i = 0; i < tsc; ++i) {
+            ch[i] = ts[i]->ct[2] - ts[i]->pt[2];
+            cs[i] = getCodeletSize(ts[i]);
+            cw += cs[i];
+        }
+
+        // 3) Get column locations and fnl
+        int fcr = 2;
+        while (traceSkewedCodelets(ip, p, ts, tsc)) fcr++;
+        assert(fcr*(type+1) == (ub-lb));  // Fused codelet length
+
+        for (int i = 0; i < tsc; ++i) {
+            traverseBack(p, ip, ts[i]);
+            cl[i] = ts[i]->ct[2];
+        }
+        int fnl = ts[0]->ct[1];
+
+        // 3) Generate fused skewed codelets
+        cc.emplace_back(new DDT::FUSED_PSCT2(type+1,fnl, cw, lb, ub, tsc, pl));
+    }
+
+    /**
+     * @brief Scans DAG to form memory codelets at marked locations
+     *
+     * @param i
+     * @param ip
+     * @param ips
+     * @param p
+     * @param cc
+     */
+    void generateCodeletsFromIteration(
+            DDT::GlobalObject& d,
+            int& i,
+            int** ip,
+            int ips,
+            DDT::PatternDAG* p,
+            std::vector<DDT::Codelet*>& cc
+            ) {
+        for (int j = 0; j < ip[i + 1] - ip[i];) {
+            int cn = ((ip[i] + j) - ip[0]) / TPR;
+            if (p[cn].pt != nullptr && p[cn].ct != nullptr) {
+                // Generate (TYPE_FSC | TYPE_PSC1 | TYPE_PSC2)
+                generateCodelet(d, p + cn, cc);
+                j += (p[cn].sz + 1) * TPR;
+            } else if (p[cn].ct != nullptr) {
+                // Generate (TYPE_PSC3)
+                if (/* nCodelets == 0*/ false) {
+                    int iEnd = findType3VBounds(ip, p, i);
+                    cn = ((ip[i]) - ip[0]) / TPR;
+                    generateFullRowCodeletType(i, ip, ips,
+                                               p, p + cn, cc);
+                    i = iEnd;
+                    break;
+                } else {
+                    j += findType3Bounds(
+                            d, i, j, ip[i + 1] - ip[i]);
+                    cn = ((ip[i] + (j - TPR)) - ip[0]) /
+                         TPR;
+                    generateCodelet(d, p + cn, cc);
+                }
+            } else {
+                j += TPR * (p[cn].sz + 1);
+            }
+        }
+    }
+
+    /**
+     * @brief Scans a pruned pattern DAG for codelets
+     *
+     * @param d
+     * @param cl
+     * @param cfg
+     */
+    void scanPrunedPatternDAG(DDT::GlobalObject& d, std::vector<Codelet*>& cl, const DDT::Config& cfg) {
+        for (int t = d.ipbs-1; t >= 0; --t) {
+                auto type = d.ipbt[t];
+                if (type < 0) {
+                    for (int i = d.ipb[t+1]-1; i >= d.ipb[t]; --i) {
+                        generateCodeletsFromIteration(d, i, d.mt.ip,
+                                                      d.mt.ips, d.c,cl);
+                    }
+                } else {
+                    generateCodeletsFromSkewedIteration(d.c, d.mt.ip, d.ipb[t], d.ipb[t+1], type, cl);
+                }
+        }
+        std::sort(cl.begin(), cl.end(), [](DDT::Codelet* lhs, DDT::Codelet* rhs) {
+          return lhs->first_nnz_loc < rhs->first_nnz_loc;
+        });
+    }
 
     /**
      * @brief Generates runtime information for executor codes
@@ -333,7 +583,6 @@ namespace DDT {
      * @param cfg Configuration object for inspector/executor
      */
     void generateCodeletsFromSerialDAG(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
-        //#pragma omp parallel for num_threads(c.nThread) default(none) shared(TPR, cl, d, c, std::cout)
         for (int t = 0; t < cfg.nThread; t++) {
             auto& cc = cl[t];
             for (int i = d.tb[t+1]-1; i >= d.tb[t]; i--) {
@@ -404,19 +653,19 @@ namespace DDT {
    */
   void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
       // Calculate overlap for each iteration
-      DDT::pruneIterations(d.mt.ip, d.mt.ips);
-//#ifdef O3
+//      DDT::pruneIterations(d, d.mt.ip, d.mt.ips, cfg.lim);
+
       if (cfg.op == DDT::OP_SPMV) {
           // Compute first order differences
           DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, cfg.nThread);
 
           // Mine trace for codelets
-          DDT::mineDifferences(d.mt.ip, d.c, d.d, cfg.nThread, d.tb);
+//          DDT::minePrunedDifferences(d);
+           DDT::mineDifferences(d.mt.ip, d.c, d.d, cfg.nThread, d.tb);
       }
-//#endif
       // Generate codelets from pattern DAG
+      // DDT::scanPrunedPatternDAG(d, cl[0], cfg);
       DDT::generateCodeletsFromSerialDAG(d, cl, cfg);
-
   }
 
 
@@ -425,4 +674,5 @@ namespace DDT {
    delete i;
   }
  }
+ void FUSED_PSCT2::print() {}
 }

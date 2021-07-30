@@ -52,17 +52,24 @@ namespace DDT {
    int coarsening;
    int bin_packing;
    int tuning_mode;
+   int lim;
   };
 
   struct GlobalObject {
-    MemoryTrace mt;
-    PatternDAG* c;
-    int* d;
-    int* o;
-    int onz;
-    int* tb;
+    MemoryTrace mt; // Object containing raw pointer memory trace
+    PatternDAG* c;  // Directed-acyclic graph of formed codelets
+    int* d;    // Array containing forward first order difference for trace
+    int* o;    // Array containing memory required for storing offset in runtime codelets
+    int onz;   // Number of offsets stored in @param o
+    int* tb;   // Bounds on mt.ip for each parallel thread
     sparse_avx::SpTRSVModel* sm;
     sparse_avx::Trace*** t;
+    bool* sp;  // Array to mark sparse iterations
+    int* rd;   // Array to mark dimensions with reuse between iterations
+    int* ipbt; // Array of types associated with pruned bound
+    int* ipb;  // Array containing pruned bounds on mt.ip
+    int ipbs;  // Current Size of ipb
+    int* nci;  // Number of codelets at iteration
   };
 
   void generateSource(DDT::GlobalObject& d);

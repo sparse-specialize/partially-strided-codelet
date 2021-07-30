@@ -46,7 +46,11 @@ int main(int argc, char *argv[]) {
     spsp->set_num_threads(config.nThread);
     auto spmv_p = spsp->evaluate();
 
-    auto *spmv1 = new SpMVVec1(B, A, sol_spmv, "SpMVVec1");
+    auto spmvp = new SpMVVec1Parallel(B,A,sol_spmv, "SpMVVec1_Parallel");
+    spmvp->set_num_threads(config.nThread);
+    auto spmv1pe = spmvp->evaluate();
+
+    auto *spmv1 = new SpMVVec1(B, A, sol_spmv, "SpMVVec1_4");
     auto spmv1e = spmv1->evaluate();
 
     auto *spmv1_8 = new SpMVVec1_8(B, A, sol_spmv, "SpMVVec1_8");
@@ -58,17 +62,21 @@ int main(int argc, char *argv[]) {
     auto *spmv2 = new SpMVVec2(B, A, sol_spmv, "SpMVVec2");
     auto spmv2e = spmv2->evaluate();
 
+//    auto *spmv_wathen120 = new SpMVWathen(B, A, sol_spmv, "SpMVVec2");
+//    auto spmv_wathen120e = spmv_wathen120->evaluate();
 
 #ifdef MKL
     auto mklspmvst = new SpMVMKL(1, B, A, sol_spmv, "MKL SPMV ST");
     auto mkl_exec_st = mklspmvst->evaluate();
 
     auto mklspmvmt = new SpMVMKL(config.nThread, B, A, sol_spmv, "MKL SPMV MT");
+    mklspmvmt->set_num_threads(config.nThread);
     auto mkl_exec_mt = mklspmvmt->evaluate();
 #endif
 
     int nThread = config.nThread;
     config.nThread = 1;
+#undef PROFILE
 #ifdef PROFILE
     auto matrixName = config.matrixPath;
     auto *ddt_profiler = new sym_lib::ProfilerWrapper<SpMVDDT>(event_list, event_limit, 1,B,A, sol_spmv, config, "SpMV DDT ST");
@@ -99,14 +107,15 @@ int main(int argc, char *argv[]) {
 #endif
     auto *ddtspmvst = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT ST");
     auto ddt_execst = ddtspmvst->evaluate();
-//
+
     config.nThread = nThread;
     auto *ddtspmv = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT MT");
+    ddtspmv->set_num_threads(config.nThread);
     auto ddt_exec = ddtspmv->evaluate();
 
-    if (config.header) {
+    if (config.header || true) {
         std::cout << "Matrix,Threads,";
-        std::cout << "SpMV Base,SpMV Parallel Base, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2";
+        std::cout << "SpMV Base,SpMV Parallel Base, SpMV Vec 1_4 Parallel, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2,";
 #ifdef MKL
         std::cout << "SpMV MKL Serial Executor, SpMV MKL Parallel Executor,";
 #endif
@@ -117,6 +126,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << config.matrixPath << "," << config.nThread << ","
               << spmv_baseline.elapsed_time << "," << spmv_p.elapsed_time << ",";
+    std::cout << spmv1pe.elapsed_time << ",";
     std::cout << spmv1e.elapsed_time << "," << spmv2e.elapsed_time << ",";
     std::cout << spmv1_8e.elapsed_time << "," << spmv1_16e.elapsed_time << ",";
 #ifdef MKL
@@ -135,7 +145,7 @@ int main(int argc, char *argv[]) {
 
     delete spsp;
     delete sps;
-    delete ddtspmv;
+//    delete ddtspmv;
 
 
     return 0;

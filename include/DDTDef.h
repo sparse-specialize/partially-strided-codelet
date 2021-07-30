@@ -5,8 +5,8 @@
 #ifndef DDT_DDTDEF_H
 #define DDT_DDTDEF_H
 
-#include<immintrin.h>
-namespace DDT{
+#include <immintrin.h>
+namespace DDT {
 
 #ifdef __AVX2__
  typedef union
@@ -28,14 +28,22 @@ namespace DDT{
   __m128      f128;
  };
 
+    static int TPR = 3;
+
     enum CodeletType {
-        TYPE_FSC,
-        TYPE_PSC1,
-        TYPE_PSC2,
-        TYPE_PSC3,
-        TYPE_PSC3_V1,
-        TYPE_PSC3_V2
+        TYPE_FSC = 0,
+        TYPE_PSC1 = 1,
+        TYPE_PSC2 = 2,
+        TYPE_PSC3 = 3,
+        TYPE_PSC3_V1 = 4,
+        TYPE_PSC3_V2 = 5,
+        TYPE_F_PSC = 6
     };
+
+    const int MAX_CODELETS_PER_ITERATION = 100;
+    const int MIN_LIM_ITERATIONS = 40;
+    const int SP_ITER_THRESHOLD = 4;
+    const int MAX_LIM = 4;
 
     struct PatternDAG {
         int sz;

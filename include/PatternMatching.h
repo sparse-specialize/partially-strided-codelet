@@ -25,7 +25,9 @@ namespace DDT {
 
     int findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps,
                  DDT::PatternDAG *lhscp, DDT::PatternDAG *rhscp, int *lhstpd,
-                 int *rhstpd);
+                 int *rhstpd, int rd);
+
+    void minePrunedDifferences(DDT::GlobalObject& d);
 }
 
 #endif  // DDT_PATTERNMATCHING_H

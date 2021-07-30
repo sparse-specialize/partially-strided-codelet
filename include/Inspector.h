@@ -6,6 +6,7 @@
 #define DDT_INSPECTOR_H
 
 #include "DDT.h"
+#include "DDTDef.h"
 #include "DDTCodelets.h"
 
 #include <iostream>
@@ -25,7 +26,6 @@ namespace DDT {
 
     template <DDT::CodeletType Type>
     void generateCodeletType(DDT::GlobalObject& d, DDT::PatternDAG* c, std::vector<Codelet*>& cl) {
-        int TPR = 3;
 
         // Get codelet type
         if constexpr (Type == DDT::TYPE_PSC3) {

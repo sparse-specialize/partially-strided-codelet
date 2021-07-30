@@ -53,6 +53,9 @@ namespace DDT {
  /// PSC T3
  void psc_t3_1D1R(double *y, const double *Ax, const int *Ai,  const double
  *x, const int *offset, int lb, int fnl, int cw);
+
+ /// Fused PSC T2
+ void f_psc_t2(int cw, int fnl, int tsc, int lb, int ub, int p, const int* o, const double* Ax, const double* x, double* y);
  }
 
 #endif //DDT_GENERICCODELETS_H

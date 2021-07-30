@@ -17,10 +17,9 @@
  */
 
 #include "DDT.h"
+#include "DDTDef.h"
 
 #include <iostream>
-#include <fstream>
-#include <sstream>
 
 namespace DDT {
 void generateSingleStatement(std::stringstream& ss, int* ct) {
@@ -29,7 +28,6 @@ void generateSingleStatement(std::stringstream& ss, int* ct) {
 
 void generateCodelet(std::stringstream& ss, DDT::GlobalObject& d, DDT::PatternDAG*
     c) {
-  int TPR = 3;
   // Get codelet type
   auto TYPE = c->t;
 

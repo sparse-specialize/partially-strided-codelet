@@ -45,6 +45,14 @@ namespace sparse_avx{
   }
  }
 
+    inline void hsum_double_avx_avx(__m256d v0, __m256d v1, __m128d v2, double* y, int i) {
+        auto h0 = _mm256_hadd_pd(v0,v1);
+        __m128d vlow = _mm256_castpd256_pd128(h0);
+        __m128d vhigh = _mm256_extractf128_pd(h0, 1);  // high 128
+        vlow = _mm_add_pd(vlow, vhigh);
+        vlow = _mm_add_pd(vlow, v2);
+        _mm_storeu_pd(y+i, vlow);
+    }
 
     inline double hsum_double_avx(__m256d v) {
         __m128d vlow = _mm256_castpd256_pd128(v);
@@ -55,8 +63,39 @@ namespace sparse_avx{
         return _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
     }
 
+    inline double hsum_add_double_avx(__m256d v, __m128d a) {
+        __m128d vlow = _mm256_castpd256_pd128(v);
+        __m128d vhigh = _mm256_extractf128_pd(v, 1);  // high 128
+        vlow = _mm_add_pd(vlow, vhigh);      // reduce down to 128
+        vlow = _mm_add_pd(vlow, a);
+
+        __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+        return _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
+    }
+
+    __m256i MASK_3 = _mm256_set_epi64x(0,-1,-1,-1);
 void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
                            const double *x, double *y, int nThreads) {
+        for (int i = 0; i < n; i++) {
+            auto r0 = _mm256_setzero_pd();
+            int j = Ap[i];
+            for (; j < Ap[i+1] - 3; j += 4) {
+                auto xv = _mm256_set_pd(x[Ai[j+3]],x[Ai[j+2]],x[Ai[j+1]],x[Ai[j]]);
+                auto axv0 = _mm256_loadu_pd(Ax + j);
+                r0 = _mm256_fmadd_pd(axv0, xv, r0);
+            }
+
+            // Compute tail
+            double tail = 0.;
+            for (; j < Ap[i+1]; j++) { tail += Ax[j] * x[Ai[j]]; }
+
+            // H-Sum
+            y[i] += tail + hsum_double_avx(r0);
+        }
+    }
+    void spmv_vec1_parallel(int n, const int *Ap, const int *Ai, const double *Ax,
+                   const double *x, double *y, int nThreads) {
+#pragma omp parallel for num_threads(nThreads)
         for (int i = 0; i < n; i++) {
             auto r0 = _mm256_setzero_pd();
             int j = Ap[i];
@@ -128,6 +167,156 @@ void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
             y[i] += tail + hsum_double_avx(r0);
         }
     }
+
+    inline double wathen3_2_3vec_1d(const int* Ap, const int* Ai, const double* Ax, const double* x, int i) {
+        int j = Ap[i];
+        int o0 = Ai[j], o1 = Ai[j+3], o2 = Ai[j+5];
+
+        auto r0 = _mm256_setzero_pd();
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j), _mm256_maskload_pd(x+o0, MASK_3), r0);
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+5), _mm256_maskload_pd(x+o2, MASK_3), r0);
+
+        return hsum_add_double_avx(r0, _mm_mul_pd(_mm_loadu_pd(Ax+j+3), _mm_loadu_pd(x+o1)));
+    }
+
+    inline double wathen3_2_3_2_3vec1d(const int* Ap, const int* Ai, const double* Ax, const double* x, int i) {
+        int j = Ap[i];
+        int o0 = Ai[j], o1 = Ai[j+3], o2 = Ai[j+5], o3 = Ai[j+8], o4 = Ai[j+10];
+
+        auto r0 = _mm256_setzero_pd();
+        auto r1 = _mm_setzero_pd();
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j), _mm256_maskload_pd(x+o0, MASK_3), r0);
+        r1 = _mm_fmadd_pd(_mm_loadu_pd(Ax+j+3), _mm_loadu_pd(x+o1), r1);
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+5), _mm256_maskload_pd(x+o2, MASK_3), r0);
+        r1 = _mm_fmadd_pd(_mm_loadu_pd(Ax+j+8), _mm_loadu_pd(x+o3), r1);
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+10), _mm256_maskload_pd(x+o4, MASK_3), r0);
+
+        return hsum_add_double_avx(r0, r1);
+    }
+
+    inline double wathen_5_3_5_3_5vec_1d(const int* Ap, const int* Ai, const double* Ax, const double* x, int i) {
+        int j = Ap[i];
+        int o0 = Ai[j], o1 = Ai[j+5], o2 = Ai[j+8], o3 = Ai[j+13], o4 = Ai[j+16];
+
+        auto r0 = _mm256_setzero_pd();
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j), _mm256_loadu_pd(x+o0), r0);
+        double tail = Ax[j+4] * x[o0+4];
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+5), _mm256_maskload_pd(x+o1, MASK_3), r0);
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+8), _mm256_loadu_pd(x+o2), r0);
+        tail += Ax[j+12] * x[o2+4];
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+13), _mm256_maskload_pd(x+o3, MASK_3), r0);
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+16), _mm256_loadu_pd(x+o4), r0);
+        tail += Ax[j+20] * x[o4+4];
+        return hsum_double_avx(r0) + tail;
+    }
+
+    inline double wathen3_5_vec_1d(const int* Ap, const int* Ai, const double* Ax, const double* x, int i) {
+        int j = Ap[i];
+        int o0 = Ai[j], o1 = Ai[j+3];
+
+        auto r0 = _mm256_setzero_pd();
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j), _mm256_maskload_pd(x+o0, MASK_3), r0);
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+3), _mm256_loadu_pd(x+o1), r0);
+        double tail = Ax[j+7] * x[o1+4];
+
+        return hsum_double_avx(r0) + tail;
+    }
+
+    inline void wathen5_3_5vec_2d(const int* Ap, const int* Ai, const double* Ax, const double* x, double* y, int i) {
+        int j0 = Ap[i], j1 = Ap[i+1];
+        int o0 = Ai[j0], o1 = Ai[j0+5], o2 = Ai[j0+8];
+        int o3 = Ai[j1], o4 = Ai[j1+5], o5 = Ai[j1+8];
+
+        auto r0 = _mm256_setzero_pd();
+        auto r1 = _mm256_setzero_pd();
+        auto tail = _mm_loadu_pd(y+i);
+
+        // Row 1
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j0), _mm256_loadu_pd(x+o0), r0);
+        tail[0] += Ax[j0+4] * x[o0+4];
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j0+5), _mm256_maskload_pd(x+o1, MASK_3), r0);
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j0+8), _mm256_loadu_pd(x+o2), r0);
+        tail[0] += Ax[j0+12] * x[o2+4];
+
+        // Row 2
+        r1 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j1), _mm256_loadu_pd(x+o3), r1);
+        tail[1] += Ax[j1+4] * x[o3+4];
+        r1 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j1+5), _mm256_maskload_pd(x+o4, MASK_3), r1);
+        r1 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j1+8), _mm256_loadu_pd(x+o5), r1);
+        tail[1] += Ax[j1+12] * x[o5+4];
+
+        // H-Sum
+        auto h0 = _mm256_hadd_pd(r0,r1);
+        __m128d vlow = _mm256_castpd256_pd128(h0);
+        __m128d vhigh = _mm256_extractf128_pd(h0, 1);  // high 128
+        vlow = _mm_add_pd(vlow, vhigh);
+        vlow = _mm_add_pd(vlow, tail);
+        _mm_storeu_pd(y+i, vlow);
+    }
+
+    inline double wathen5_3_5vec_1d(const int* Ap, const int* Ai, const double* Ax, const double* x, int i) {
+        int j = Ap[i];
+        int o0 = Ai[j], o1 = Ai[j+5], o2 = Ai[j+8];
+
+        auto r0 = _mm256_setzero_pd();
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j), _mm256_loadu_pd(x+o0), r0);
+        double tail = Ax[j+4] * x[o0+4];
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+5), _mm256_maskload_pd(x+o1, MASK_3), r0);
+        r0 = _mm256_fmadd_pd(_mm256_loadu_pd(Ax+j+8), _mm256_loadu_pd(x+o2), r0);
+        tail += Ax[j+12] * x[o2+4];
+        return hsum_double_avx(r0) + tail;
+    }
+
+    void spmv_wathen_clean(int n, const int *Ap, const int *Ai, const double *Ax,
+                     const double *x, double *y, int nThreads) {
+        int i = 1, j;
+        y[0] += wathen3_5_vec_1d(Ap, Ai, Ax, x, 0);
+        for (int k = 0; k < 99; k++, i+=2) {
+            y[i] += wathen3_2_3vec_1d(Ap, Ai, Ax, x, i);
+            y[i+1] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i+1);
+        }
+        for (int ii = 0; ii < 119; ++ii) {
+            for (int k = 0; k < 4; k++, i++) {
+                if (Ap[i+1] - Ap[i] == 8)
+                    y[i] += wathen3_2_3vec_1d(Ap, Ai, Ax, x, i);
+                else
+                    y[i] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i);
+            }
+            for (int k = 0; k < 49; k++, i+=2) {
+                y[i] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i);
+                y[i + 1] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i + 1);
+            }
+            for (int k = 0; k < 4; k++, i++) {
+                for (j = Ap[i]; j < Ap[i + 1]; j++) {
+                    y[i] += Ax[j] * x[Ai[j]];
+                }
+            }
+            for (int k = 0; k < 98; k++, i+=2) {
+                y[i] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i);
+                y[i + 1] += wathen_5_3_5_3_5vec_1d(Ap, Ai, Ax, x, i + 1);
+            }
+        }
+        for (int k = 0; k < 4; k++, i++) {
+            if (Ap[i+1] - Ap[i] == 8)
+                y[i] += wathen3_2_3vec_1d(Ap, Ai, Ax, x, i);
+            else
+                y[i] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i);
+        }
+        for (int k = 0; k < 49; k++, i+=2) {
+                y[i] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i);
+                y[i+1] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i+1);
+        }
+        for (int k = 0; k < 4; k++, i++) {
+            for (j = Ap[i]; j < Ap[i + 1]; j++) {
+                y[i] += Ax[j] * x[Ai[j]];
+            }
+        }
+        for (int k = 0; k < 99; k++, i+=2) {
+            y[i] += wathen3_5_vec_1d(Ap, Ai, Ax, x, i);
+            y[i+1] += wathen5_3_5vec_1d(Ap, Ai, Ax, x, i+1);
+        }
+    }
+
     void spmv_vec2(int n, const int *Ap, const int *Ai, const double *Ax,
                    const double *x, double *y, int nThreads) {
         int i = 0;
@@ -238,6 +427,28 @@ void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
   };
  };
 
+    class SpMVVec1Parallel : public SpMVSerial {
+    protected:
+        sym_lib::timing_measurement fused_code() override {
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            spmv_vec1_parallel(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_, num_threads_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+
+    public:
+        SpMVVec1Parallel(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                     double *correct_x,
+                     std::string name) :
+                SpMVSerial(L, L_csc, correct_x, name) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+    };
+
 
 
     class SpMVVec1 : public SpMVSerial {
@@ -319,6 +530,28 @@ void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
 
     public:
         SpMVVec2(sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                 double *correct_x,
+                 std::string name) :
+                SpMVSerial(L, L_csc, correct_x, name) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+    };
+
+    class SpMVWathen : public SpMVSerial {
+    protected:
+        sym_lib::timing_measurement fused_code() override {
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            spmv_wathen_clean(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_, num_threads_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+
+    public:
+        SpMVWathen(sym_lib::CSR *L, sym_lib::CSC *L_csc,
                  double *correct_x,
                  std::string name) :
                 SpMVSerial(L, L_csc, correct_x, name) {
