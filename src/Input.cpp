@@ -15,6 +15,7 @@
  *
  * =====================================================================================
  */
+#include "DDTDef.h"
 #include "DDT.h"
 #include "Input.h"
 
@@ -45,6 +46,9 @@ namespace DDT {
       ("p,packing", "bin-packing", cxxopts::value<int>()->default_value("1"))
       ("u,tuning", "Tuning enabled", cxxopts::value<int>()->default_value("0"))
       ("iteration_limit", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("0"))
+      ("fsc_only", "Max length of periodic iteration space to find", cxxopts::value<bool>()->default_value("false"))
+      ("col_th", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("0"))
+      ("clt_width", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("0"))
       ("d,header", "prints header or not.");
 
     auto result = options.parse(argc, argv);
@@ -75,8 +79,15 @@ namespace DDT {
     auto bpacking = result["packing"].as<int>();
     auto tuning_en = result["tuning"].as<int>();
     auto lim = result["iteration_limit"].as<int>();
+    auto fsc_only = result["fsc_only"].as<bool>();
+    auto col_th = result["col_th"].as<int>();
+    auto clt_width = result["clt_width"].as<int>();
 
     assert(lim <= MAX_LIM);
+
+    DDT::clt_width = clt_width;
+    DDT::col_th = col_th;
+    DDT::fsc_only = fsc_only;
 
     NumericalOperation op;
     if (operation == "SPMV") {

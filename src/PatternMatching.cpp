@@ -17,13 +17,14 @@
  */
 #include "PatternMatching.h"
 #include "DDT.h"
+#include "DDTDef.h"
 #include "DDTUtils.h"
 
 #include <immintrin.h>
 
 #include <chrono>
 
-int THRESHOLDS[4] = {5, 100000, 3, 0};
+int THRESHOLDS[4] = {5, 100000, DDT::col_th, 0};
 int UNIT_THRESHOLDS[4] = {2, 2, 2, 2};
 
 const int TPD = 3;
@@ -233,7 +234,7 @@ namespace DDT {
                 uint16_t imm = _mm_movemask_epi8(xordv);
 
                 while ((i < lhstps - 1 && j < rhstps - 1) &&
-                       ZERO_MASK == (imm & ZERO_MASK)) {
+                       ZERO_MASK == (imm & ZERO_MASK) && (DDT::fsc_only ? iu && hsad : true)) {
                     lhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(
                             lhstpd + ++i * tpd));
                     rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(
@@ -245,11 +246,12 @@ namespace DDT {
                     uint16_t MASK =
                             _mm_movemask_epi8(_mm_cmpeq_epi32(odv, lhsdv));
                     hsad = hsad && ZERO_MASK == (MASK & ZERO_MASK);
+                iu = isUnit(lhsdv);
                 }
 
                 // Adjust pointers to form codelet
                 int sz = i - iStart;
-                if (sz != 0 && sz > 4) {
+                if (sz != 0 && sz > DDT::clt_width) {
                     DDT::CodeletType t;
                     uint16_t unitMask = _mm_movemask_epi8(
                             _mm_cmplt_epi32(odv, unitThresholds));

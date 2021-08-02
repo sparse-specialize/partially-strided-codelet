@@ -6,6 +6,7 @@
 #define SPARSE_AVX512_DEMO_SPMVVEC_H
 
 #include "FusionDemo.h"
+#include "SerialSpMVExecutor.h"
 
 #include "DDT.h"
 #include "Executor.h"
@@ -383,7 +384,7 @@ void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
   sym_lib::timing_measurement fused_code() override {
    sym_lib::timing_measurement t1;
    t1.start_timer();
-   spmv_csr(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_);
+   spmv_csr(L1_csr_->m, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_);
    t1.measure_elapsed_time();
    //copy_vector(0,n_,x_in_,x_);
    return t1;
@@ -575,7 +576,7 @@ void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
 //         d.diag = SPARSE_DIAG_NON_UNIT;
 //         d.mode = SPARSE_FILL_MODE_FULL;
 
-         MKL_INT expected_calls = 5;
+         MKL_INT expected_calls = 1;
 
          LLI = new MKL_INT[this->L1_csr_->m+1]();
          for (int l = 0; l < this->L1_csr_->m+1; ++l) {
@@ -609,6 +610,119 @@ void spmv_vec1(int n, const int *Ap, const int *Ai, const double *Ax,
      }
  };
 #endif
+
+    class TightLoopSpMV : public SpMVSerial {
+        typedef void (*FunctionPtr)();
+        void reset_pointers() {
+            // Assign pointers
+            axi = this->L1_csr_->i;
+            xp = this->x_in_;
+            axp = this->L1_csr_->x;
+            app = this->L1_csr_->p;
+            yp = this->x_;
+            m = this->L1_csr_->m;
+        }
+        void build_set() override {
+            // Init templates
+            build_templates();
+
+            // Init memory
+            using FunctionPtr2 = void (*)();
+            fp = new FunctionPtr2[this->L1_csr_->m+1];
+
+            for (int i = 0; i < this->L1_csr_->m; ++i) {
+                auto diff = this->L1_csr_->p[i+1] - this->L1_csr_->p[i];
+                int sbs[6] = { 0 };
+                int cnt = 0;
+                int cntr = 0;
+                for (int j = this->L1_csr_->p[i]; j < this->L1_csr_->p[i+1]-1; ++j) {
+                    cntr++;
+                    if ((this->L1_csr_->i[j+1] - this->L1_csr_->i[j]) != 1) {
+                        sbs[cnt++] = cntr;
+                        cntr = 0;
+                    }
+                }
+                sbs[cnt++] = cntr+1;
+
+                if (cnt == 1) {
+                    if (sbs[0] == 2) {
+                        fp[i] = v2_;
+                    } else if (sbs[0] == 3) {
+                        fp[i] = v3_;
+                    } else {
+                        goto flag;
+                    }
+                } else if (cnt == 2) {
+                    if (sbs[0] == 2 && sbs[1] == 1) {
+                        fp[i] = v2_1;
+                    } else if (sbs[0] == 1 && sbs[1] == 2) {
+                        fp[i] = v3;
+                    } else if (sbs[0] == 3 && sbs[1] == 1) {
+                        fp[i] = v3_1;
+                    } else if (sbs[0] == 1 && sbs[1] == 3) {
+                        fp[i] = v1_3;
+                    } else {
+                       goto flag;
+                    }
+                } else if (cnt == 3) {
+                   if (sbs[0] == 1 && sbs[1] == 2 && sbs[2] == 1) {
+                       fp[i] = v1_2_1;
+                   } else if (sbs[0] == 1 && sbs[1] == 3 && sbs[2] == 1) {
+                       fp[i] = v1_3_1;
+                   } else {
+                       goto flag;
+                   }
+                } else if (cnt == 4) {
+                    if (sbs[0] == 1 && sbs[1] == 1 && sbs[2] == 2 && sbs[3] == 1) {
+                        fp[i] = v1_1_2_1;
+                    } else if (sbs[0] == 1 && sbs[1] == 1 && sbs[2] == 3 && sbs[3] == 1) {
+                        fp[i] = v1_1_3_1;
+                    } else {
+                        goto flag;
+                    }
+                } else {
+                    flag:
+                    std::cout << cnt << ": ";
+                    for (int k = 0; k < cnt; k++) {
+                        std::cout << sbs[k] << ",";
+                    }
+                    std::cout << std::endl;
+                    exit(1);
+                    fp[i] = mapped_fp[diff];
+                }
+
+                if (diff > 14) {
+                    throw std::runtime_error("Error: template specialization too large... exiting...");
+                }
+            }
+
+            // Assign pointers
+            reset_pointers();
+        }
+        sym_lib::timing_measurement fused_code() override {
+            auto m = this->L1_csr_->m;
+            auto p = this->L1_csr_->p;
+            auto ai = this->L1_csr_->i;
+            auto ax = this->L1_csr_->x;
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            for (int i = 0; i < m; ++i) {
+                for (int j = p[i]; j < p[i+1]; ++j) {
+                    x_[i] += ax[j] * x_in_[ai[j]];
+                }
+            }
+            t1.measure_elapsed_time();
+            return t1;
+        }
+
+    public:
+        TightLoopSpMV(int nThreads, sym_lib::CSR *L, sym_lib::CSC *L_csc,
+                double *correct_x,
+                std::string name) :
+                SpMVSerial(L, L_csc, correct_x, name) {}
+
+        ~TightLoopSpMV() override {}
+    };
 
  class SpMVDDT : public SpMVSerial {
  protected:

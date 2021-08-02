@@ -7,6 +7,9 @@
 
 #include <immintrin.h>
 namespace DDT {
+  inline int clt_width = 0;
+  inline bool fsc_only = true;
+  inline int  col_th     = 2;
 
 #ifdef __AVX2__
  typedef union

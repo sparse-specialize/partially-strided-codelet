@@ -2,7 +2,9 @@
 // Created by kazem on 7/13/21.
 //
 #include "SPMV_demo_utils.h"
+#include "SerialSpMVExecutor.h"
 
+#include "DDTDef.h"
 #include <def.h>
 #include <sparse_io.h>
 #include <sparse_utilities.h>
@@ -42,25 +44,25 @@ int main(int argc, char *argv[]) {
     double *sol_spmv = sps->solution();
     //std::copy(sol_spmv, sol_spmv+A->n, )
 
-    auto *spsp = new SpMVParallel(B, A, sol_spmv, "SpMV Parallel");
-    spsp->set_num_threads(config.nThread);
-    auto spmv_p = spsp->evaluate();
-
-    auto spmvp = new SpMVVec1Parallel(B,A,sol_spmv, "SpMVVec1_Parallel");
-    spmvp->set_num_threads(config.nThread);
-    auto spmv1pe = spmvp->evaluate();
-
-    auto *spmv1 = new SpMVVec1(B, A, sol_spmv, "SpMVVec1_4");
-    auto spmv1e = spmv1->evaluate();
-
-    auto *spmv1_8 = new SpMVVec1_8(B, A, sol_spmv, "SpMVVec1_8");
-    auto spmv1_8e = spmv1_8->evaluate();
-
-    auto *spmv1_16 = new SpMVVec1_16(B, A, sol_spmv, "SpMVVec1_16");
-    auto spmv1_16e = spmv1_16->evaluate();
-
-    auto *spmv2 = new SpMVVec2(B, A, sol_spmv, "SpMVVec2");
-    auto spmv2e = spmv2->evaluate();
+//    auto *spsp = new SpMVParallel(B, A, sol_spmv, "SpMV Parallel");
+//    spsp->set_num_threads(config.nThread);
+//    auto spmv_p = spsp->evaluate();
+//
+//    auto spmvp = new SpMVVec1Parallel(B,A,sol_spmv, "SpMVVec1_Parallel");
+//    spmvp->set_num_threads(config.nThread);
+//    auto spmv1pe = spmvp->evaluate();
+//
+//    auto *spmv1 = new SpMVVec1(B, A, sol_spmv, "SpMVVec1_4");
+//    auto spmv1e = spmv1->evaluate();
+//
+//    auto *spmv1_8 = new SpMVVec1_8(B, A, sol_spmv, "SpMVVec1_8");
+//    auto spmv1_8e = spmv1_8->evaluate();
+//
+//    auto *spmv1_16 = new SpMVVec1_16(B, A, sol_spmv, "SpMVVec1_16");
+//    auto spmv1_16e = spmv1_16->evaluate();
+//
+//    auto *spmv2 = new SpMVVec2(B, A, sol_spmv, "SpMVVec2");
+//    auto spmv2e = spmv2->evaluate();
 
 //    auto *spmv_wathen120 = new SpMVWathen(B, A, sol_spmv, "SpMVVec2");
 //    auto spmv_wathen120e = spmv_wathen120->evaluate();
@@ -109,32 +111,35 @@ int main(int argc, char *argv[]) {
     auto ddt_execst = ddtspmvst->evaluate();
 
     config.nThread = nThread;
-    auto *ddtspmv = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT MT");
-    ddtspmv->set_num_threads(config.nThread);
-    auto ddt_exec = ddtspmv->evaluate();
+    auto *ddtspmvmt = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT MT");
+    ddtspmvmt->set_num_threads(config.nThread);
+    auto ddt_execmt = ddtspmvmt->evaluate();
+
+//    auto *tlspmv = new TightLoopSpMV(1, B, A, sol_spmv, "SpMV Tight Loop");
+//    auto tlspmv_exec = tlspmv->evaluate();
 
     if (config.header || true) {
-        std::cout << "Matrix,Threads,";
-        std::cout << "SpMV Base,SpMV Parallel Base, SpMV Vec 1_4 Parallel, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2,";
+        std::cout << "Matrix,Threads, fsc_only, size_cutoff, col_threshold,";
+        std::cout << "SpMV Base,"; //SpMV Parallel Base, SpMV Vec 1_4 Parallel, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2,";
 #ifdef MKL
-        std::cout << "SpMV MKL Serial Executor, SpMV MKL Parallel Executor,";
+//        std::cout << "SpMV MKL Serial Executor, SpMV MKL Parallel Executor,";
 #endif
         std::cout <<
-                     "SpMVDDT Serial Executor,SpMV DDT Parallel Executor";
+                     "SpMVDDT Serial Executor, SpMV DDT Parallel Executor";
         std::cout << "\n";
     }
 
-    std::cout << config.matrixPath << "," << config.nThread << ","
-              << spmv_baseline.elapsed_time << "," << spmv_p.elapsed_time << ",";
-    std::cout << spmv1pe.elapsed_time << ",";
-    std::cout << spmv1e.elapsed_time << "," << spmv2e.elapsed_time << ",";
-    std::cout << spmv1_8e.elapsed_time << "," << spmv1_16e.elapsed_time << ",";
+    std::cout << config.matrixPath << "," << config.nThread << "," << DDT::fsc_only << "," << DDT::clt_width << "," << DDT::col_th << ","
+               << spmv_baseline.elapsed_time << ",";//<< "," << tlspmv_exec.elapsed_time << ","; //<< spmv_p.elapsed_time << ",";
+    // std::cout << spmv1pe.elapsed_time << ",";
+    // std::cout << spmv1e.elapsed_time << "," << spmv2e.elapsed_time << ",";
+    // std::cout << spmv1_8e.elapsed_time << "," << spmv1_16e.elapsed_time << ",";
 #ifdef MKL
-    std::cout << mkl_exec_st.elapsed_time << "," << mkl_exec_mt.elapsed_time << ",";
+//     std::cout << mkl_exec_st.elapsed_time << "," << mkl_exec_mt.elapsed_time << ",";
 #endif
     std::cout
-              << ddt_execst.elapsed_time << "," << ddt_exec.elapsed_time << ", ";// <<
-//                    std::cout << spg3e.elapsed_time;
+              << ddt_execst.elapsed_time << ",";
+                    std::cout << ddt_execmt.elapsed_time;
     std::cout << "\n";
 
     delete A;
@@ -143,7 +148,7 @@ int main(int argc, char *argv[]) {
     delete L_csr;
     delete[] sol;
 
-    delete spsp;
+//    delete spsp;
     delete sps;
 //    delete ddtspmv;
 

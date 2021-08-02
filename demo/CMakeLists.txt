@@ -1,7 +1,8 @@
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 add_executable(spmv_demo
         FusionDemo.cpp
         SPMV_demo.cpp
+        SerialSpMVExecutor.cpp
         ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
         ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC}
         )
