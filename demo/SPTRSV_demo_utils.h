@@ -7,6 +7,7 @@
 
 #include "FusionDemo.h"
 
+#include "Analyzer.h"
 #include "DDT.h"
 #include "Executor.h"
 #include "Input.h"
@@ -253,11 +254,6 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
  class SpTRSVSerial : public sym_lib::FusionDemo {
  protected:
-  void setting_up() override {
-   std::fill_n(x_,n_,0.0);
-   std::fill_n(x_in_,n_,1.0);
-  }
-
   sym_lib::timing_measurement fused_code() override {
    std::copy(x_in_, x_in_+n_, x_);
    sym_lib::timing_measurement t1;
@@ -283,11 +279,6 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
     class SpTRSVSerialVec1 : public SpTRSVSerial {
     protected:
-        void setting_up() override {
-            std::fill_n(x_,n_,0.0);
-            std::fill_n(x_in_,n_,1.0);
-        }
-
         sym_lib::timing_measurement fused_code() override {
             std::copy(x_in_, x_in_+n_, x_);
             sym_lib::timing_measurement t1;
@@ -313,11 +304,6 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
     class SpTRSVSerialVec2 : public SpTRSVSerial {
     protected:
-        void setting_up() override {
-            std::fill_n(x_,n_,0.0);
-            std::fill_n(x_in_,n_,1.0);
-        }
-
         sym_lib::timing_measurement fused_code() override {
             std::copy(x_in_, x_in_+n_, x_);
             sym_lib::timing_measurement t1;
@@ -406,6 +392,9 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
      int num_threads;
 
      void build_set() override {
+         if (LLI != nullptr) {
+             delete LLI;
+         }
          sparse_operation_t opr = SPARSE_OPERATION_NON_TRANSPOSE;
          d.type = SPARSE_MATRIX_TYPE_TRIANGULAR;
          d.diag = SPARSE_DIAG_NON_UNIT;
@@ -417,6 +406,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
          for (int l = 0; l < this->L1_csr_->m+1; ++l) {
              LLI[l] = this->L1_csr_->p[l];
          }
+
          mkl_sparse_d_create_csr(&m, SPARSE_INDEX_BASE_ZERO, this->L1_csr_->m, this->L1_csr_->n,
                                  LLI, LLI+1, this->L1_csr_->i, this->L1_csr_->x);
          mkl_sparse_set_mv_hint(m, opr, d, expected_calls);
@@ -439,7 +429,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
      SpTRSVMKL(int nThreads, sym_lib::CSR *L, sym_lib::CSC *L_csc,
      double *correct_x,
              std::string name) :
-     SpTRSVSerial(L, L_csc, correct_x, name), num_threads(nThreads) {};
+             SpTRSVSerial(L, L_csc, correct_x, name), num_threads(nThreads), LLI(nullptr) {};
  };
 #endif
 
@@ -451,7 +441,11 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   int lp_, cp_, ic_;
   bool b_pack;
   int tuning;
+
   void build_set() override {
+  if (final_level_no != 0) {
+      return;
+  }
    auto *cost = new double[n_]();
    for (int i = 0; i < n_; ++i) {
     cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
@@ -513,7 +507,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   SpTRSVParallel(sym_lib::CSR *L, sym_lib::CSC *L_csc,
                double *correct_x,
                std::string name, int lp, int cp, int ic, int bp, int tun) :
-    SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp), ic_(ic),
+    SpTRSVSerial(L, L_csc, correct_x, name), lp_(lp), cp_(cp), ic_(ic), part_no(0), final_level_no(0),
     b_pack(bp), tuning(tun) {
    L1_csr_ = L;
    L1_csc_ = L_csc;
@@ -528,7 +522,6 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
   int CP(){return cp_;}
   int BP(){return b_pack;}
-
  };
 
     class SpTRSVParallelVec2 : public SpTRSVSerial {
@@ -611,6 +604,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 
  class SpTRSVDDT : public SpTRSVSerial {
  protected:
+  bool memoryAllocated = false;
   DDT::Config config;
   std::vector<DDT::Codelet*>* cl;
   DDT::GlobalObject d;
@@ -618,11 +612,16 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   int lp_, cp_, ic_;
 
   void build_set() override {
-   // Allocate memory and generate global object
+      if (memoryAllocated) {
+          return;
+      }
+      // Allocate memory and generate global object
       if (config.nThread != 1) {
           d = DDT::init(this->L1_csr_, this->L1_csc_,config);
+          memoryAllocated = true;
       } else {
           d = DDT::init(this->L1_csr_, config);
+          memoryAllocated = true;
       }
    analysis_breakdown.start_timer();
    sym_lib::timing_measurement t1;
@@ -635,6 +634,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
        DDT::inspectSerialTrace(d, this->cl, config);
    } else {
        DDT::inspectParallelTrace(d, config);
+       if (config.analyze) { DDT::analyzeData(d, d.sm->_cl, config); }
    }
 
    analysis_breakdown.start_timer();
@@ -670,19 +670,18 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   SpTRSVDDT(sym_lib::CSR *L, sym_lib::CSC *L_csc,
           double *correct_x, DDT::Config &conf,
           std::string name, int lp, int cp, int ic) :
-    SpTRSVSerial(L, L_csc, correct_x, name), config(conf), lp_(lp), cp_(cp),
+    SpTRSVSerial(L, L_csc, correct_x, name), config(conf), lp_(lp), cp_(cp), cl(nullptr),
     ic_(ic) {
   };
 
   sym_lib::timing_measurement get_analysis_bw(){return analysis_breakdown;}
 
   ~SpTRSVDDT(){
-   DDT::free(d);
+    DDT::free(d);
+    delete[] cl;
 //   DDT::free(cl);
   }
  };
-
-
-}
+};
 
 #endif //DDT_SPTRSV_DEMO_UTILS_H

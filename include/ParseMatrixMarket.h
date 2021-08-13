@@ -105,6 +105,14 @@ class Matrix {
     int* Lp;
     int* Li;
     double* Lx;
+
+    void print() {
+        for (int i = 0; i < this->r; ++i) {
+            for (int j = this->Lp[i]; j < this->Lp[i+1]; ++j) {
+                std::cout << i << "," << this->Li[j] << std::endl;
+            }
+        }
+    }
 };
 
 class CSR : public Matrix {
@@ -194,6 +202,7 @@ class CSR : public Matrix {
         lhs.Li = nullptr;
         lhs.Lx = nullptr;
     }
+
 };
 
 class CSC : public Matrix {

@@ -8,8 +8,8 @@
 #include <immintrin.h>
 namespace DDT {
   inline int clt_width = 0;
-  inline bool fsc_only = true;
-  inline int  col_th     = 2;
+  inline bool prefer_fsc = false;
+  inline int  col_th   = 8;
 
 #ifdef __AVX2__
  typedef union

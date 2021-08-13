@@ -373,6 +373,7 @@ namespace DDT {
             // 1) Detect n-order differences
             auto nb = findIterationDifferential(d.ipbt, d.ipb, d.ipbs, m0, m1, ip, ips, i, lim);
 
+            std::cout << (ip[i+1] - ip[i]) / TPR << ",";
             // 2) Detect sparse iterations
             if (isIterationSparse(ip,i)) {
                 d.sp[i] = true;
@@ -391,6 +392,9 @@ namespace DDT {
                 for (int k = 0; k < TPR; k++) {
                     d.rd[k] = d.rd[k] || isOverlapping(ip[i][k],ip[i+1][-3+k], ip[i+1][k], ip[i+2][-3+k]);
                 }
+            }
+            if (i > 500) {
+                exit(1);
             }
         }
         d.ipb[d.ipbs] = d.mt.ips;
@@ -653,18 +657,16 @@ namespace DDT {
    */
   void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
       // Calculate overlap for each iteration
-//      DDT::pruneIterations(d, d.mt.ip, d.mt.ips, cfg.lim);
+      // DDT::pruneIterations(d, d.mt.ip, d.mt.ips, cfg.lim);
 
       if (cfg.op == DDT::OP_SPMV) {
           // Compute first order differences
           DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, cfg.nThread);
 
           // Mine trace for codelets
-//          DDT::minePrunedDifferences(d);
            DDT::mineDifferences(d.mt.ip, d.c, d.d, cfg.nThread, d.tb);
       }
       // Generate codelets from pattern DAG
-      // DDT::scanPrunedPatternDAG(d, cl[0], cfg);
       DDT::generateCodeletsFromSerialDAG(d, cl, cfg);
   }
 

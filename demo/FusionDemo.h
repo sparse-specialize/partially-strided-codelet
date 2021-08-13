@@ -4,7 +4,6 @@
 
 #ifndef PROJECT_FUSIONDEMO_H
 #define PROJECT_FUSIONDEMO_H
-
 #include "def.h"
 #ifdef PAPI
 #include "PAPIWrapper.h"

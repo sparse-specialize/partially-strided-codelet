@@ -24,7 +24,7 @@ namespace DDT {
             }
         }
 
-        const double eps = 1e-8;
+        const double eps = 1e-4;
 
 
         // Compare outputs
@@ -34,6 +34,7 @@ namespace DDT {
                 std::cout << "Wrong at 'i' = " << i << std::endl;
                 std::cout << "(" << yy[i] << "," << y[i] << ")" << std::endl;
                 wrong = true;
+                exit(1);
             }
         }
         if (wrong)

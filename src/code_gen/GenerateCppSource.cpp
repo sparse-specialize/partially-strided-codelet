@@ -18,6 +18,7 @@
 
 #include "DDT.h"
 #include "DDTDef.h"
+#include "GenerateCppSource.h"
 
 #include <iostream>
 

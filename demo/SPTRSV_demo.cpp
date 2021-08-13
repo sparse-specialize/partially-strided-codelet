@@ -1,6 +1,8 @@
 //
 // Created by kazem on 7/16/21.
 //
+//
+#include "Profiler.h"
 
 #include <iostream>
 #include <sparse_io.h>
@@ -11,7 +13,6 @@
 #ifdef METIS
 #include "metis_interface.h"
 #endif
-
 
 using namespace sparse_avx;
 int main(int argc, char *argv[]) {
@@ -27,6 +28,12 @@ int main(int argc, char *argv[]) {
     int *perm;
     std::fill_n(sol, A->n, 1);
     sym_lib::CSC *A_full = NULLPNTR;
+
+#ifdef PROFILE
+    /// Profiling
+    int event_limit = 1, instance_per_run = 5;
+    auto event_list = sym_lib::get_available_counter_codes();
+#endif
 
 #ifdef METIS
     //We only reorder L since dependency matters more in l-solve.
@@ -49,6 +56,7 @@ int main(int argc, char *argv[]) {
     auto sptrsv_baseline = sps->evaluate();
     double *sol_sptrsv = sps->solution();
 
+#ifndef PROFILE
     auto *spsls = new SptrsvLevelSet(L1_ord_csr, L1_ord, sol_sptrsv,
                                      "Parallel Levelset");
     auto sptrsv_ls = spsls->evaluate();
@@ -96,44 +104,86 @@ int main(int argc, char *argv[]) {
     auto *sptrsv_vec2 =
             new SpTRSVSerialVec2(L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec2");
     auto sptrsv_vec2_exec = sptrsv_vec2->evaluate();
+#endif
 
+#ifdef PROFILE
+#ifdef ANALYZE
+    auto *ddtsptrsvst = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
+                                      "SpTRSV DDT Parallel Analyzer", 1, coarsening_p,
+                                      initial_cut);
+    ddtsptrsvst->evaluate();
+#else
+    auto matrixName = config.matrixPath;
+    auto* baseline_profiler = new sym_lib::ProfilerWrapper<SpTRSVParallel>(event_list, event_limit, 1, L1_ord_csr, L1_ord, sol_sptrsv,
+        "Parallel "
+        "LBC",
+        num_threads, coarsening_p, initial_cut,
+        bpack, tuning);
+    baseline_profiler->profile(num_threads);
+    matrixName.erase(std::remove(matrixName.begin(), matrixName.end(), '\n'), matrixName.end());
+    if (config.header) { std::cout << "MATRIX_NAME, THREADS, KERNEL_TYPE, codelet_min_width, codelet_max_distance, only_fsc_codelets,";  baseline_profiler->print_headers(); }
+    std::cout << matrixName << "," << config.nThread << "," << "PARALLEL_BASELINE,";
+    std::cout << 0 << "," << 0 << "," << 0 << ",";
+    baseline_profiler->print_counters();
+    std::cout << std::endl;
+
+    auto *mkl_profiler= new sym_lib::ProfilerWrapper<SpTRSVMKL>(event_list, event_limit, 1, config.nThread, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_PARALLEL");
+    mkl_profiler->profile(num_threads);
+    std::cout << matrixName << "," << config.nThread << "," << "MKL,";
+    std::cout << 0 << "," << 0 << "," << 0 << ",";
+    mkl_profiler->print_counters();
+    std::cout << "\n";
+
+    auto *ddt_profiler= new sym_lib::ProfilerWrapper<SpTRSVDDT>(event_list, event_limit, 1, L1_ord_csr, L1_ord, sol_sptrsv, config,
+        "SpTRSV DDT Parallel", num_threads, coarsening_p,
+        initial_cut);
+    ddt_profiler->profile(num_threads);
+    std::cout << matrixName << "," << config.nThread << "," << "DDT,";
+    std::cout << DDT::clt_width << "," << DDT::col_th << "," << DDT::prefer_fsc << ",";
+    ddt_profiler->print_counters();
+    std::cout << "\n";
+    exit(0);
+#endif
+#endif
+
+#ifndef PROFILE
 #ifdef MKL
     auto *mkltrsvst =
-            new SpTRSVMKL(1, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_SERIAL");
+      new SpTRSVMKL(1, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_SERIAL");
     auto sptrsv_mkl_execst = mkltrsvst->evaluate();
 
     auto *mkltrsvmt =
-            new SpTRSVMKL(config.nThread, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_SERIAL");
+      new SpTRSVMKL(config.nThread, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_SERIAL");
     auto sptrsv_mkl_execmt = mkltrsvmt->evaluate();
 #endif
 
     if (config.header) {
-        std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
-        std::cout << "Tuning Mode,Dimension,NNZ,";
-        std::cout << "SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, "
-                     "SpTRSV LS "
-                     "NOVec, SpTRSV Parallel,SpTRSV "
-                     "Vec2 Parallel,";
+      std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
+      std::cout << "Tuning Mode,Dimension,NNZ,";
+      std::cout << "SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, "
+        "SpTRSV LS "
+        "NOVec, SpTRSV Parallel,SpTRSV "
+        "Vec2 Parallel,";
 #ifdef MKL
-        std::cout << "SpTRSV MKL Serial Executor,";
-        std::cout << "SpTRSV MKL Parallel Executor,";
+      std::cout << "SpTRSV MKL Serial Executor,";
+      std::cout << "SpTRSV MKL Parallel Executor,";
 #endif
-        std::cout << "SpTRSV DDT Serial Executor, SpTRSV DDT "
-                     "Parallel Executor, Inspector_Time";
-        std::cout << "\n";
+      std::cout << "SpTRSV DDT Serial Executor, SpTRSV DDT "
+        "Parallel Executor, Inspector_Time";
+      std::cout << "\n";
     }
 
     std::cout << config.matrixPath << "," << config.nThread << ",";
     if(tuning > 0)
-       std::cout<< config.coarsening << ","<< config.bin_packing<<",";
+      std::cout<< config.coarsening << ","<< config.bin_packing<<",";
     else
-       std::cout<< spsp->CP() << ","<< spsp->BP() <<",";
+      std::cout<< spsp->CP() << ","<< spsp->BP() <<",";
 
     std::cout<< tuning << ","
-              << L1_ord->n<<","<<L1_ord->nnz<<","
-               << sptrsv_baseline.elapsed_time << ","
-              << sptrsv_vec1_exec.elapsed_time << ","
-              << sptrsv_vec2_exec.elapsed_time << ",";
+      << L1_ord->n<<","<<L1_ord->nnz<<","
+      << sptrsv_baseline.elapsed_time << ","
+      << sptrsv_vec1_exec.elapsed_time << ","
+      << sptrsv_vec2_exec.elapsed_time << ",";
     std::cout << sptrsv_ls.elapsed_time << ",";
     std::cout << sptrsv_ls_novec.elapsed_time << ",";
     std::cout << sptrsv_par.elapsed_time << ",";
@@ -142,10 +192,10 @@ int main(int argc, char *argv[]) {
     std::cout << sptrsv_mkl_execst.elapsed_time << ",";
     std::cout << sptrsv_mkl_execmt.elapsed_time << ",";
 #endif
-//#ifdef DDTT
+    //#ifdef DDTT
     std::cout << ddt_execst.elapsed_time << ",";
     std::cout << ddt_execmt.elapsed_time << ",";
-//#endif
+    //#endif
     std::cout << "\n";
 
     // delete A;
@@ -161,6 +211,7 @@ int main(int argc, char *argv[]) {
     //delete ddtsptrsv;
     delete sptrsv_vec1;
     delete sptrsv_vec2;
+#endif
 
     // delete ddtsptrsv;
 

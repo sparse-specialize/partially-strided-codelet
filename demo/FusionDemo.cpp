@@ -3,7 +3,6 @@
 //
 #define DBG_LOG
 #define CSV_LOG
-
 #include <cstring>
 #include <cmath>
 #include <utils.h>
@@ -30,7 +29,7 @@ namespace sym_lib {
    if (std::isnan(vec1[i]) || std::isnan(vec2[i]))
     return false;
    if constexpr (std::is_same_v<type, double> || std::is_same_v<type, float>) {
-        if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { return false; }
+        if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { std::cout << i << ":" << vec1[i] << "," << vec2[i] << std::endl; return false; }
    } else {
        if (!is_generic_equal(vec1[i],vec2[i], eps))
            return false;
@@ -45,7 +44,7 @@ namespace sym_lib {
                           A_csr_(NULLPNTR),A_csc_(NULLPNTR),
                           x_(NULLPNTR),
                           x_in_(NULLPNTR), correct_x_(NULLPNTR){
-  num_test_=9;
+  num_test_=5;
   redundant_nodes_=0;
 #ifdef PROFILE
   pw_ = NULLPNTR;
@@ -84,8 +83,10 @@ namespace sym_lib {
  }
 
  void FusionDemo::setting_up() {
-  std::fill_n(x_in_,n_,1);
-  std::fill_n(x_,n_,0.0);
+     for (int i = 0; i < this->n_; ++i) {
+         x_in_[i] = 1;
+     }
+    std::fill_n(x_,n_,0.0);
  }
 
  void FusionDemo::testing() {
@@ -101,7 +102,7 @@ namespace sym_lib {
   analysis_time_.start_timer();
   build_set();
   analysis_time_.measure_elapsed_time();
-     for (int i = 0; i < num_test_; ++i) {
+  for (int i = 0; i < num_test_; ++i) {
    setting_up();
 #ifdef PROFILE
    if (pw_ != nullptr) { pw_->begin_profiling(); }

@@ -53,6 +53,9 @@ namespace DDT {
    int bin_packing;
    int tuning_mode;
    int lim;
+   _mm_hint hint;
+   int prefetch_distance;
+   bool analyze;
   };
 
   struct GlobalObject {
@@ -72,7 +75,6 @@ namespace DDT {
     int* nci;  // Number of codelets at iteration
   };
 
-  void generateSource(DDT::GlobalObject& d);
 
   void printTuple(int* t, std::string&& s);
 

@@ -92,12 +92,12 @@ namespace sym_lib {
 
     template <typename T>
     class ProfilerWrapper : public sym_lib::Profiler {
-        T* d;
     protected:
         sym_lib::FusionDemo *get_demo() override {
             return d;
         }
     public:
+        T* d;
         template<typename ...Args>
         ProfilerWrapper(std::vector<int>  event_codes, int event_thr, int inst_no, Args ...args):
                 sym_lib::Profiler(event_codes, event_thr, inst_no) {

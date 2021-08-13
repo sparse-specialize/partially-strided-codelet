@@ -24,7 +24,7 @@
 
 #include <chrono>
 
-int THRESHOLDS[4] = {5, 100000, DDT::col_th, 0};
+
 int UNIT_THRESHOLDS[4] = {2, 2, 2, 2};
 
 const int TPD = 3;
@@ -197,8 +197,9 @@ namespace DDT {
     int findCLCS(int tpd, int *lhstp, int *rhstp, int lhstps, int rhstps,
                  DDT::PatternDAG *lhscp, DDT::PatternDAG *rhscp, int *lhstpd,
                  int *rhstpd, int rd) {
+        int THRESHOLDS[4] = {5, 100000, DDT::col_th, 0};
         const int REUSE_DIMENSION = rd;
-        const int PSC1_RD_DIM = 0;
+        const int PSC1_RD_DIM = 2;
         __m128i thresholds = _mm_set_epi32(THRESHOLDS[3], THRESHOLDS[2],
                                            THRESHOLDS[1], THRESHOLDS[0]);
         __m128i unitThresholds =
@@ -234,7 +235,9 @@ namespace DDT {
                 uint16_t imm = _mm_movemask_epi8(xordv);
 
                 while ((i < lhstps - 1 && j < rhstps - 1) &&
-                       ZERO_MASK == (imm & ZERO_MASK) && (DDT::fsc_only ? iu && hsad : true)) {
+                       ZERO_MASK == (imm & ZERO_MASK) &&
+                       !isInCodelet(lhscp+i+1) &&
+                       (DDT::prefer_fsc && (i-iStart > clt_width ) ? hsad : true)) {
                     lhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(
                             lhstpd + ++i * tpd));
                     rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(
@@ -251,7 +254,7 @@ namespace DDT {
 
                 // Adjust pointers to form codelet
                 int sz = i - iStart;
-                if (sz != 0 && sz > DDT::clt_width) {
+                if (sz > DDT::clt_width) {
                     DDT::CodeletType t;
                     uint16_t unitMask = _mm_movemask_epi8(
                             _mm_cmplt_epi32(odv, unitThresholds));
@@ -272,7 +275,7 @@ namespace DDT {
                         // @TODO: FIX HACK sub[0] == 0
                         if (!((MASK == PSC1_MASK && hsad &&
                                (unitMask | 0xF000) == 0xFFFF && sub[PSC1_RD_DIM] == 0) ||
-                              MASK == FSC_MASK)) {
+                               MASK == FSC_MASK)) {
                             i = lhscp[iStart].sz + iStart + 1;
                             lhs = _mm_loadu_si128(
                                     reinterpret_cast<const __m128i *>(lhstp +
@@ -295,6 +298,10 @@ namespace DDT {
                     rhs = _mm_loadu_si128(reinterpret_cast<const __m128i *>(
                             rhstp + ++j * tpd));
                     continue;
+                } else {
+                    if (isInCodelet(lhscp+iStart)) {
+                        i = iStart + lhscp[iStart].sz + 1;
+                    }
                 }
             }
             if (lhstp[i * tpd + REUSE_DIMENSION] <= rhstp[j * tpd + REUSE_DIMENSION]) {

@@ -6,3 +6,4 @@ build
 compile_commands.json
 *.mtx
 external
+*.csv

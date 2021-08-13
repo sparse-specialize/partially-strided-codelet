@@ -54,6 +54,10 @@ namespace DDT {
     bnd_row_array[nThreads] = m.r;
   }
 
+  void verifyCodelets(DDT::GlobalObject& d, std::vector<DDT::Codelet*>& cl) {
+
+  }
+
   void getSpTRSVIterationThreadBounds(int* bnd_row_array, int nThreads, const Matrix& m) {
     getSpMVIterationThreadBounds(bnd_row_array, nThreads, m);
   }
