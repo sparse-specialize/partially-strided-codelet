@@ -357,10 +357,5 @@ namespace DDT {
         return hsum_epi32_avx(sum128);
     }
 
-    double getTimeDifference(std::chrono::steady_clock::time_point t1,
-                             std::chrono::steady_clock::time_point t2) {
-        return std::chrono::duration_cast<std::chrono::duration<double>>(t2 -
-                                                                         t1)
-                .count();
-    }
+
 }// namespace DDT

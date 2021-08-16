@@ -90,3 +90,4 @@ target_link_libraries(DDT
 
 add_subdirectory(lib/lbc/)
 add_subdirectory(demo)
+add_subdirectory(codelet_demo)

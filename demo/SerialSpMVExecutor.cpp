@@ -5,15 +5,6 @@
 #include "SerialSpMVExecutor.h"
 #include <immintrin.h>
 
-inline double hsum_double_avx(__m256d v) {
-    __m128d vlow = _mm256_castpd256_pd128(v);
-    __m128d vhigh = _mm256_extractf128_pd(v, 1);  // high 128
-    vlow = _mm_add_pd(vlow, vhigh);      // reduce down to 128
-
-    __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
-    return _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
-}
-
 inline double hsum_double_avx(__m256d v, __m128d tail) {
     __m128d vlow = _mm256_castpd256_pd128(v);
     __m128d vhigh = _mm256_extractf128_pd(v, 1);  // high 128
@@ -152,22 +143,6 @@ inline double hsum_double_avx(__m256d v, __m128d tail) {
         *yp += *axp++ * xp[*axi++];
     }
 
-    void build_templates() {
-        mapped_fp = new FunctionPtr[13+1];
-        mapped_fp[0] = nullptr;
-        mapped_fp[1] = v1;
-        mapped_fp[2] = v2;
-        mapped_fp[3] = v3;
-        mapped_fp[4] = v4;
-        mapped_fp[5] = v5;
-        mapped_fp[6] = v6;
-        mapped_fp[7] = v7;
-        mapped_fp[8] = v8;
-        mapped_fp[9] = v9;
-        mapped_fp[10] = v10;
-        mapped_fp[11] = v11;
-        mapped_fp[12] = v12;
-        mapped_fp[13] = v13;
-    }
+
 
 

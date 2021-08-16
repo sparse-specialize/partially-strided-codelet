@@ -6,6 +6,7 @@
 #define DDT_DDTUTILS_H
 
 #include "DDTDef.h"
+#include <chrono>
 
 namespace DDT {
     /**
@@ -92,6 +93,21 @@ namespace DDT {
      */
     inline int getCodeletSize(PatternDAG* c) {
         return c->sz+1;
+    }
+
+    /**
+     * Gets time difference between two points
+     *
+     * @param t1 First point in time
+     * @param t2 Second point in time
+     *
+     * @return Time (in seconds) t2-t1
+     */
+    inline double getTimeDifference(std::chrono::steady_clock::time_point t1,
+                                    std::chrono::steady_clock::time_point t2) {
+        return std::chrono::duration_cast<std::chrono::duration<double>>(t2 -
+        t1)
+        .count();
     }
 }
 #endif//DDT_DDTUTILS_H
