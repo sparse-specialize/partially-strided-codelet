@@ -28,6 +28,8 @@
 #include "Inspector.h"
 #include "PatternMatching.h"
 
+#include "SPMV_CVR.h"
+
 #include <iostream>
 #ifdef MKL
 #include <mkl.h>
@@ -2224,6 +2226,35 @@ namespace sparse_avx {
 
         ~TightLoopSpMV() override {}
     };
+
+#ifdef __AVX512__
+    class SpMVCVR : public SpMVSerial {
+        SPMV_CVR::ExecutorParameters ep;
+
+        void build_set() override {
+            ep.h_val = this->L1_csr_->x;
+            ep.h_rowDelimiters = this->L1_csr_->p;
+            ep.h_cols = this->L1_csr_->i;
+            ep.Nthrds = this->num_threads_;
+            ep.numCols = this->L1_csr_->n;
+            ep.numRows = this->L1_csr_->m;
+            ep.nItems = this->L1_csr_->nnz;
+            ep.omega = 1;
+            ep.h_vec = x_in_;
+
+            SPMV_CVR::build_set(ep);
+            ep.refOut = x_;
+        }
+        sym_lib::timing_measurement fused_code() override {
+            SPMV_CVR::run_spmv(ep.Nthrds, ep.N_start, ep.N_step, ep.vPack_Nblock,
+                               ep.vPack_vec_record, ep.vPack_nnz_rows,
+                               ep.vPack_vec_vals, ep.vPack_vec_cols,ep.h_val, ep.h_cols, ep.vPack_vec_final,
+                               ep.vPack_vec_final_2, ep.vPack_split, x_,
+                               ep.nItems, ep.numRows, ep.omega, ep.h_rowDelimiters,
+            ep.filename, ep.h_vec, 1);
+        }
+    };
+#endif
 
     class SpMVDDT : public SpMVSerial {
     protected:

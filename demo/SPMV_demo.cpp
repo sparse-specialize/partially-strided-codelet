@@ -112,6 +112,12 @@ int main(int argc, char *argv[]) {
     exit(0);
 #endif
 #ifndef PROFILE
+
+#ifdef __AVX512__
+    auto cvrspmv = new SpMVDDT(B, A, sol_spmv, config, "SpMV CVR MT");
+    auto cvr_execmt = cvrspmv->evaluate();
+#endif
+
     auto nThread = config.nThread;
     config.nThread = 1;
     auto *ddtspmvst = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT ST");
@@ -131,6 +137,9 @@ int main(int argc, char *argv[]) {
 #ifdef MKL
         std::cout << "SpMV MKL Serial Executor, SpMV MKL Parallel Executor,";
 #endif
+#ifdef __AVX512__
+        std::cout << "SpMV CVR Parallel Executor,";
+#endif
         std::cout <<
                      "SpMVDDT Serial Executor, SpMV DDT Parallel Executor";
         std::cout << "\n";
@@ -143,6 +152,9 @@ int main(int argc, char *argv[]) {
      std::cout << spmv1_8e.elapsed_time << "," << spmv1_16e.elapsed_time << ",";
 #ifdef MKL
      std::cout << mkl_exec_st.elapsed_time << "," << mkl_exec_mt.elapsed_time << ",";
+#endif
+#ifdef __AVX512__
+     std::cout << cvr_execmt.elapsed_time << ",";
 #endif
     std::cout
               << ddt_execst.elapsed_time << ",";

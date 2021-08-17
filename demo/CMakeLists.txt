@@ -3,6 +3,7 @@ add_executable(spmv_demo
         FusionDemo.cpp
         SPMV_demo.cpp
         SerialSpMVExecutor.cpp
+        SPMV_CVR.cpp
         ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
         ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC}
         )
