@@ -390,11 +390,13 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
      matrix_descr d;
      sparse_matrix_t m;
      int num_threads;
+     sym_lib::timing_measurement analysis_bw;
 
      void build_set() override {
          if (LLI != nullptr) {
              delete LLI;
          }
+         analysis_bw.start_timer();
          sparse_operation_t opr = SPARSE_OPERATION_NON_TRANSPOSE;
          d.type = SPARSE_MATRIX_TYPE_TRIANGULAR;
          d.diag = SPARSE_DIAG_NON_UNIT;
@@ -412,6 +414,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
          mkl_sparse_set_mv_hint(m, opr, d, expected_calls);
 
          mkl_set_num_threads(num_threads);
+         analysis_bw.measure_elapsed_time();
      }
      sym_lib::timing_measurement fused_code() override {
          sym_lib::timing_measurement t1;
@@ -422,6 +425,8 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
          return t1;
      }
 
+
+
      ~SpTRSVMKL() override {
          delete[] this->LLI;
      }
@@ -430,6 +435,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
      double *correct_x,
              std::string name) :
              SpTRSVSerial(L, L_csc, correct_x, name), num_threads(nThreads), LLI(nullptr) {};
+     sym_lib::timing_measurement get_analysis_bw(){return analysis_bw;}
  };
 #endif
 
@@ -441,11 +447,13 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
   int lp_, cp_, ic_;
   bool b_pack;
   int tuning;
+  sym_lib::timing_measurement analysis_bw;
 
   void build_set() override {
   if (final_level_no != 0) {
       return;
   }
+  analysis_bw.start_timer();
    auto *cost = new double[n_]();
    for (int i = 0; i < n_; ++i) {
     cost[i] = L1_csr_->p[i+1] - L1_csr_->p[i];
@@ -490,6 +498,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    }
 
    delete []cost;
+   analysis_bw.measure_elapsed_time();
   }
 
   sym_lib::timing_measurement fused_code() override {
@@ -513,6 +522,8 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
    L1_csc_ = L_csc;
    correct_x_ = correct_x;
   };
+
+  sym_lib::timing_measurement get_analysis_bw(){return analysis_bw;}
 
   ~SpTRSVParallel(){
    delete []fina_level_ptr;
@@ -615,6 +626,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
       if (memoryAllocated) {
           return;
       }
+      analysis_breakdown.start_timer();
       // Allocate memory and generate global object
       if (config.nThread != 1) {
           d = DDT::init(this->L1_csr_, this->L1_csc_,config);
@@ -623,12 +635,6 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
           d = DDT::init(this->L1_csr_, config);
           memoryAllocated = true;
       }
-   analysis_breakdown.start_timer();
-   sym_lib::timing_measurement t1;
-   t1.start_timer();
-
-   analysis_breakdown.start_timer();
-
    if (config.nThread == 1) {
        this->cl = new std::vector<DDT::Codelet*>();
        DDT::inspectSerialTrace(d, this->cl, config);
@@ -636,9 +642,6 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
        DDT::inspectParallelTrace(d, config);
        if (config.analyze) { DDT::analyzeData(d, d.sm->_cl, config); }
    }
-
-   analysis_breakdown.start_timer();
-
    analysis_breakdown.measure_elapsed_time();
   }
 

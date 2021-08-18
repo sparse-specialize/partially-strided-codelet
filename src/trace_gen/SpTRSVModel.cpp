@@ -71,7 +71,11 @@ namespace sparse_avx {
         }
   // Separate LBC and levelset depending on the number of nnz per row
         if (ic_ > 0) {
-            sym_lib::get_coarse_levelSet_DAG_CSC(
+//            sym_lib::get_coarse_levelSet_DAG_CSC(
+//                    _num_cols, _Apt, _Ait, _final_level_no, _final_level_ptr,
+//                    _final_part_no, _final_part_ptr, _final_node_ptr, parts,
+//                    ic_, cp_, cost, _bpack);
+            sym_lib::get_coarse_Level_set_DAG_CSC03_parallel(
                     _num_cols, _Apt, _Ait, _final_level_no, _final_level_ptr,
                     _final_part_no, _final_part_ptr, _final_node_ptr, parts,
                     ic_, cp_, cost, _bpack);

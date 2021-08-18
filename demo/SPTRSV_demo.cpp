@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
                                     num_threads, coarsening_p, initial_cut,
                                     bpack, tuning);
     auto sptrsv_par = spsp->evaluate();
+    auto sptrsv_par_analysis = spsp->analysisTime();
 
     auto *spspv2 =
             new SpTRSVParallelVec2(L1_ord_csr, L1_ord, sol_sptrsv,
@@ -155,6 +156,8 @@ int main(int argc, char *argv[]) {
     auto *mkltrsvmt =
       new SpTRSVMKL(config.nThread, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_SERIAL");
     auto sptrsv_mkl_execmt = mkltrsvmt->evaluate();
+
+    auto sptrsv_mkl_analysis = mkltrsvmt->get_analysis_bw();
 #endif
 
     if (config.header) {
@@ -169,7 +172,7 @@ int main(int argc, char *argv[]) {
       std::cout << "SpTRSV MKL Parallel Executor,";
 #endif
       std::cout << "SpTRSV DDT Serial Executor, SpTRSV DDT "
-        "Parallel Executor, Inspector_Time";
+        "Parallel Executor, Sympiler Inspector Time, MKL Inspector Time, DDT Inspector Time";
       std::cout << "\n";
     }
 
@@ -195,6 +198,12 @@ int main(int argc, char *argv[]) {
     //#ifdef DDTT
     std::cout << ddt_execst.elapsed_time << ",";
     std::cout << ddt_execmt.elapsed_time << ",";
+    std::cout << sptrsv_par_analysis.elapsed_time << ",";
+#ifdef MKL
+    std::cout << sptrsv_mkl_analysis.elapsed_time << ",";
+#endif
+    std::cout << ddt_analysismt.elapsed_time << ",";
+
     //#endif
     std::cout << "\n";
 
