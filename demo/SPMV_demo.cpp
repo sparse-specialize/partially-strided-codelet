@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
     auto mklspmvmt = new SpMVMKL(config.nThread, B, A, sol_spmv, "MKL SPMV MT");
     mklspmvmt->set_num_threads(config.nThread);
     auto mkl_exec_mt = mklspmvmt->evaluate();
+    auto mkl_analysis_bw = mklspmvmt->get_analysis_bw();
 #endif
 #endif
 
@@ -118,6 +119,11 @@ int main(int argc, char *argv[]) {
     auto cvr_execmt = cvrspmv->evaluate();
 #endif
 
+    auto csr5spmv = new SpMVCSR5(B, A, sol_spmv, "SpMV CSR5 MT");
+    csr5spmv->set_num_threads(config.nThread);
+    auto csr5spmv_execmt = csr5spmv->evaluate();
+    auto csr5spmv_analysis = csr5spmv->get_analysis_bw();
+
     auto nThread = config.nThread;
     config.nThread = 1;
     auto *ddtspmvst = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT ST");
@@ -127,9 +133,8 @@ int main(int argc, char *argv[]) {
     auto *ddtspmvmt = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT MT");
     ddtspmvmt->set_num_threads(config.nThread);
     auto ddt_execmt = ddtspmvmt->evaluate();
+    auto ddt_analysis = ddtspmvmt->get_analysis_bw();
 
-//    auto *tlspmv = new TightLoopSpMV(1, B, A, sol_spmv, "SpMV Tight Loop");
-//    auto tlspmv_exec = tlspmv->evaluate();
 
     if (config.header) {
         std::cout << "Matrix,Threads, prefer_fsc, size_cutoff, col_threshold,";
@@ -141,7 +146,7 @@ int main(int argc, char *argv[]) {
         std::cout << "SpMV CVR Parallel Executor,";
 #endif
         std::cout <<
-                     "SpMVDDT Serial Executor, SpMV DDT Parallel Executor";
+        "SpMVCSR5 Parallel Executor,SpMVDDT Serial Executor,SpMV DDT Parallel Executor, MKL Analysis, CSR5 Analysis, SPMV Analysis";
         std::cout << "\n";
     }
 
@@ -156,9 +161,11 @@ int main(int argc, char *argv[]) {
 #ifdef __AVX512__
      std::cout << cvr_execmt.elapsed_time << ",";
 #endif
+    std::cout << csr5spmv_execmt.elapsed_time << ",";
     std::cout
               << ddt_execst.elapsed_time << ",";
-                    std::cout << ddt_execmt.elapsed_time;
+                    std::cout << ddt_execmt.elapsed_time << ",";
+                    std::cout << mkl_analysis_bw.elapsed_time << "," << csr5spmv_analysis.elapsed_time << "," << ddt_analysis.elapsed_time << ",";
     std::cout << "\n";
 
     delete A;

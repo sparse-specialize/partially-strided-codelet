@@ -23,7 +23,6 @@ namespace DDT {
                 yy[i] += Ax[j] * x[Ai[j]];
             }
         }
-
         const double eps = 1e-4;
 
 

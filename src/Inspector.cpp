@@ -598,18 +598,10 @@ namespace DDT {
                         j += (d.c[cn].sz + 1) * TPR;
                     } else if (d.c[cn].ct != nullptr) {
                         // Generate (TYPE_PSC3)
-                        if (/* nCodelets == 0*/ false) {
-                            int iEnd = findType3VBounds(d.mt.ip, d.c, i);
-                            cn = ((d.mt.ip[i]) - d.mt.ip[0]) / TPR;
-                            generateFullRowCodeletType(i, d.mt.ip, d.mt.ips, d.c, d.c + cn, cc);
-                            i = iEnd;
-                            break;
-                        } else {
-                            j += findType3Bounds(d, i, j,
-                                                 d.mt.ip[i + 1] - d.mt.ip[i]);
-                            cn = ((d.mt.ip[i] + (j - TPR)) - d.mt.ip[0]) / TPR;
-                            generateCodelet(d, d.c + cn, cc);
-                        }
+                        j += findType3Bounds(d, i, j,
+                                             d.mt.ip[i + 1] - d.mt.ip[i]);
+                        cn = ((d.mt.ip[i] + (j - TPR)) - d.mt.ip[0]) / TPR;
+                        generateCodelet(d, d.c + cn, cc);
                     } else {
                         j += TPR * (d.c[cn].sz + 1);
                     }
@@ -658,10 +650,9 @@ namespace DDT {
   void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
       // Calculate overlap for each iteration
       // DDT::pruneIterations(d, d.mt.ip, d.mt.ips, cfg.lim);
-
       if (cfg.op == DDT::OP_SPMV) {
           // Compute first order differences
-          DDT::computeParallelizedFOD(d.mt.ip, d.mt.ips, d.d, cfg.nThread);
+          DDT::computeThreadBoundParallelizedFOD(d.tb, d.mt.ip, d.mt.ips, d.d, cfg.nThread);
 
           // Mine trace for codelets
            DDT::mineDifferences(d.mt.ip, d.c, d.d, cfg.nThread, d.tb);

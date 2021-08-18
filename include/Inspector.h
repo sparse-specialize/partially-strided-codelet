@@ -7,6 +7,7 @@
 
 #include "DDT.h"
 #include "DDTDef.h"
+#include "DDTUtils.h"
 #include "DDTCodelets.h"
 
 #include <iostream>
@@ -77,7 +78,6 @@ namespace DDT {
 
             int vi = c->ct[2] - c->pt[2];
             int vj = c->ct[5] - c->ct[2];
-
             while (c->pt != c->ct) {
                 d.o[--d.onz] = c->ct[1];
                 int nc = (c->pt - d.mt.ip[0])/TPR;
@@ -86,7 +86,6 @@ namespace DDT {
                 rowCnt++;
             }
             d.o[--d.onz] = c->ct[1];
-
             assert(vi == 0);
             assert(vj == 1);
 

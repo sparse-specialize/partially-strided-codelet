@@ -5,6 +5,7 @@
 #include "Input.h"
 #include "Inspector.h"
 
+#include <DDTUtils.h>
 #include <algorithm>
 
 int main(int argc, char** argv) {

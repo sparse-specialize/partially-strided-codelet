@@ -23,6 +23,7 @@
 #include "ParseMatrixMarket.h"
 #include "SpTRSVModel.h"
 
+#include <DDTUtils.h>
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
@@ -124,8 +125,8 @@ namespace DDT {
     int* iba = new int[nThreads+1]();  // Iteration bounds array
 
     // Allocate memory
-    auto mem = new int[nTuples*2+m.nz]();
-    auto* codelets = new DDT::PatternDAG[m.nz]();
+    auto mem = new int[nTuples*2+m.nz];
+    auto* codelets = new DDT::PatternDAG[m.nz];
     int** dp = new int*[m.r+1];
     auto tuples = mem;
     auto df = mem+nTuples;

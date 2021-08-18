@@ -94,6 +94,8 @@ namespace DDT {
 
     DDT::GlobalObject allocateSpTRSVMemoryTrace(const Matrix& m, int nThreads);
 
+    DDT::GlobalObject allocateSpMVMemoryTrace(const Matrix& m, int nThreads);
+
     template <typename M0>
   DDT::GlobalObject init(const M0* m0, const DDT::Config& cfg) {
         // Convert matrix into regular form
@@ -103,7 +105,7 @@ namespace DDT {
         // Allocate memory and generate trace
         DDT::GlobalObject d;
         if (cfg.op == OP_SPMV) {
-//            d = DDT::allocateSpMVMemoryTrace(m, cfg.nThread);
+            d = DDT::allocateSpMVMemoryTrace(m, cfg.nThread);
         } else if (cfg.op == OP_SPTRS) {
             d = DDT::allocateSpTRSVMemoryTrace(m, cfg.nThread);
         } else {

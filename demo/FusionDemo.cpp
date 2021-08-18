@@ -91,7 +91,7 @@ namespace sym_lib {
 
  void FusionDemo::testing() {
   if(correct_x_)
-   if (!is_equal(0, n_, correct_x_, x_,1e-8))
+   if (!is_equal(0, n_, correct_x_, x_,1e-6))
     PRINT_LOG(name_ + " code != reference solution.\n");
  }
 
@@ -107,7 +107,6 @@ namespace sym_lib {
 #ifdef PROFILE
    if (pw_ != nullptr) { pw_->begin_profiling(); }
 #endif
-
          timing_measurement t1 = fused_code();
 #ifdef PROFILE
    if (pw_ != nullptr)

@@ -10,8 +10,6 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-//#include <hbwmalloc.h>
-
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -53,8 +51,17 @@ using namespace std;
 #define ALLOC(t,s) new t[s]
 #define FREE(p) delete[] p
 #endif
-
 #ifdef __AVX512__
+
+__m512i pbadc = _mm512_set_epi32(4,5,6,7,0,1,2,3,12,13,14,15,8,9,10,11);
+#define _MM_PERM_BADC pbadc
+#define _mm512_permute4f128_epi32(idx, p) _mm512_permutexvar_epi32(p, idx)
+
+#define _MM_SCALE_4 4
+#define _MM_SCALE_8 8
+
+#define _mm512_i32logather_pd(vi, ba, s) _mm512_i32gather_pd(vi, ba, s)
+
 namespace SPMV_CVR {
     struct Coordinate {
         int x;

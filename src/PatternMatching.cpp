@@ -49,8 +49,25 @@ namespace DDT {
     void computeParallelizedFOD(int **ip, int ips, int *differences,
                                 int nThreads) {
 #pragma omp parallel for num_threads(nThreads)
-        for (int t = 0; t < nThreads; t++) {
             for (int i = 0; i < ips; i++) {
+                computeFirstOrder(differences + (ip[i] - ip[0]), ip[i],
+                                  ip[i + 1] - ip[i]);
+            }
+    }
+
+    /**
+     * @brief Compute FODs using iteration thread bounds stored in tb
+     * @param tb Array of iteration bounds for each thread
+     * @param ip
+     * @param ips
+     * @param differences
+     * @param nThreads
+     */
+    void computeThreadBoundParallelizedFOD(int* tb, int **ip, int ips, int *differences,
+                                int nThreads) {
+#pragma omp parallel for num_threads(nThreads)
+        for (int t = 0; t < nThreads; t++) {
+            for (int i = tb[t]; i < tb[t+1]-1; i++) {
                 computeFirstOrder(differences + (ip[i] - ip[0]), ip[i],
                                   ip[i + 1] - ip[i]);
             }
@@ -143,7 +160,7 @@ namespace DDT {
     /**
  *
  * Generates codelets from differences and tuple information.
- *
+ * @param cl Pointer to several vectors that store codelets for each trace
  * @param ip Pointer to tuples at start of iterations
  * @param ips Number of pointers in ip
  * @param c Storage for codelet groupings
@@ -151,9 +168,7 @@ namespace DDT {
  */
     void mineDifferences(int **ip, DDT::PatternDAG *c, int *d, int nThreads,
                          const int *tBound) {
-        int rd = 2;
-        int tc = 0;
-#pragma omp parallel for num_threads(nThreads) reduction(+ : tc)
+#pragma omp parallel for num_threads(nThreads)
         for (int ii = 0; ii < nThreads; ++ii) {
             int nc = 0;
             for (int i = tBound[ii]; i < tBound[ii + 1] - 1; i++) {
@@ -162,9 +177,8 @@ namespace DDT {
                 auto lhstps = (ip[i + 1] - ip[i]) / TPD;
                 auto rhstps = (ip[i + 2] - ip[i + 1]) / TPD;
                 nc += findCLCS(TPD, ip[i], ip[i + 1], lhstps, rhstps, c + lhscp,
-                               c + rhscp, d + lhscp * TPD, d + rhscp * TPD, rd);
+                               c + rhscp, d + lhscp * TPD, d + rhscp * TPD, 2);
             }
-            tc += nc;
         }
     }
 

@@ -29,6 +29,7 @@
 #include "PatternMatching.h"
 
 #include "SPMV_CVR.h"
+#include "anonymouslib_avx2.h"
 
 #include <iostream>
 #ifdef MKL
@@ -691,8 +692,10 @@ namespace sparse_avx {
         matrix_descr d;
         MKL_INT *LLI;
         int num_threads;
+        sym_lib::timing_measurement analysis_breakdown;
 
         void build_set() override {
+            analysis_breakdown.start_timer();
             d.type = SPARSE_MATRIX_TYPE_GENERAL;
             //         d.diag = SPARSE_DIAG_NON_UNIT;
             //         d.mode = SPARSE_FILL_MODE_FULL;
@@ -713,6 +716,7 @@ namespace sparse_avx {
 
             mkl_set_num_threads(num_threads);
             mkl_set_num_threads_local(num_threads);
+            analysis_breakdown.measure_elapsed_time();
         }
         sym_lib::timing_measurement fused_code() override {
             sym_lib::timing_measurement t1;
@@ -728,6 +732,10 @@ namespace sparse_avx {
                 double *correct_x, std::string name)
             : SpMVSerial(L, L_csc, correct_x, name), num_threads(nThreads),
               LLI(nullptr) {}
+
+        sym_lib::timing_measurement get_analysis_bw() {
+            return analysis_breakdown;
+        }
 
         ~SpMVMKL() override { delete[] LLI; }
     };
@@ -2256,6 +2264,58 @@ namespace sparse_avx {
     };
 #endif
 
+    class SpMVCSR5 : public SpMVSerial {
+        anonymouslibHandle<int, unsigned int, double> A;
+        int*Ap;
+        int*Ai;
+        double*Ax;
+        sym_lib::timing_measurement analysis_breakdown;
+
+        void build_set() override{
+            analysis_breakdown.start_timer();
+            if (Ap != nullptr)
+                return;
+            Ap = new int[this->L1_csr_->m+1]();
+            Ai = new int[this->L1_csr_->nnz]();
+            Ax = new double[this->L1_csr_->nnz]();
+
+            for (int i = 0; i < this->L1_csr_->nnz; ++i) {
+                Ax[i] = this->L1_csr_->x[i];
+                Ai[i] = this->L1_csr_->i[i];
+            }
+            for (int i = 0; i < this->L1_csr_->m + 1; ++i) {
+                Ap[i] = this->L1_csr_->p[i];
+            }
+            auto err = A.inputCSR(this->L1_csr_->nnz, Ap, Ai, Ax);
+            A.setX(x_in_); // you only need to do it once!
+            A.setSigma(16);
+            A.asCSR5();
+            analysis_breakdown.measure_elapsed_time();
+        }
+        sym_lib::timing_measurement fused_code() override{
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+            auto err = A.spmv(1.0, x_);
+            t1.measure_elapsed_time();
+            //copy_vector(0,n_,x_in_,x_);
+            return t1;
+        }
+    public:
+        SpMVCSR5(sym_lib::CSR *L, sym_lib::CSC *L_csc, double *correct_x, std::string name)
+        : SpMVSerial(L, L_csc, correct_x, name), A(this->L1_csr_->m, this->L1_csr_->n), Ap(nullptr), Ax(nullptr), Ai(nullptr) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+        sym_lib::timing_measurement get_analysis_bw() {
+            return analysis_breakdown;
+        }
+        ~SpMVCSR5() override {
+            delete[] Ap;
+            delete[] Ai;
+            delete[] Ax;
+        }
+    };
     class SpMVDDT : public SpMVSerial {
     protected:
         DDT::Config config;
@@ -2267,7 +2327,8 @@ namespace sparse_avx {
             // Allocate memory and generate global object
             if (this->cl == nullptr) {
                 this->cl = new std::vector<DDT::Codelet *>[config.nThread];
-                d = DDT::init(config);
+                analysis_breakdown.start_timer();
+                d = DDT::init(this->L1_csr_, config);
                 analysis_breakdown.start_timer();
                 DDT::inspectSerialTrace(d, cl, config);
                 analysis_breakdown.measure_elapsed_time();
