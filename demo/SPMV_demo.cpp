@@ -119,6 +119,18 @@ int main(int argc, char *argv[]) {
     auto cvr_execmt = cvrspmv->evaluate();
 #endif
 
+    auto ellpackspmv = new SpMVELL(B, A, sol_spmv, "SpMV ELLPACK");
+    ellpackspmv->set_num_threads(config.nThread);
+    auto ellpackspmv_exec = ellpackspmv->evaluate();
+    auto ellpackspmv_analysis = ellpackspmv->get_analysis_bw();
+
+#ifdef DIA
+    auto diaspmv = new SpMVDIA(B, A, sol_spmv, "SpMV DIA");
+    diaspmv->set_num_threads(config.nThread);
+    auto diaspmv_exec = diaspmv->evaluate();
+    auto diaspmv_analysis = diaspmv->get_analysis_bw();
+#endif
+
     auto csr5spmv = new SpMVCSR5(B, A, sol_spmv, "SpMV CSR5 MT");
     csr5spmv->set_num_threads(config.nThread);
     auto csr5spmv_execmt = csr5spmv->evaluate();
@@ -146,7 +158,11 @@ int main(int argc, char *argv[]) {
         std::cout << "SpMV CVR Parallel Executor,";
 #endif
         std::cout <<
-        "SpMVCSR5 Parallel Executor,SpMVDDT Serial Executor,SpMV DDT Parallel Executor, MKL Analysis, CSR5 Analysis, SPMV Analysis";
+        "SpMVCSR5 Parallel Executor, ELLPACK Parallel Executor,";
+#ifdef DIA
+        "DIA Parallel Executor,"
+#endif
+        std::cout << "SpMVDDT Serial Executor,SpMV DDT Parallel Executor, ELLPack Analysis, DIA Analysis, MKL Analysis, CSR5 Analysis, SPMV Analysis";
         std::cout << "\n";
     }
 
@@ -162,9 +178,17 @@ int main(int argc, char *argv[]) {
      std::cout << cvr_execmt.elapsed_time << ",";
 #endif
     std::cout << csr5spmv_execmt.elapsed_time << ",";
+    std::cout << ellpackspmv_exec.elapsed_time << ",";
+#ifdef DIA
+    std::cout << diaspmv_exec.elapsed_time << ",";
+#endif
     std::cout
               << ddt_execst.elapsed_time << ",";
                     std::cout << ddt_execmt.elapsed_time << ",";
+                    std::cout << ellpackspmv_analysis.elapsed_time << ",";
+#ifdef DIA
+                std::cout << diaspmv_analysis.elapsed_time << ",";
+#endif
                     std::cout << mkl_analysis_bw.elapsed_time << "," << csr5spmv_analysis.elapsed_time << "," << ddt_analysis.elapsed_time << ",";
     std::cout << "\n";
 
@@ -172,10 +196,7 @@ int main(int argc, char *argv[]) {
     delete B;
     delete A_full;
     delete L_csr;
-
-//    delete spsp;
     delete sps;
-//    delete ddtspmv;
 #endif
 
 

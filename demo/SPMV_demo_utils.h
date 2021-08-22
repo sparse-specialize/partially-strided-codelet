@@ -2264,6 +2264,211 @@ namespace sparse_avx {
     };
 #endif
 
+    class SpMVELL : public SpMVSerial {
+        int m;
+        int JMAX;
+        double* Lxe;
+        int* ie;
+        sym_lib::timing_measurement analysis_breakdown;
+
+
+        void build_set() {
+            if (this->Lxe != nullptr) {
+                return;
+            }
+            analysis_breakdown.start_timer();
+            // Set m
+            this->m = this->L1_csr_->m;
+
+            // Get JMAX
+            JMAX = 0;
+            for (int i = 0; i < this->L1_csr_->m; ++i) {
+                JMAX = std::max(JMAX, this->L1_csr_->p[i+1]-this->L1_csr_->p[i]);
+            }
+
+            // Allocate memory
+            Lxe = new double[JMAX*this->L1_csr_->m]();
+            ie = new int[JMAX*this->L1_csr_->m]();
+
+            // Build ELL-Pack format
+            for (int i = 0; i < this->L1_csr_->m; ++i) {
+                int counter = 0;
+                for (int j = this->L1_csr_->p[i], cnt = 1; j < this->L1_csr_->p[i+1]; ++j, ++counter) {
+                    if (i == this->L1_csr_->i[j]) {
+                        Lxe[i*JMAX] = this->L1_csr_->x[j];
+                        ie[i*JMAX]  = i;
+                    } else {
+                        Lxe[i*JMAX + cnt] = this->L1_csr_->x[j];
+                        ie[i*JMAX + cnt]  = this->L1_csr_->i[j];
+                        cnt++;
+                    }
+                }
+                if (counter < JMAX) {
+                    Lxe[i*JMAX + counter]  = 0;
+                    ie[i*JMAX + counter] = 1;
+                }
+            }
+            analysis_breakdown.measure_elapsed_time();
+        }
+        sym_lib::timing_measurement fused_code() override{
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+#pragma omp parallel for num_threads(this->num_threads_)
+            for (int i = 0; i < m; ++i) {
+                for (int j = 0; j < JMAX; ++j) {
+                    x_[i] += this->Lxe[i*JMAX+j] * x_in_[this->ie[i*JMAX+j]];
+                }
+            }
+            t1.measure_elapsed_time();
+            return t1;
+        }
+    public:
+        SpMVELL(sym_lib::CSR *L, sym_lib::CSC *L_csc, double *correct_x, std::string name)
+        : SpMVSerial(L, L_csc, correct_x, name), Lxe(nullptr), ie(nullptr) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+        sym_lib::timing_measurement get_analysis_bw() {
+            return analysis_breakdown;
+        }
+        ~SpMVELL() override {
+            delete[] Lxe;
+            delete[] ie;
+        }
+    };
+
+    class SpMVDIA : public SpMVSerial {
+        double* diagval;
+        int* idiag;
+        int ndiag = 0;
+        int lval = 0;
+
+        sym_lib::timing_measurement analysis_breakdown;
+        
+        void build_set() override {
+            if (idiag != nullptr)
+                return;
+            analysis_breakdown.start_timer();
+            ndiag = 0;
+            lval = this->L1_csr_->m;
+            
+            // We need to count the number of diagonals with NNZ
+            unsigned* usedDiag = new unsigned[this->L1_csr_->m*2-1];
+            memset(usedDiag, 0, sizeof(unsigned)*(this->L1_csr_->m*2-1));
+
+            for (int idxRow = 0 ; idxRow < this->L1_csr_->m ; ++idxRow){
+                for (int idxVal = this->L1_csr_->p[idxRow] ; idxVal < this->L1_csr_->p[idxRow+1] ; ++idxVal){
+                    const int idxCol = this->L1_csr_->i[idxVal];
+                    const int diag = (this->L1_csr_->m-1)-idxRow+idxCol;
+                    assert(0 <= diag && diag < this->L1_csr_->m*2-1);
+                    if(usedDiag[diag] == 0){
+                        usedDiag[diag] = 1;
+                        ndiag += 1;
+                    }
+                }
+            }
+
+            diagval = new double[ndiag*lval]();
+            idiag = new int[ndiag]();
+
+            for (int i = 0, cnt = 0; i < this->L1_csr_->m*2-1; ++i) {
+                if (usedDiag[i] == 1) {
+                    idiag[cnt++] = i - (this->L1_csr_->m - 1);
+                }
+            }
+
+            // Fill diagonals
+            for (int i = 0, cnt = 0; i < this->lval; ++i) {
+                for (int j = this->L1_csr_->p[i]; j < this->L1_csr_->p[i+1]; ++j) {
+                    const int idxCol = this->L1_csr_->i[j];
+                    const int diag = this->L1_csr_->m-i+idxCol-1;
+                    const int offset = diag - (this->L1_csr_->m-1);
+                    int k = 0;
+                    for (; k < ndiag; ++k) {
+                        if (idiag[k] == offset) {
+                            break;
+                        }
+                    }
+                    diagval[k*lval+this->L1_csr_->i[j]] = this->L1_csr_->x[j];
+                }
+            }
+            delete[] usedDiag;
+            analysis_breakdown.measure_elapsed_time();
+        }
+
+        sym_lib::timing_measurement fused_code() override {
+            sym_lib::timing_measurement t1;
+            t1.start_timer();
+//#pragma omp parallel for num_threads(this->num_threads_)
+            for (int i = 0; i < ndiag; ++i) {
+                int offset = idiag[i];
+                if (offset < 0) {
+                    offset *= -1;
+                    for (int j = 0; j < lval-offset; ++j) {
+                        x_[j+offset] += diagval[lval*i+j] * x_in_[j];
+                    }
+                } else {
+                    for (int j = offset; j < lval; ++j) {
+                        x_[j-offset] += diagval[lval*i+j] * x_in_[j];
+                    }
+                }
+            }
+            t1.measure_elapsed_time();
+
+            return t1;
+        }
+    public:
+        SpMVDIA(sym_lib::CSR *L, sym_lib::CSC *L_csc, double *correct_x, std::string name)
+        : SpMVSerial(L, L_csc, correct_x, name), idiag(nullptr), diagval(nullptr) {
+            L1_csr_ = L;
+            L1_csc_ = L_csc;
+            correct_x_ = correct_x;
+        };
+        sym_lib::timing_measurement get_analysis_bw() {
+            return analysis_breakdown;
+        }
+        ~SpMVDIA() override {
+            delete[] diagval;
+            delete[] idiag;
+        }
+    };
+
+    class SpMVBCSR : SpMVSerial {
+        int blockSize;
+        int nbBlocks;
+
+        void build_set() override {
+            nbBlocks = 0;
+
+            // We need to count the number of blocks (aligned!)
+            const int maxBlockPerRow = (this->L1_csr_->m+blockSize-1)/blockSize;
+            auto* usedBlocks = new unsigned[maxBlockPerRow];
+
+            for(int idxRow = 0 ; idxRow < this->L1_csr_->m ; ++idxRow){
+                if(idxRow%blockSize == 0){
+                    memset(usedBlocks, 0, sizeof(unsigned)*maxBlockPerRow);
+                }
+                for(int idxVal = this->L1_csr_->p[idxRow] ; idxVal < this->L1_csr_->p[idxRow+1] ; ++idxVal){
+                    const int idxCol = this->L1_csr_->i[idxVal];
+                    if(usedBlocks[idxCol/blockSize] == 0){
+                        usedBlocks[idxCol/blockSize] = 1;
+                        nbBlocks += 1;
+                    }
+                }
+            }
+
+            delete[] usedBlocks;
+
+            auto nbBlockRows = (this->L1_csr_->m+blockSize-1)/blockSize;
+            auto lb = blockSize;
+            auto ldabsr = lb*lb;
+            auto a = new double[nbBlocks*lb*lb];
+            auto ia = new int[nbBlockRows+1];
+            auto ja = new int[nbBlocks];
+        }
+    };
+
     class SpMVCSR5 : public SpMVSerial {
         anonymouslibHandle<int, unsigned int, double> A;
         int*Ap;
