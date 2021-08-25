@@ -7,24 +7,24 @@ namespace supernodaltools {
     enum MatrixType {CSC_TYPE, CSR_TYPE};
 
     class BCSCMatrix {
-        BCSC *M;
+        sym_lib::BCSC *M;
     public:
         /// finds all the different supernodes / blocks in the matrix
-        int supernodes(CSC *A, int limit, bool isLower);
+        int supernodes(sym_lib::CSC *A, int limit, bool isLower);
 
         /// calculate the total number of nonzero in the matrix including zero padding
-        int calcSize(CSC *A);
+        int calcSize(sym_lib::CSC *A);
 
         /// Fill in the row and numerical values for blocked matrix
-        void createFormat(CSC *A);
+        void createFormat(sym_lib::CSC *A);
 
         // Extract a supernodal CSC from a BCSC
-        CSC *compressed_BCSC_to_CSC();
+        sym_lib::CSC *compressed_BCSC_to_CSC();
 
         /// Generates the BCSC arrays from A
         /// \param nA
         /// \param A
-        void generateBCSC(CSC *A) {
+        void generateBCSC(sym_lib::CSC *A) {
             M->nnz = calcSize(A);
             M->i = new int[M->nnz]();
             M->x = new double[M->nnz]();
@@ -33,21 +33,21 @@ namespace supernodaltools {
         }
 
     public:
-        BCSCMatrix(CSC *A) {
-            M = new BCSC(A);
+        BCSCMatrix(sym_lib::CSC *A) {
+            M = new sym_lib::BCSC(A);
             M->nodes = supernodes(A, A->n, true);
             generateBCSC(A);
         }
 
-        BCSCMatrix(CSC *A, int nodes, int *supernodes) {
-            M = new BCSC(A);
+        BCSCMatrix(sym_lib::CSC *A, int nodes, int *supernodes) {
+            M = new sym_lib::BCSC(A);
             M->nodes = nodes;
             M->supernodes = new int[nodes+1]();
             std::memcpy(M->supernodes, supernodes, sizeof(int) * (nodes+1));
             generateBCSC(A);
         }
 
-        BCSC *getBCSC() { return M; }
+        sym_lib::BCSC *getBCSC() { return M; }
 
         ~BCSCMatrix() {
             delete(M);
@@ -70,9 +70,9 @@ namespace supernodaltools {
         //Limit the maximum size of supernodes
         int limit;
         //Pointer to the input matrix
-        const CSR* A_CSR;
-        const CSC* A_CSC;
-        const CSC* Dep_DAG;
+        const sym_lib::CSR* A_CSR;
+        const sym_lib::CSC* A_CSC;
+        const sym_lib::CSC* Dep_DAG;
         //Dependency DAG index and pointer
         std::vector<int> DAG_ptr;
         std::vector<int> DAG_set;
@@ -94,7 +94,7 @@ namespace supernodaltools {
         ///\param Dep_DAG: The dependency DAG based on CSC format (normally it is the CSC format of the matrix)
         ///\param limit: Shows the maximum size of a supernode. If it is less than 1, then
         /// It will automatically set to maximum size (n)
-        SuperNodal(MatrixType type,const CSC* A_CSC,const CSR* A_CSR, const CSC* Dep_DAG, int limit = 0);
+        SuperNodal(MatrixType type,const sym_lib::CSC* A_CSC,const sym_lib::CSR* A_CSR, const sym_lib::CSC* Dep_DAG, int limit = 0);
 
         ///\Description: This function will return the Dependency DAG of the supernodes in CSC format
         ///\return Lp: the pointer of the dependency DAG between supernodes (CSC format)

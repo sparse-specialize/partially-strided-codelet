@@ -1,4 +1,4 @@
-#include "includes/BLAS.h"
+#include "BLAS.h"
 
 namespace custom_blas {
     void lsolve_BLAS(int dim, int num_col, double *M, double *b) {

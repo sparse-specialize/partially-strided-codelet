@@ -26,6 +26,7 @@
 #include <mkl.h>
 #include <mkl_spblas.h>
 #include <mkl_types.h>
+#include <sparse_io.h>
 #endif
 
 
@@ -466,7 +467,7 @@ void sptrsv_csr_lbc(int n, int *Lp, int *Li, double *Lx, double *x,
 #define OLD
 #ifdef OLD
       if (ic_ > 0) {
-          sym_lib::get_coarse_levelSet_DAG_CSC(n_, L1_csc_->p, L1_csc_->i,
+          sym_lib::get_coarse_levelSet_DAG_CSC_tree(n_, L1_csc_->p, L1_csc_->i,this->L1_csc_->stype,
                                                final_level_no,
                                                fina_level_ptr,part_no,
                                                final_part_ptr,final_node_ptr,

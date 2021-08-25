@@ -2,13 +2,14 @@
 // Created by kazem on 7/16/21.
 //
 //
-#include "Profiler.h"
+
+#include "SPTRSV_demo_utils.h"
+#include "SPTRSV_supernodal_sympiler.h"
 
 #include <iostream>
 #include <sparse_io.h>
 #include <sparse_utilities.h>
 
-#include "SPTRSV_demo_utils.h"
 
 #ifdef METIS
 #include "metis_interface.h"
@@ -73,31 +74,28 @@ int main(int argc, char *argv[]) {
     auto sptrsv_par = spsp->evaluate();
     auto sptrsv_par_analysis = spsp->analysisTime();
 
-    auto *spspv2 =
-            new SpTRSVParallelVec2(L1_ord_csr, L1_ord, sol_sptrsv,
-                                   "Parallel Vec2"
-                                   "LBC",
-                                   num_threads, coarsening_p, initial_cut,
-                                   bpack, tuning);
+    auto *spspv2 = new SpTRSVParallelVec2(L1_ord_csr, L1_ord, sol_sptrsv,
+                                          "Parallel Vec2"
+                                          "LBC",
+                                          num_threads, coarsening_p,
+                                          initial_cut, bpack, tuning);
     auto sptrsv_parv2 = spspv2->evaluate();
 
-//#ifdef DDTT
     config.nThread = 1;
- auto *ddtsptrsvst = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
-                                 "SpTRSV DDT Serial", 1, coarsening_p,
-                                 initial_cut);
- auto ddt_execst =  ddtsptrsvst->evaluate();
- auto ddt_analysisst = ddtsptrsvst->get_analysis_bw();
+    auto *ddtsptrsvst =
+            new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
+                          "SpTRSV DDT Serial", 1, coarsening_p, initial_cut);
+    auto ddt_execst = ddtsptrsvst->evaluate();
+    auto ddt_analysisst = ddtsptrsvst->get_analysis_bw();
 
     config.nThread = num_threads;
 
-    auto *ddtsptrsvmt = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
-                                    "SpTRSV DDT", num_threads, coarsening_p,
-                                    initial_cut);
-    auto ddt_execmt =  ddtsptrsvmt->evaluate();
+    auto *ddtsptrsvmt =
+            new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config, "SpTRSV DDT",
+                          num_threads, coarsening_p, initial_cut);
+    auto ddt_execmt = ddtsptrsvmt->evaluate();
     auto ddt_analysismt = ddtsptrsvmt->get_analysis_bw();
 
-//#endif
     auto *sptrsv_vec1 =
             new SpTRSVSerialVec1(L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec1");
     auto sptrsv_vec1_exec = sptrsv_vec1->evaluate();
@@ -105,42 +103,59 @@ int main(int argc, char *argv[]) {
     auto *sptrsv_vec2 =
             new SpTRSVSerialVec2(L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec2");
     auto sptrsv_vec2_exec = sptrsv_vec2->evaluate();
+
+    auto supernodal_sympiler = new sym_lib::SpTrSv_LL_Blocked_LBC(
+            L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec2", config.nThread);
+    auto supernodal_sympiler_exec = supernodal_sympiler->evaluate();
+    auto supernodal_sympiler_analysis =
+            supernodal_sympiler->getSchedulingTime();
 #endif
 
 #ifdef PROFILE
 #ifdef ANALYZE
     auto *ddtsptrsvst = new SpTRSVDDT(L1_ord_csr, L1_ord, sol_sptrsv, config,
-                                      "SpTRSV DDT Parallel Analyzer", 1, coarsening_p,
-                                      initial_cut);
+                                      "SpTRSV DDT Parallel Analyzer", 1,
+                                      coarsening_p, initial_cut);
     ddtsptrsvst->evaluate();
 #else
     auto matrixName = config.matrixPath;
-    auto* baseline_profiler = new sym_lib::ProfilerWrapper<SpTRSVParallel>(event_list, event_limit, 1, L1_ord_csr, L1_ord, sol_sptrsv,
-        "Parallel "
-        "LBC",
-        num_threads, coarsening_p, initial_cut,
-        bpack, tuning);
+    auto *baseline_profiler = new sym_lib::ProfilerWrapper<SpTRSVParallel>(
+            event_list, event_limit, 1, L1_ord_csr, L1_ord, sol_sptrsv,
+            "Parallel "
+            "LBC",
+            num_threads, coarsening_p, initial_cut, bpack, tuning);
     baseline_profiler->profile(num_threads);
-    matrixName.erase(std::remove(matrixName.begin(), matrixName.end(), '\n'), matrixName.end());
-    if (config.header) { std::cout << "MATRIX_NAME, THREADS, KERNEL_TYPE, codelet_min_width, codelet_max_distance, only_fsc_codelets,";  baseline_profiler->print_headers(); }
-    std::cout << matrixName << "," << config.nThread << "," << "PARALLEL_BASELINE,";
+    matrixName.erase(std::remove(matrixName.begin(), matrixName.end(), '\n'),
+                     matrixName.end());
+    if (config.header) {
+        std::cout << "MATRIX_NAME, THREADS, KERNEL_TYPE, codelet_min_width, "
+                     "codelet_max_distance, only_fsc_codelets,";
+        baseline_profiler->print_headers();
+    }
+    std::cout << matrixName << "," << config.nThread << ","
+              << "PARALLEL_BASELINE,";
     std::cout << 0 << "," << 0 << "," << 0 << ",";
     baseline_profiler->print_counters();
     std::cout << std::endl;
 
-    auto *mkl_profiler= new sym_lib::ProfilerWrapper<SpTRSVMKL>(event_list, event_limit, 1, config.nThread, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_PARALLEL");
+    auto *mkl_profiler = new sym_lib::ProfilerWrapper<SpTRSVMKL>(
+            event_list, event_limit, 1, config.nThread, L1_ord_csr, L1_ord,
+            NULLPNTR, "SpTRSV_MKL_PARALLEL");
     mkl_profiler->profile(num_threads);
-    std::cout << matrixName << "," << config.nThread << "," << "MKL,";
+    std::cout << matrixName << "," << config.nThread << ","
+              << "MKL,";
     std::cout << 0 << "," << 0 << "," << 0 << ",";
     mkl_profiler->print_counters();
     std::cout << "\n";
 
-    auto *ddt_profiler= new sym_lib::ProfilerWrapper<SpTRSVDDT>(event_list, event_limit, 1, L1_ord_csr, L1_ord, sol_sptrsv, config,
-        "SpTRSV DDT Parallel", num_threads, coarsening_p,
-        initial_cut);
+    auto *ddt_profiler = new sym_lib::ProfilerWrapper<SpTRSVDDT>(
+            event_list, event_limit, 1, L1_ord_csr, L1_ord, sol_sptrsv, config,
+            "SpTRSV DDT Parallel", num_threads, coarsening_p, initial_cut);
     ddt_profiler->profile(num_threads);
-    std::cout << matrixName << "," << config.nThread << "," << "DDT,";
-    std::cout << DDT::clt_width << "," << DDT::col_th << "," << DDT::prefer_fsc << ",";
+    std::cout << matrixName << "," << config.nThread << ","
+              << "DDT,";
+    std::cout << DDT::clt_width << "," << DDT::col_th << "," << DDT::prefer_fsc
+              << ",";
     ddt_profiler->print_counters();
     std::cout << "\n";
     exit(0);
@@ -150,47 +165,49 @@ int main(int argc, char *argv[]) {
 #ifndef PROFILE
 #ifdef MKL
     auto *mkltrsvst =
-      new SpTRSVMKL(1, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_SERIAL");
+            new SpTRSVMKL(1, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_SERIAL");
     auto sptrsv_mkl_execst = mkltrsvst->evaluate();
 
-    auto *mkltrsvmt =
-      new SpTRSVMKL(config.nThread, L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_MKL_SERIAL");
+    auto *mkltrsvmt = new SpTRSVMKL(config.nThread, L1_ord_csr, L1_ord,
+                                    NULLPNTR, "SpTRSV_MKL_SERIAL");
     auto sptrsv_mkl_execmt = mkltrsvmt->evaluate();
 
     auto sptrsv_mkl_analysis = mkltrsvmt->get_analysis_bw();
 #endif
 
     if (config.header) {
-      std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
-      std::cout << "Tuning Mode,Dimension,NNZ,";
-      std::cout << "SpTRSV Base,SpTRSV Vec1, SpTRSV Vec2, SpTRSV LS Vec, "
-        "SpTRSV LS "
-        "NOVec, SpTRSV Parallel,SpTRSV "
-        "Vec2 Parallel,";
+        std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
+        std::cout << "Tuning Mode,Dimension,NNZ,";
+        std::cout << "SpTRSV Base,SpTRSV Vec1,SpTRSV Vec2,SpTRSV LS Vec, "
+                     "SpTRSV LS "
+                     "NOVec,SpTRSV Parallel,SpTRSV "
+                     "Vec2 Parallel,Supernodal Sympiler,";
 #ifdef MKL
-      std::cout << "SpTRSV MKL Serial Executor,";
-      std::cout << "SpTRSV MKL Parallel Executor,";
+        std::cout << "SpTRSV MKL Serial Executor,";
+        std::cout << "SpTRSV MKL Parallel Executor,";
 #endif
-      std::cout << "SpTRSV DDT Serial Executor, SpTRSV DDT "
-        "Parallel Executor, Sympiler Inspector Time, MKL Inspector Time, DDT Inspector Time";
-      std::cout << "\n";
+        std::cout << "SpTRSV DDT Serial Executor, SpTRSV DDT "
+                     "Parallel Executor, Supernodal Sympiler Inspector Time, "
+                     "Sympiler Inspector Time, MKL Inspector Time, DDT "
+                     "Inspector Time";
+        std::cout << "\n";
     }
 
     std::cout << config.matrixPath << "," << config.nThread << ",";
-    if(tuning > 0)
-      std::cout<< config.coarsening << ","<< config.bin_packing<<",";
+    if (tuning > 0)
+        std::cout << config.coarsening << "," << config.bin_packing << ",";
     else
-      std::cout<< spsp->CP() << ","<< spsp->BP() <<",";
+        std::cout << spsp->CP() << "," << spsp->BP() << ",";
 
-    std::cout<< tuning << ","
-      << L1_ord->n<<","<<L1_ord->nnz<<","
-      << sptrsv_baseline.elapsed_time << ","
-      << sptrsv_vec1_exec.elapsed_time << ","
-      << sptrsv_vec2_exec.elapsed_time << ",";
+    std::cout << tuning << "," << L1_ord->n << "," << L1_ord->nnz << ","
+              << sptrsv_baseline.elapsed_time << ","
+              << sptrsv_vec1_exec.elapsed_time << ","
+              << sptrsv_vec2_exec.elapsed_time << ",";
     std::cout << sptrsv_ls.elapsed_time << ",";
     std::cout << sptrsv_ls_novec.elapsed_time << ",";
     std::cout << sptrsv_par.elapsed_time << ",";
     std::cout << sptrsv_parv2.elapsed_time << ",";
+    std::cout << supernodal_sympiler_exec.elapsed_time << ",";
 #ifdef MKL
     std::cout << sptrsv_mkl_execst.elapsed_time << ",";
     std::cout << sptrsv_mkl_execmt.elapsed_time << ",";
@@ -198,6 +215,7 @@ int main(int argc, char *argv[]) {
     //#ifdef DDTT
     std::cout << ddt_execst.elapsed_time << ",";
     std::cout << ddt_execmt.elapsed_time << ",";
+    std::cout << supernodal_sympiler_analysis << ",";
     std::cout << sptrsv_par_analysis.elapsed_time << ",";
 #ifdef MKL
     std::cout << sptrsv_mkl_analysis.elapsed_time << ",";

@@ -2,7 +2,7 @@
 #include <unordered_set>
 
 namespace supernodaltools{
-    int BCSCMatrix::supernodes(CSC *A, int limit, bool isLower) {
+    int BCSCMatrix::supernodes(sym_lib::CSC *A, int limit, bool isLower) {
         int n = A->n;
 
         int num_nodes = 0;
@@ -114,7 +114,7 @@ namespace supernodaltools{
         return num_nodes;
     }
 
-    int BCSCMatrix::calcSize(CSC *A) {
+    int BCSCMatrix::calcSize(sym_lib::CSC *A) {
         int i, j, p;
         int n = A->n;
         int *Ap = A->p;
@@ -152,7 +152,7 @@ namespace supernodaltools{
         return nnz;
     }
 
-    void BCSCMatrix::createFormat(CSC *A) {
+    void BCSCMatrix::createFormat(sym_lib::CSC *A) {
         int i, j, p;
         int counter = 0;
 
@@ -213,7 +213,7 @@ namespace supernodaltools{
         delete[]in_block;
     }
 
-    CSC *BCSCMatrix::compressed_BCSC_to_CSC() {
+    sym_lib::CSC *BCSCMatrix::compressed_BCSC_to_CSC() {
         int nodes = M->nodes;
         const int *supernodes = M->supernodes;
 
@@ -247,7 +247,7 @@ namespace supernodaltools{
             count = 0;
         }
 
-        CSC *Acsc = new CSC(nodes, nodes, nnz);
+        sym_lib::CSC *Acsc = new sym_lib::CSC(nodes, nodes, nnz);
         auto Ap = Acsc->p;
         auto Ai = Acsc->i;
 
@@ -283,7 +283,7 @@ namespace supernodaltools{
         return Acsc;
     }
 
-    SuperNodal::SuperNodal(MatrixType type, const CSC* A_CSC, const CSR* A_CSR, const CSC* Dep_DAG, int limit) {
+    SuperNodal::SuperNodal(MatrixType type, const sym_lib::CSC* A_CSC, const sym_lib::CSR* A_CSR, const sym_lib::CSC* Dep_DAG, int limit) {
         this->input_type = type;
         this->A_CSR = A_CSR;
         this->A_CSC = A_CSC;

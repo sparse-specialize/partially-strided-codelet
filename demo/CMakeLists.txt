@@ -1,5 +1,5 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-include_directories(${CSR5_INCLUDE_DIR})
+include_directories(${CSR5_INCLUDE_DIR} ${CUSP_INCLUDE_DIR})
 add_executable(spmv_demo
         FusionDemo.cpp
         SPMV_demo.cpp
@@ -30,6 +30,8 @@ target_link_libraries(spmv_demo
 add_executable(sptrsv_demo
         FusionDemo.cpp
         SPTRSV_demo.cpp
+        BLAS.cpp
+        SuperNodalTools.cpp
         ${SRC}
         ${TRCGEN}
         ${MATRIX_PARSING_SRC}
