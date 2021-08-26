@@ -238,6 +238,7 @@ for (int i = 0; i < numNodes; ++i) {
         int tmp = minLevelDist;
         if (tmp > partition2Level[lClusterCnt] && tmp < levelNo) {
             //Due to tuning parameter we need this check
+            assert(lClusterCnt < levelNo);
             partition2Level[++lClusterCnt] = tmp;
             int size;
             if(accuSlackGroups[tmp-1] / 2 >= nthreads)
@@ -258,7 +259,7 @@ for (int i = 0; i < numNodes; ++i) {
                 size = accuSlackGroups[tmp-1];
             else
                 size = 1;
-
+            assert(lClusterCnt < levelNo);
             innerPartsSize.push_back(size);
             partition2Level[++lClusterCnt] = tmp;
             tmp += divRate;
@@ -424,18 +425,18 @@ for (int i = 0; i < numNodes; ++i) {
 
 // H-partitioning
 //    int *partition2Level = new int[levelNo + 1]();
-std::vector<int> partition2Level(levelNo + 1, 0);
+        auto* partition2Level = new int[levelNo + 1]();
         std::vector<int> innerPartsSize;
         originalHeight = levelNo;
         std::vector<std::vector<int>> slackGroups(originalHeight + 1);
         std::vector<std::vector<int>> slackedLevelSet(originalHeight + 1);
         int lClusterCnt = height_partitioning_DAG_trng_behrooz(
                 levelNo, levelPtr, NULL, originalHeight, innerParts, minLevelDist, divRate,
-                innerPartsSize, slackGroups, NULL, partition2Level.data(),1);
+                innerPartsSize, slackGroups, NULL, partition2Level,1);
 
         make_partitions_parallel_behrooz(n, lC, lR, finaLevelPtr, finalNodePtr, finalPartPtr,
                                  innerParts, originalHeight, nodeCost, node2Level,
-                                 innerPartsSize, lClusterCnt, partition2Level.data(),
+                                 innerPartsSize, lClusterCnt, partition2Level,
                                  levelPtr, levelSet, numThreads, binPacking);
 
         finaLevelNo = lClusterCnt;
@@ -458,6 +459,7 @@ std::vector<int> partition2Level(levelNo + 1, 0);
         }
         //    delete[] partition2Level;
         delete[] isChanged;
+        delete[] partition2Level;
 
         return averageCC / lClusterCnt;
     }
@@ -586,6 +588,8 @@ std::vector<int> partition2Level(levelNo + 1, 0);
             LBC_level_ptr.resize(n_ + 1);
             LBC_w_ptr.resize(n_ + 1);
             LBC_node_ptr.resize(n_);
+
+            assert(ic_ > 0);
             get_coarse_Level_set_DAG_CSC03_parallel_NOLEVELSET_V2_behrooz(
                     num_supernodes, DAG_ptr.data(), DAG_set.data(),
                     LBC_level_no, LBC_level_ptr.data(), num_w_part,

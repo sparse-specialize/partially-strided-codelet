@@ -106,6 +106,8 @@ int main(int argc, char *argv[]) {
 
     auto supernodal_sympiler = new sym_lib::SpTrSv_LL_Blocked_LBC(
             L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec2", config.nThread);
+    supernodal_sympiler->setP2_P3(coarsening_p, initial_cut);
+    supernodal_sympiler->set_num_threads(config.nThread);
     auto supernodal_sympiler_exec = supernodal_sympiler->evaluate();
     auto supernodal_sympiler_analysis =
             supernodal_sympiler->getSchedulingTime();
