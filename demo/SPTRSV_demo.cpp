@@ -10,6 +10,9 @@
 #include <sparse_io.h>
 #include <sparse_utilities.h>
 
+#ifdef PROFILE
+#include "Profiler.h"
+#endif
 
 #ifdef METIS
 #include "metis_interface.h"
@@ -105,7 +108,7 @@ int main(int argc, char *argv[]) {
     auto sptrsv_vec2_exec = sptrsv_vec2->evaluate();
 
     auto supernodal_sympiler = new sym_lib::SpTrSv_LL_Blocked_LBC(
-            L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec2", config.nThread);
+            L1_ord_csr, L1_ord, NULLPNTR, "Super Nodal Sympiler", config.nThread);
     supernodal_sympiler->setP2_P3(coarsening_p, initial_cut);
     supernodal_sympiler->set_num_threads(config.nThread);
     auto supernodal_sympiler_exec = supernodal_sympiler->evaluate();
@@ -149,6 +152,16 @@ int main(int argc, char *argv[]) {
     std::cout << 0 << "," << 0 << "," << 0 << ",";
     mkl_profiler->print_counters();
     std::cout << "\n";
+
+    auto *sympiler_profiler = new sym_lib::ProfilerWrapper<sym_lib::SpTrSv_LL_Blocked_LBC>(event_list, event_limit, 1,L1_ord_csr, L1_ord, NULLPNTR, "SpTRSV_Vec2", config.nThread);
+    sympiler_profiler->d->setP2_P3(coarsening_p,initial_cut);
+    sympiler_profiler->d->set_num_threads(config.nThread);
+    sympiler_profiler->profile(num_threads);
+    std::cout << matrixName << "," << config.nThread << ","
+    << "SYMPILER,";
+    std::cout << 0 << "," << 0 << "," << 0
+    << ",";
+    sympiler_profiler->print_counters();
 
     auto *ddt_profiler = new sym_lib::ProfilerWrapper<SpTRSVDDT>(
             event_list, event_limit, 1, L1_ord_csr, L1_ord, sol_sptrsv, config,
