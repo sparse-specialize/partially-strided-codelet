@@ -42,7 +42,7 @@ int main() {
     }
 
     // Run PSC_T3_BASELINE test configurations
-    std::vector<std::tuple<double,double,double,double>> TEST_FSC_PSC_SPMV_RESULTS;
+    std::vector<std::tuple<double,double,double,double,double>> TEST_FSC_PSC_SPMV_RESULTS;
     TEST_FSC_PSC_SPMV_RESULTS.reserve(std::size(TEST_FSC_PSC_SPMV_CONFIG));
     for (auto& config : TEST_FSC_PSC_SPMV_CONFIG) {
         TEST_FSC_PSC_SPMV_RESULTS.push_back(TEST_FSC_PSC_SPMV(config[0], config[1], config[2], config[3], config[4]));
@@ -92,6 +92,7 @@ int main() {
                 << std::get<1>(TEST_FSC_PSC_SPMV_RESULTS[i]) << ","
                 << std::get<2>(TEST_FSC_PSC_SPMV_RESULTS[i]) << ","
                 << std::get<3>(TEST_FSC_PSC_SPMV_RESULTS[i]) << ","
+                << std::get<4>(TEST_FSC_PSC_SPMV_RESULTS[i]) << ","
                 << "\n";
     }
 #endif

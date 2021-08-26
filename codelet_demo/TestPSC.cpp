@@ -37,6 +37,25 @@ void psc_t1_vb_csr_baseline(double* y, const double* x, const double* Ax, const 
     }
 }
 
+void psc_id_6_csr_baseline(const double** Lxp, const int* yp, double* y, const double* x, int cols, int rows) {
+        for (int i = 0; i < cols; ++i) {
+            auto Lx = Lxp[i];
+            auto xv = _mm256_set1_pd(x[i]);
+            int j = 0;
+            for (; j < rows - 3; j += 4) {
+                auto lxv = _mm256_loadu_pd(Lx + j);
+                auto r0 = _mm256_mul_pd(lxv, xv);
+                y[yp[j + 0]] += r0[0];
+                y[yp[j + 1]] += r0[1];
+                y[yp[j + 2]] += r0[2];
+                y[yp[j + 3]] += r0[3];
+            }
+            for (; j < rows; ++j) {
+                y[yp[j]] += Lx[j] * x[i];
+            }
+        }
+}
+
 void psc_t3_csr_baseline(const int*Ap, const int*Ai, double* y, const double* x, const double* Ax, int n) {
     for (int i = 0; i < n; ++i) {
         int j = Ap[i];
@@ -206,7 +225,36 @@ void fsc_psc_baseline(double*y,const double*Ax,const double*x,int colSegmentSize
     int blockSize = rowBlockSize*numColSegments*colSegmentSize;
     for (int i = 0; i < numBlockedPsc; ++i) {
         for (int j = 0; j < numColSegments; ++j) {
-            DDT::fsc_t2_2DC(y, Ax, x,  colSegmentSize*numColSegments,i*blockSize+j*colSegmentSize, i*rowBlockSize, i*rowBlockSize+rowBlockSize, j*colSegmentSize, j*colSegmentSize+colSegmentSize, 0);
+            int k = 0;
+            for (; k < rowBlockSize-1; k+=2) {
+                DDT::fsc_t2_2DC(
+                        y,
+                        Ax,
+                        x,
+                        colSegmentSize*numColSegments,
+                        i*blockSize+j*colSegmentSize+k*colSegmentSize*numColSegments,
+                        i*rowBlockSize+k,
+                        i*rowBlockSize+k+2,
+                        j*colSegmentSize,
+                        j*colSegmentSize+colSegmentSize,
+                        0
+                        );
+            }
+            for (; k < rowBlockSize; ++k) {
+                DDT::fsc_t2_2DC(
+                y,
+                Ax,
+                x,
+                colSegmentSize*numColSegments,
+                i*blockSize+j*colSegmentSize+k*colSegmentSize*numColSegments,
+                i*rowBlockSize+k,
+                i*rowBlockSize+k+1,
+                j*colSegmentSize,
+                j*colSegmentSize+colSegmentSize,
+                0
+                );
+            }
+//            DDT::fsc_t2_2DC(y, Ax, x,  colSegmentSize*numColSegments,i*blockSize+j*colSegmentSize, i*rowBlockSize, i*rowBlockSize+rowBlockSize, j*colSegmentSize, j*colSegmentSize+colSegmentSize, 0);
         }
     }
 }
@@ -246,6 +294,60 @@ DDT::Matrix generateBlockedPSC2SparseMatrix(int rowBlockSize, int colGap, int nu
 
     return m;
 }
+
+DDT::Matrix generateBlockedPSC2SparseMatrixCSC(int rowBlockSize, int colGap, int numColSegments, int numColNNZ, int numBlockedPsc) {
+    assert((numColNNZ % numColSegments) == 0);
+
+    int nnz = numColNNZ * rowBlockSize * numBlockedPsc;
+    int colBandSize = numColNNZ / numColSegments;
+    int cols = (numColSegments-1)*colGap+numColNNZ;
+
+    auto Ax = new double[nnz]();
+    auto Ai = new int[nnz]();
+    auto Ap = new int[cols+1]();
+
+    for (int i = 0; i < nnz; ++i) {
+        Ax[i] = 3.3;
+    }
+    int cnt = 0;
+    for (int i = 0; i < numColSegments; ++i) {
+        for (int j = 0; j < colBandSize; ++j) {
+            for (int ii = 0; ii < rowBlockSize*numBlockedPsc; ++ii) {
+                Ai[cnt++] = ii;
+            }
+        }
+    }
+    assert(cnt == nnz);
+
+    int assertCount = 0, colCnt = 0, realCols = 0;
+    for (int ii = 0; ii < numColSegments; ++ii) {
+        for (int i = 0; i < colBandSize; ++i) {
+            Ap[colCnt++] = realCols++ * rowBlockSize * numBlockedPsc;
+        }
+        if (ii < numColSegments-1) {
+            for (int i = 0; i < colGap; ++i) {
+                Ap[colCnt] = Ap[colCnt - 1];
+                colCnt++;
+                assertCount++;
+            }
+        }
+    }
+    Ap[colCnt] = Ap[colCnt-1] + rowBlockSize * numBlockedPsc;
+    assert(assertCount == colGap*(numColSegments-1));
+    assert(colCnt == cols);
+
+    DDT::Matrix m{};
+    m.r = rowBlockSize*numBlockedPsc;
+    m.c = cols;
+    m.nz = nnz;
+
+    m.Lx = Ax;
+    m.Li = Ai;
+    m.Lp = Ap;
+
+    return m;
+}
+
 
 double TEST_PSC_T2_Baseline_SPMV(int rowBlockSize, int colGap, int numColSegments, int numColNNZ, int numBlockedPsc) {
     auto m = generateBlockedPSC2SparseMatrix(rowBlockSize, colGap, numColSegments, numColNNZ, numBlockedPsc);
@@ -328,9 +430,15 @@ double TEST_PSC_T3_Baseline_SPMV(int maxRow, int maxCol, int nnzPerRow) {
     return std::chrono::duration_cast<std::chrono::duration<double>>(t1-t0).count() / std::chrono::duration_cast<std::chrono::duration<double>>(t3-t2).count();
 }
 
-std::tuple<double,double,double,double> TEST_FSC_PSC_SPMV(int rowBlockSize, int colGap, int numColSegments, int numColNNZ, int numBlockedPsc) {
+std::tuple<double,double,double,double,double> TEST_FSC_PSC_SPMV(int rowBlockSize, int colGap, int numColSegments, int numColNNZ, int numBlockedPsc) {
     auto m = generateBlockedPSC2SparseMatrix(rowBlockSize, colGap, numColSegments, numColNNZ, numBlockedPsc);
+    auto cscM = generateBlockedPSC2SparseMatrixCSC(rowBlockSize, colGap, numColSegments, numColNNZ, numBlockedPsc);
 
+//    for (int i = 0; i < cscM.c; ++i) {
+//        for (int j = cscM.Lp[i]; j < cscM.Lp[i+1]; ++j) {
+//            std::cout << "(" << cscM.Li[j] << "," << i << ")\n";
+//        }
+//    }
     auto y = new double[m.r]();
     auto yTrue = new double[m.r]();
     auto x = new double[m.c]();
@@ -343,6 +451,8 @@ std::tuple<double,double,double,double> TEST_FSC_PSC_SPMV(int rowBlockSize, int 
             x[i] = 1;
         }
     };
+
+
 
     // Generate offsets
     auto offsets = new int[numBlockedPsc*numColSegments*rowBlockSize]();
@@ -366,6 +476,19 @@ std::tuple<double,double,double,double> TEST_FSC_PSC_SPMV(int rowBlockSize, int 
         }
     }
     t0_time /= NUM_KERNEL_TEST;
+
+    double t0_time_csc = 0.;
+    for (int i = 0; i < NUM_KERNEL_TEST; ++i) {
+        resetVector();
+        auto t0 = std::chrono::steady_clock::now();
+        spmv_csc_baseline(cscM.c, cscM.Li, cscM.Lp, cscM.Lx, x, y);
+        auto t1 = std::chrono::steady_clock::now();
+        t0_time_csc += DDT::getTimeDifference(t0,t1);
+        if (!verifyVector(m.r,y,yTrue)) {
+            throw std::runtime_error("Error: CSC Baseline incorrect...");
+        }
+    }
+    t0_time_csc /= NUM_KERNEL_TEST;
 
 
     double t1_time = 0.;
@@ -420,6 +543,32 @@ std::tuple<double,double,double,double> TEST_FSC_PSC_SPMV(int rowBlockSize, int 
     }
     t4_time /= NUM_KERNEL_TEST;
 
+    // Create Lxp and yp
+    const auto** Lxp = new const double*[cscM.c];
+    for (int i = 0; i < cscM.c; ++i) {
+        Lxp[i] = m.Lx + m.Lp[i];
+    }
+    auto ypp = new int[cscM.r];
+    for (int i = 0; i < cscM.r; ++i) {
+        ypp[i] = i;
+    }
+
+    double t5_time = 0.;
+    for (int i = 0; i < NUM_KERNEL_TEST; ++i) {
+        resetVector();
+        auto t0 = std::chrono::steady_clock::now();
+        psc_id_6_csr_baseline(Lxp, ypp, y, x, cscM.c-colGap*(numColSegments-1), cscM.r);
+        auto t1 = std::chrono::steady_clock::now();
+        t5_time += DDT::getTimeDifference(t0,t1);
+        if (!verifyVector(m.r,y,yTrue)) {
+            throw std::runtime_error("Error: PSC_ID_6 Baseline incorrect...");
+        }
+    }
+    t5_time /= NUM_KERNEL_TEST;
+
+    delete[] ypp;
+    delete[] Lxp;
+
     delete[] y;
     delete[] x;
     delete[] offsets;
@@ -428,6 +577,7 @@ std::tuple<double,double,double,double> TEST_FSC_PSC_SPMV(int rowBlockSize, int 
         t0_time / t1_time,
         t0_time / t2_time,
         t0_time / t3_time,
-        t0_time / t4_time
+        t0_time / t4_time,
+        t0_time_csc / t5_time
         );
 }
