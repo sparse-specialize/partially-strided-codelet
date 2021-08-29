@@ -11,5 +11,6 @@
 namespace DDT {
     void analyzeData(const DDT::GlobalObject& d,  std::vector<DDT::Codelet*>** cll, const DDT::Config& config);
     void analyzeData(const DDT::GlobalObject& d, const std::vector<DDT::Codelet*>* cll, const DDT::Config& config);
+    void analyzeCodeletExection(const DDT::GlobalObject& d, const std::vector<DDT::Codelet*>* cll, const DDT::Config& config);
 }
 #endif//DDT_ANALYZER_H

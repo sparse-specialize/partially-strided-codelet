@@ -5,7 +5,9 @@
 #include "Analyzer.h"
 #include "DDT.h"
 #include "DDTDef.h"
+#include "DDTUtils.h"
 #include "ParseMatrixMarket.h"
+#include "GenericCodelets.h"
 
 #include <numeric>
 #include <valarray>
@@ -35,6 +37,7 @@ namespace DDT {
             "unique_row_patterns," // FOD hash
             "average_num_unique_row_patterns,"
             "average_num_unique_row_patterns_std_deviation,"
+            "percent_vectorizable,"
             "num_fsc,"
             "average_fsc_width,"
             "average_fsc_width_std_deviation,"
@@ -42,6 +45,7 @@ namespace DDT {
             "average_fsc_height_std_deviation,"
             "average_fsc_points,"
             "average_fsc_points_std_deviation,"
+            "total_loads_fsc,"
             "num_psc1,"
             "average_psc1_width,"
             "average_psc1_width_std_deviation,"
@@ -49,6 +53,7 @@ namespace DDT {
             "average_psc1_height_std_deviation,"
             "average_psc1_points,"
             "average_psc1_points_std_deviation,"
+            "total_loads_psc1,"
             "num_psc2,"
             "average_psc2_width,"
             "average_psc2_width_std_deviation,"
@@ -56,6 +61,7 @@ namespace DDT {
             "average_psc2_height_std_deviation,"
             "average_psc2_points,"
             "average_psc2_points_std_deviation,"
+            "total_loads_psc2,"
             "num_psc3,"
             "average_psc3_width,"
             "average_psc3_width_std_deviation"
@@ -64,7 +70,9 @@ namespace DDT {
             "average_psc3_v1_width_std_deviation"
             "num_psc3_v2,"
             "average_psc3_v2_width,"
-            "average_psc3_v2_width_std_deviation";
+            "average_psc3_v2_width_std_deviation,"
+            "total_loads_psc3,"
+            "total_loads";
     void analyzeData(const DDT::GlobalObject& d, std::vector<DDT::Codelet*>** cll, const DDT::Config& config) {
         auto cl = new std::vector<DDT::Codelet*>[config.nThread]();
 
@@ -102,7 +110,8 @@ namespace DDT {
               average_num_unique_row_patterns = 0,
               average_num_unique_row_patterns_std_deviation = 0.,
               average_row_sequential_component_std_deviation = 0.,
-              average_length_row_sequential_component_std_deviation = 0.;
+              average_length_row_sequential_component_std_deviation = 0.,
+              numSeqPoints = 0.;
 
         std::unordered_map<std::string, int> unique_row_patterns_hash;
 
@@ -117,6 +126,8 @@ namespace DDT {
                 std::stringstream ss;
                 int length_row_sequential_component_cnt = 0,
                     row_sequential_component_cnt = 0;
+                int currentSeqSize = 1;
+                const int VW_SQS  = 4;
                 for (int j = m.Lp[i]; j < m.Lp[i + 1]; ++j) {
                     if (j + 1 < m.Lp[i + 1]) {
                         if (ii == 0) {
@@ -126,12 +137,17 @@ namespace DDT {
                         }
                         if (m.Li[j + 1] - m.Li[j] != 1) {
                             if (ii == 0) {
+                                if (currentSeqSize >= VW_SQS) {
+                                    numSeqPoints += currentSeqSize;
+                                }
+                                currentSeqSize = 1;
                                 average_row_sequential_component++;
                             } else {
                                 row_sequential_component_cnt++;
                             }
                         } else {
                             if (ii == 0) {
+                                currentSeqSize++;
                                 average_length_row_sequential_component++;
                             } else {
                                 length_row_sequential_component_cnt++;
@@ -146,7 +162,11 @@ namespace DDT {
                 }
                 if (ii == 0) {
                     unique_row_patterns_hash[ss.str()] += 1;
+                    if (currentSeqSize >= VW_SQS) {
+                        numSeqPoints += currentSeqSize;
+                    }
                 }
+                currentSeqSize = 1;
                 if (i + 1 < m.r) {
                     if (ii == 0) {
                         average_row_skew += m.Li[m.Lp[i + 1]] - m.Li[m.Lp[i]];
@@ -209,24 +229,28 @@ namespace DDT {
               average_fsc_height_std_deviation = 0.,
               average_fsc_points = 0.,
               average_fsc_points_std_deviation = 0.,
+              total_loads_fsc = 0.,
               average_psc1_width = 0.,
               average_psc1_width_std_deviation = 0.,
               average_psc1_height = 0.,
               average_psc1_height_std_deviation = 0.,
               average_psc1_points = 0.,
               average_psc1_points_std_deviation = 0.,
+              total_loads_psc1 = 0.,
               average_psc2_width = 0.,
               average_psc2_width_std_deviation = 0.,
               average_psc2_height = 0.,
               average_psc2_height_std_deviation = 0.,
               average_psc2_points = 0.,
               average_psc2_points_std_deviation = 0.,
+              total_loads_psc2 = 0.,
               average_psc3_width = 0.,
               average_psc3_width_std_deviation = 0.,
               average_psc3_v1_width = 0.,
               average_psc3_v1_width_std_deviation = 0.,
               average_psc3_v2_width = 0.,
-              average_psc3_v2_width_std_deviation = 0.;
+              average_psc3_v2_width_std_deviation = 0.,
+              total_loads_psc3 = 0.;
 
         // Calculate Codelet Means/Stdev
         for (int i = 0; i < 2; i++) {
@@ -238,6 +262,7 @@ namespace DDT {
                             average_fsc_width += c->col_width;
                             average_fsc_height += c->row_width;
                             average_fsc_points += c->row_width*c->col_width;
+                            total_loads_fsc += 6;
                         } else {
                             average_fsc_width_std_deviation += std::pow(c->col_width - average_fsc_width,2);
                             average_fsc_height_std_deviation += std::pow(c->row_width - average_fsc_height,2);
@@ -250,6 +275,7 @@ namespace DDT {
                             average_psc1_width += c->col_width;
                             average_psc1_height += c->row_width;
                             average_psc1_points += c->col_width * c->row_width;
+                            total_loads_psc1 += 4 + c->row_width;
                         } else {
                             average_psc1_width_std_deviation += std::pow(c->col_width - average_psc1_width,2);
                             average_psc1_height_std_deviation += std::pow(c->row_width - average_psc1_height,2);
@@ -259,9 +285,10 @@ namespace DDT {
                     case DDT::TYPE_PSC2:
                         if (i == 0) {
                             num_psc2++;
-                            average_psc2_width += c->col_width;
+                            average_psc2_width  += c->col_width;
                             average_psc2_height += c->row_width;
                             average_psc2_points += c->col_width*c->row_width;
+                            total_loads_psc2    += 5 + c->col_width;
                         } else {
                             average_psc2_width_std_deviation += std::pow(c->col_width - average_psc2_width,2);
                             average_psc2_height_std_deviation += std::pow(c->row_width - average_psc2_height,2);
@@ -272,6 +299,7 @@ namespace DDT {
                         if (i == 0) {
                             num_psc3++;
                             average_psc3_width += c->col_width;
+                            total_loads_psc3   += 5 + c->col_width;
                         } else {
                             average_psc3_width_std_deviation += std::pow(c->col_width - average_psc3_width,2);
                         }
@@ -354,7 +382,8 @@ namespace DDT {
                 average_col_distance_std_deviation << "," <<
                 unique_row_patterns << "," <<
                 average_num_unique_row_patterns << "," <<
-                average_num_unique_row_patterns_std_deviation << ",";
+                average_num_unique_row_patterns_std_deviation << "," <<
+                (numSeqPoints / nnz) << ",";
         std::cout <<
             num_fsc << "," <<
             average_fsc_width << "," <<
@@ -363,6 +392,7 @@ namespace DDT {
             average_fsc_height_std_deviation << "," <<
             average_fsc_points << "," <<
             average_fsc_points_std_deviation << "," <<
+            total_loads_fsc << "," <<
             num_psc1 << "," <<
             average_psc1_width << "," <<
             average_psc1_width_std_deviation << "," <<
@@ -370,6 +400,7 @@ namespace DDT {
             average_psc1_height_std_deviation << "," <<
             average_psc1_points << "," <<
             average_psc1_points_std_deviation << "," <<
+            total_loads_psc1 << "," <<
             num_psc2 << "," <<
             average_psc2_width << "," <<
             average_psc2_width_std_deviation << "," <<
@@ -377,6 +408,7 @@ namespace DDT {
             average_psc2_height_std_deviation << "," <<
             average_psc2_points << "," <<
             average_psc2_points_std_deviation << "," <<
+            total_loads_psc2 << "," <<
             num_psc3 << "," <<
             average_psc3_width << "," <<
             average_psc3_width_std_deviation << "," <<
@@ -386,7 +418,173 @@ namespace DDT {
             num_psc3_v2 << "," <<
             average_psc3_v2_width << "," <<
             average_psc3_v2_width_std_deviation << "," <<
+            total_loads_psc3 << "," <<
+            (total_loads_fsc + total_loads_psc1 + total_loads_psc2 + total_loads_psc3) << "," <<
                 std::endl;
+
+        exit(0);
+    }
+
+    /**
+     * @brief Calculates average run-time of given codelet
+     *
+     * @description Given a codelet c, this function runs the codelet
+     * 100000 times to find the average run-time of the codelet given the
+     * input vector x, matrix Ax and output vector y.
+     *
+     * @param y  Output vector for SpMV
+     * @param x  Input vector for SpMV
+     * @param m  Input sparse matrix for SpMV
+     * @param c  Codelet to time on numerical method
+     *
+     * @return   Average run-time of codelet
+     */
+    double timeSingleCodelet(double*y, double* x, Matrix& m, Codelet *c) {
+        const int NUM_RUNS = 1000000;
+
+        const auto Ax = m.Lx;
+        const auto Ai = m.Li;
+
+        // Reset memory
+        for (int i = 0; i < m.r; ++i) {
+            y[i] = 0.;
+        }
+        for (int i = 0; i < m.c; ++i) {
+            x[i] = 1.;
+        }
+
+        std::chrono::time_point<std::chrono::steady_clock> t1, t2;
+        switch (c->get_type()) {
+            case TYPE_FSC:
+                t1 = std::chrono::steady_clock::now();
+                for (int i = 0; i < NUM_RUNS; ++i) {
+                    fsc_t2_2DC(y, Ax, x, c->row_offset, c->first_nnz_loc,
+                               c->lbr, c->lbr + c->row_width, c->lbc,
+                               c->col_width + c->lbc, c->col_offset);
+                }
+                t2 = std::chrono::steady_clock::now();
+                break;
+            case TYPE_PSC1:
+                t1 = std::chrono::steady_clock::now();
+                for (int i = 0; i < NUM_RUNS; ++i) {
+                    psc_t1_2D4R(y, Ax, x, c->offsets, c->lbr,
+                                c->lbr + c->row_width, c->lbc,
+                                c->lbc + c->col_width);
+                }
+                t2 = std::chrono::steady_clock::now();
+                break;
+            case TYPE_PSC2:
+                t1 = std::chrono::steady_clock::now();
+                for (int i = 0; i < NUM_RUNS; ++i) {
+                    psc_t2_2DC(y, Ax, x, c->offsets, c->row_offset,
+                               c->first_nnz_loc, c->lbr,
+                               c->lbr + c->row_width, c->col_width,
+                               c->col_offset);
+                }
+                t2 = std::chrono::steady_clock::now();
+                break;
+            case TYPE_PSC3:
+                t1 = std::chrono::steady_clock::now();
+                for (int i = 0; i < NUM_RUNS; ++i) {
+                    psc_t3_1D1R(y, Ax, Ai, x, c->offsets, c->lbr,
+                                c->first_nnz_loc, c->col_width);
+                }
+                t2 = std::chrono::steady_clock::now();
+                break;
+            default:
+                throw std::runtime_error("Error: codelet type not recognized...");
+        }
+
+        return getTimeDifference(t1,t2) / NUM_RUNS;
+    }
+
+    void printCodeletStatsHeader() {
+        std::cout << "CODELET_TYPE,EXECUTION_TIME,WIDTH,HEIGHT,SEQUENTIAL_COMPONENTS\n";
+    }
+
+    /**
+     * @brief Returns string associated with codelet type enum
+     * @param cl Codelet object
+     *
+     * @return String associated with DDT::CodeletTypes enum
+     */
+    std::string getCodeletTypeString(DDT::Codelet* cl) {
+        switch (cl->get_type()) {
+            case DDT::TYPE_FSC:
+                return "FSC";
+            case DDT::TYPE_PSC1:
+                return "PSC1";
+            case DDT::TYPE_PSC2:
+                return "PSC2";
+            case DDT::TYPE_PSC3:
+                return "PSC3";
+            default:
+                throw std::runtime_error("Error: Codelet Type not supported...");
+        }
+    }
+
+    /**
+     * @brief Returns number of regions in codelet with unit strides
+     *
+     * @description A strided region is one where the offset between two memory
+     * tuples from each dimension is 0 or 1. This code finds all regions where
+     * adjacent elements have 0/1 strides.
+     *
+     * @param cl Codelet to check
+     * @return Number of strided regions in codelet with 0 or 1 as stride
+     */
+    int getSequentialComponents(DDT::Codelet* cl) {
+        int sc = 1;
+        if (cl->get_type() == DDT::TYPE_FSC || cl->get_type() == DDT::TYPE_PSC1) {
+            return sc;
+        }
+        for (int i = 0; i < cl->col_width-1; ++i) {
+            if (cl->offsets[i+1]-cl->offsets[i] != 1) {
+                sc++;
+            }
+        }
+        return sc;
+    }
+
+    void printCodeletStats(double* y, double* x, Matrix& m, Codelet *cl) {
+        auto codeletRuntime = timeSingleCodelet(y,x,m,cl);
+        auto sc = getSequentialComponents(cl);
+        std::cout
+                << getCodeletTypeString(cl) << ","
+                << codeletRuntime << ","
+                << cl->row_width  << ","
+                << cl->col_width  << ","
+                << sc << ",\n";
+    }
+
+    /**
+     * @brief Prints out information about codelets found in a sparsity pattern
+     *
+     * @description Goes over every codelet inside a matrix sparsity pattern
+     * and numerical method and prints out detailed statistics per codelet
+     * on efficiencies, size and run-times.
+     *
+     * @param d The global object containing runtime information
+     * @param cll The list of codelets associated with each thread
+     * @param config The global configuration object
+     *
+     * @note This function with exit the program
+     */
+    void analyzeCodeletExection(const DDT::GlobalObject& d, const std::vector<DDT::Codelet*>* cll, const DDT::Config& config) {
+        // Allocate memory and read matrix for timings
+        auto m = readSparseMatrix<CSR>(config.matrixPath);
+        auto y = new double[m.r]();
+        auto x = new double[m.c]();
+
+        printCodeletStatsHeader();
+        for (int i = 0; i < config.nThread; ++i) {
+            for (auto const&  cl : cll[i]) {
+                printCodeletStats(y,x,m,cl);
+            }
+        }
+
+        delete[] y;
+        delete[] x;
 
         exit(0);
     }

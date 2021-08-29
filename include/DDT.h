@@ -56,6 +56,7 @@ namespace DDT {
    _mm_hint hint;
    int prefetch_distance;
    bool analyze;
+   bool analyzeCodelets;
   };
 
   struct GlobalObject {

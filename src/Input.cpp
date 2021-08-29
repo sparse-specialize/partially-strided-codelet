@@ -52,6 +52,7 @@ namespace DDT {
       ("hint", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("0"))
       ("prefetch_distance", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("0"))
       ("analyze", "Return analysis information instead of computing numerical method", cxxopts::value<bool>()->default_value("false"))
+      ("analyze_codelets", "Return analysis information for individual codelets instead of computing numerical method", cxxopts::value<bool>()->default_value("false"))
       ("d,header", "prints header or not.");
 
     auto result = options.parse(argc, argv);
@@ -88,6 +89,7 @@ namespace DDT {
     auto hint = result["hint"].as<int>();
     auto prefetch_distance = result["prefetch_distance"].as<int>();
     auto analyze = result["analyze"].as<bool>();
+    auto analyzeCodelets = result["analyze_codelets"].as<bool>();
 
     assert(lim <= MAX_LIM);
 
@@ -121,6 +123,6 @@ namespace DDT {
 
    return Config{ matrixPath, op, header, nThreads, sf, coarsening, bpacking,
     tuning_en, lim,
-    static_cast<_mm_hint>(hint), prefetch_distance, analyze };
+    static_cast<_mm_hint>(hint), prefetch_distance, analyze, analyzeCodelets };
   }
 }
