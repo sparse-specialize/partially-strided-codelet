@@ -62,9 +62,8 @@ namespace DDT {
      auto x0 = x + cbl;
      auto x1 = x0 + co;
 
-
      int cr = (ub - lb) % 2;
-     for (int i = lb; i < ub - cr; i += 2) {
+     for (int i = lb; i < ub - 1; i += 2) {
          auto r0 = _mm256_setzero_pd();
          auto r1 = _mm256_setzero_pd();
 

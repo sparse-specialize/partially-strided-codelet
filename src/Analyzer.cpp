@@ -495,7 +495,165 @@ namespace DDT {
                 throw std::runtime_error("Error: codelet type not recognized...");
         }
 
+        // Reset memory
+        for (int i = 0; i < m.r; ++i) {
+            y[i] = 0.;
+        }
+        for (int i = 0; i < m.c; ++i) {
+            x[i] = 1.;
+        }
+
+        switch (c->get_type()) {
+            case TYPE_FSC:
+                    fsc_t2_2DC(y, Ax, x, c->row_offset, c->first_nnz_loc,
+                               c->lbr, c->lbr + c->row_width, c->lbc,
+                               c->col_width + c->lbc, c->col_offset);
+                break;
+                case TYPE_PSC1:
+                        psc_t1_2D4R(y, Ax, x, c->offsets, c->lbr,
+                                    c->lbr + c->row_width, c->lbc,
+                                    c->lbc + c->col_width);
+                    break;
+                    case TYPE_PSC2:
+                            psc_t2_2DC(y, Ax, x, c->offsets, c->row_offset,
+                                       c->first_nnz_loc, c->lbr,
+                                       c->lbr + c->row_width, c->col_width,
+                                       c->col_offset);
+                        break;
+                        case TYPE_PSC3:
+                                psc_t3_1D1R(y, Ax, Ai, x, c->offsets, c->lbr,
+                                            c->first_nnz_loc, c->col_width);
+                            break;
+                            default:
+                                throw std::runtime_error("Error: codelet type not recognized...");
+        }
+
         return getTimeDifference(t1,t2) / NUM_RUNS;
+    }
+
+    /**
+     * @brief Calculates the execution time for one or more codelets
+     *
+     * @invariant All codelet types in vector must be the same
+     * @param y
+     * @param x
+     * @param m
+     * @param cl
+     *
+     * @return Execution time in seconds for codelets in vector
+     */
+    double timeMultipleCodelet(double* y, double* x, Matrix& m, std::vector<Codelet*>& cl) {
+        const int NUM_RUNS = 1000000;
+
+        const auto Ax = m.Lx;
+        const auto Ai = m.Li;
+
+        // Reset memory
+        for (int i = 0; i < m.r; ++i) {
+            y[i] = 0.;
+        }
+        for (int i = 0; i < m.c; ++i) {
+            x[i] = 1.;
+        }
+
+        std::chrono::time_point<std::chrono::steady_clock> t1, t2;
+        switch (cl[0]->get_type()) {
+            case TYPE_FSC:
+                t1 = std::chrono::steady_clock::now();
+                for (int i = 0; i < NUM_RUNS; ++i) {
+                    for (auto const& c : cl) {
+                        fsc_t2_2DC(y, Ax, x, c->row_offset, c->first_nnz_loc,
+                                   c->lbr, c->lbr + c->row_width, c->lbc,
+                                   c->col_width + c->lbc, c->col_offset);
+                    }
+                }
+                t2 = std::chrono::steady_clock::now();
+                break;
+                case TYPE_PSC1:
+                    t1 = std::chrono::steady_clock::now();
+                    for (int i = 0; i < NUM_RUNS; ++i) {
+                        for (auto const& c : cl) {
+                            psc_t1_2D4R(y, Ax, x, c->offsets, c->lbr,
+                                        c->lbr + c->row_width, c->lbc,
+                                        c->lbc + c->col_width);
+                        }
+                    }
+                    t2 = std::chrono::steady_clock::now();
+                    break;
+                    case TYPE_PSC2:
+                        t1 = std::chrono::steady_clock::now();
+                        for (int i = 0; i < NUM_RUNS; ++i) {
+                            for (auto const& c : cl) {
+                                psc_t2_2DC(y, Ax, x, c->offsets, c->row_offset,
+                                           c->first_nnz_loc, c->lbr,
+                                           c->lbr + c->row_width, c->col_width,
+                                           c->col_offset);
+                            }
+                        }
+                        t2 = std::chrono::steady_clock::now();
+                        break;
+                        case TYPE_PSC3:
+                            t1 = std::chrono::steady_clock::now();
+                            for (int i = 0; i < NUM_RUNS; ++i) {
+                                for (auto const& c : cl) {
+                                    psc_t3_1D1R(y, Ax, Ai, x, c->offsets,
+                                                c->lbr, c->first_nnz_loc,
+                                                c->col_width);
+                                }
+                            }
+                            t2 = std::chrono::steady_clock::now();
+                            break;
+                            default:
+                                throw std::runtime_error("Error: codelet type not recognized...");
+        }
+
+        // Reset memory
+        for (int i = 0; i < m.r; ++i) {
+            y[i] = 0.;
+        }
+        for (int i = 0; i < m.c; ++i) {
+            x[i] = 1.;
+        }
+
+        switch (cl[0]->get_type()) {
+            case TYPE_FSC:
+                for (auto const& c : cl) {
+                    fsc_t2_2DC(y, Ax, x, c->row_offset, c->first_nnz_loc,
+                               c->lbr, c->lbr + c->row_width, c->lbc,
+                               c->col_width + c->lbc, c->col_offset);
+                }
+                break;
+                case TYPE_PSC1:
+                    for (auto const& c : cl) {
+                        psc_t1_2D4R(y, Ax, x, c->offsets, c->lbr,
+                                    c->lbr + c->row_width, c->lbc,
+                                    c->lbc + c->col_width);
+                    }
+                    break;
+                    case TYPE_PSC2:
+                        for (auto const& c : cl) {
+                            psc_t2_2DC(y, Ax, x, c->offsets, c->row_offset,
+                                       c->first_nnz_loc, c->lbr,
+                                       c->lbr + c->row_width, c->col_width,
+                                       c->col_offset);
+                        }
+                        break;
+                        case TYPE_PSC3:
+                            for (auto const& c : cl) {
+                                psc_t3_1D1R(y, Ax, Ai, x, c->offsets,
+                                            c->lbr, c->first_nnz_loc,
+                                            c->col_width);
+                            }
+                            break;
+                            default:
+                                throw std::runtime_error("Error: codelet type not recognized...");
+        }
+
+        return getTimeDifference(t1,t2) / NUM_RUNS;
+    }
+
+    void printCodeletComparisonStatsHeader() {
+        std::cout << "CODELET_TYPE,HEIGHT,WIDTH,SEQUENTIAL_COMPONENTS,FSC_EXECUTION_TIME,PSC1v1_EXECUTION_TIME,PSC1v2_EXECUTION_TIME,PSC2_EXECUTION_TIME,\n";
     }
 
     void printCodeletStatsHeader() {
@@ -521,6 +679,194 @@ namespace DDT {
             default:
                 throw std::runtime_error("Error: Codelet Type not supported...");
         }
+    }
+
+    /**
+     * @brief Converts a PSC type 1v1 into one or more FSC codelets
+     *
+     * @param c PSC type 1v1 to be converted
+     *
+     * @return Vector of new codelets
+     */
+    std::vector<DDT::Codelet*> convert_PSC1v1_FSC(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> fscCodelets;
+        for (int i = 0; i < c->row_width-1; i+=2) {
+            fscCodelets.push_back(new FSCCodelet(c->lbr+i, c->lbc, 2,c->col_width,c->offsets[i],c->offsets[i+1]-c->offsets[i],c->col_offset));
+        }
+        for (int i = 0; i < c->row_width; i++) {
+            fscCodelets.push_back(new FSCCodelet(c->lbr+i, c->lbc, 2,c->col_width,c->offsets[i],c->offsets[i+1]-c->offsets[i],c->col_offset));
+        }
+        return fscCodelets;
+    }
+
+    std::vector<DDT::Codelet*> convert_PSC1v1_PSC1v2(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> psc1v2Codelets;
+        for (int i = 0; i < c->row_width-1; i+=2) {
+            auto offsets = new int[c->col_width]();
+            for (int j = 0; j < c->col_width; ++j) {
+                offsets[j] = c->lbc+j;
+            }
+            psc1v2Codelets.push_back(new PSCT2V1(c->lbr+i, c->row_width,c->col_width,c->first_nnz_loc,c->offsets[i+1]-c->offsets[i],c->col_offset, offsets));
+        }
+        for (int i = 0; i < c->row_width; i++) {
+            auto offsets = new int[c->col_width]();
+            for (int j = 0; j < c->col_width; ++j) {
+                offsets[j] = c->lbc+j;
+            }
+            psc1v2Codelets.push_back(new PSCT2V1(c->lbr+i, c->row_width,c->col_width,c->first_nnz_loc,c->offsets[i+1]-c->offsets[i],c->col_offset, offsets));
+        }
+        return psc1v2Codelets;
+    }
+
+    std::vector<DDT::Codelet*> convert_PSC1v1_PSC2(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> psc2Codelets;
+        for (int i = 0; i < c->row_width-1; i++) {
+            auto offsets = new int[c->col_width]();
+            for (int j = 0; j < c->col_width; ++j) {
+                offsets[j] = c->lbc+j;
+            }
+            psc2Codelets.push_back(new PSCT3V1(c->lbr+i, c->col_width, c->offsets[i], offsets));
+        }
+        return psc2Codelets;
+    }
+
+    /**
+     * @brief
+     * @param c
+     * @return
+     */
+    std::vector<DDT::Codelet*> convert_FSC_PS1v2(DDT::Codelet* c) {
+        auto offsets = new int[c->col_width]();
+        for (int i = 0; i < c->col_width; ++i) {
+            offsets[i] = c->lbc + i;
+        }
+        return std::vector<DDT::Codelet*>{ new PSCT2V1(c->lbr, c->row_width, c->col_width, c->first_nnz_loc, c->row_offset, c->col_offset, offsets) };
+    }
+
+    /**
+     * @brief
+     * @param c
+     * @return
+     */
+    std::vector<DDT::Codelet*> convert_FSC_PS1v1(DDT::Codelet* c) {
+        auto offsets = new int[c->row_width]();
+        for (int i = 0; i < c->row_width; ++i) {
+            offsets[i] = c->first_nnz_loc + c->row_offset*i;
+        }
+        return std::vector<DDT::Codelet*>{ new PSCT1V1(c->lbr, c->lbc, c->row_width, c->col_width, c->col_offset, offsets) };
+    }
+
+    /**
+     * @brief
+     * @param c
+     * @return
+     */
+    std::vector<DDT::Codelet*> convert_FSC_PS2(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> psc2Codelets;
+        for (int i = 0; i < c->row_width; ++i) {
+            auto offsets = new int[c->col_width]();
+            for (int j = 0; j < c->col_width; ++j) {
+                offsets[j] = c->lbc + j;
+            }
+            psc2Codelets.push_back(new PSCT3V1(c->lbr+i, c->col_width, c->first_nnz_loc+i*c->row_offset, offsets));
+        }
+        return psc2Codelets;
+    }
+
+    /**
+     * @brief
+     * @param c
+     * @return
+     */
+    std::vector<DDT::Codelet*> convert_PSC1v2_FSC(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> fscCodelets;
+        int totalWidth = 0;
+        for (int i = 0, cnt = 0; i < c->col_width; ++i) {
+            if (i == (c->col_width-1) || (c->offsets[i+1] - c->offsets[i]) != 1) {
+                assert(cnt < c->col_width);
+                totalWidth += i+1-cnt;
+                fscCodelets.push_back(new FSCCodelet(c->lbr, c->offsets[cnt],c->row_width, i+1-cnt,c->first_nnz_loc+cnt,c->row_offset, c->col_offset));
+                cnt = i+1;
+            }
+        }
+        assert(totalWidth == c->col_width);
+        return fscCodelets;
+    }
+
+    /**
+     * @brief
+     * @param c
+     * @return
+     */
+    std::vector<DDT::Codelet*> convert_PSC1v2_PSC1v1(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> psc1v1Codelets;
+        for (int i = 0, cnt = 0; i < c->col_width; ++i) {
+            if ((i == (c->col_width-1)) || (c->offsets[i+1] - c->offsets[i] != 1)) {
+                auto offsets = new int[c->row_width]();
+                for (int j = 0; j < c->row_width; ++j) {
+                    offsets[j] = c->first_nnz_loc+cnt + c->row_offset*j;
+                }
+                psc1v1Codelets.push_back(new PSCT1V1(c->lbr, c->offsets[cnt],c->row_width, i+1-cnt, c->col_offset, offsets));
+                cnt = i+1;
+            }
+        }
+        return psc1v1Codelets;
+    }
+
+    /**
+     * @brief EZ
+     * @param c
+     * @return
+     */
+    std::vector<DDT::Codelet*> convert_PSC1v2_PSC2(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> psc2Codelets;
+        for (int i = 0; i < c->row_width; ++i) {
+            auto offsets = new int[c->col_width]();
+            for (int j = 0; j < c->col_width; ++j) {
+                offsets[j] = c->offsets[j] + c->col_offset*i;
+            }
+            psc2Codelets.push_back(new PSCT3V1(c->lbr, c->col_width, c->first_nnz_loc, offsets));
+        }
+        return psc2Codelets;
+    }
+
+    /**
+     * @brief
+     * @param c
+     * @return
+     */
+    std::vector<DDT::Codelet*> convert_PSC2_FSC(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> fscCodelets;
+        for (int i = 0; i < c->col_width; ++i) {
+            fscCodelets.push_back(new FSCCodelet(c->lbr, c->lbc, 1,1,c->first_nnz_loc+i,c->row_width, c->col_offset));
+        }
+        return fscCodelets;
+    }
+
+    /**
+     * @brief
+     * @param c
+     * @return
+     */
+    std::vector<DDT::Codelet*> convert_PSC2_PSC1v1(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> psc1v1Codelets;
+        for (int i = 0; i < c->col_width; ++i) {
+            auto offsets = new int[1]();
+            *offsets = c->first_nnz_loc;
+            psc1v1Codelets.push_back(new PSCT1V1(c->lbr, c->lbc+i, 1,1,0,offsets));
+        }
+        return psc1v1Codelets;
+    }
+
+    /**
+     * @brief Converts a PSC type 2 into a PSC type 1v2
+     * @param c Codelet to be converted
+     * @return Vector of PSC type 1v2s that process the iteration space of c.
+     */
+    std::vector<DDT::Codelet*> convert_PSC2_PSC1v2(DDT::Codelet* c) {
+        std::vector<DDT::Codelet*> psc1v1Codelets;
+
+        return std::vector<DDT::Codelet*> { new PSCT2V1(c->lbr, c->lbc, c->col_width, c->first_nnz_loc, c->row_offset, c->col_offset, c->offsets) };
     }
 
     /**
@@ -557,6 +903,125 @@ namespace DDT {
                 << sc << ",\n";
     }
 
+    bool isCorrect(const double*y, const double* yTrue, int rows) {
+        for (int i = 0; i < rows; ++i) {
+            if (std::abs(y[i]-yTrue[i]) > 0.001) {
+                std::cout << i << ":" << y[i] << "," << yTrue[i] << std::endl;
+                assert(std::abs(y[i]-yTrue[i]) > 0.001);
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+    /**
+     * @brief Gets accurate run-time of iteration space contained in c
+     * @description Converts given codelet into all different types of codelets
+     * and returns a vector of all different execution times of the iteration
+     * space in 'c' when evaluating it using different codelet types.
+     *
+     * @param c
+     * @return vector<double> of execution times in the order: [FSC, PSC1v1, PSC1v2, PSC2]
+     */
+    std::vector<double> timeCodeletComparison(double*y, double* x, Matrix& m, DDT::Codelet* c) {
+        std::vector<double> codeletTimes;
+
+        auto yCmp = new double[m.r]();
+
+        double fscTime, psc1v1Time, psc1v2Time, psc2Time;
+        switch (c->get_type()) {
+            case TYPE_FSC: {
+                fscTime = timeSingleCodelet(y, x, m, c);
+                auto psc1v1Codelets = convert_FSC_PS1v1(c);
+                psc1v1Time = timeMultipleCodelet(y, x, m, psc1v1Codelets);
+                auto psc1v2Codelets = convert_FSC_PS1v2(c);
+                psc1v2Time = timeMultipleCodelet(y, x, m, psc1v2Codelets);
+                auto psc2Codelets = convert_FSC_PS2(c);
+                psc2Time = timeMultipleCodelet(y, x, m, psc2Codelets);
+
+                cleanPointerVectors(psc1v1Codelets, psc1v2Codelets, psc2Codelets);
+
+                return std::vector<double>{fscTime, psc1v1Time, psc1v2Time,
+                                           psc2Time};
+            }
+            case TYPE_PSC1: {
+                auto fscCodelets = convert_PSC1v1_FSC(c);
+                auto fscTime = timeMultipleCodelet(y, x, m, fscCodelets);
+                psc1v1Time = timeSingleCodelet(y, x, m, c);
+                auto psc1v2Codelets = convert_PSC1v1_PSC1v2(c);
+                auto psc1v2Time =
+                        timeMultipleCodelet(y, x, m, psc1v2Codelets);
+                auto psc2Codelets = convert_PSC1v1_PSC2(c);
+                auto psc2Time =
+                        timeMultipleCodelet(y, x, m, psc2Codelets);
+
+                // Clean up memory
+                cleanPointerVectors(fscCodelets, psc1v2Codelets, psc2Codelets);
+
+                return std::vector<double>{fscTime, psc1v1Time, psc1v2Time,
+                                           psc2Time};
+            }
+            case TYPE_PSC2: {
+                auto psc1v2Time = timeSingleCodelet(y, x, m, c);
+                std::copy(y, y+m.r, yCmp);
+                auto fscCodelets = convert_PSC1v2_FSC(c);
+                auto fscTime = timeMultipleCodelet(yCmp, x, m, fscCodelets);
+                auto psc1v1Codelets = convert_PSC1v2_PSC1v1(c);
+                auto psc1v1Time = timeMultipleCodelet(y, x, m, psc1v1Codelets);
+                auto psc2Codelets = convert_PSC1v2_PSC2(c);
+                auto psc2Time =
+                        timeMultipleCodelet(y, x, m, psc2Codelets);
+
+                // Clean up memory
+                cleanPointerVectors(fscCodelets, psc1v1Codelets, psc2Codelets);
+
+                return std::vector<double>{fscTime, psc1v1Time, psc1v2Time,
+                                           psc2Time};
+            }
+            case TYPE_PSC3: {
+                auto fscCodelets = convert_PSC2_FSC(c);
+                auto fscTime = timeMultipleCodelet(y, x, m, fscCodelets);
+                auto psc1v1Codelets = convert_PSC2_PSC1v1(c);
+                auto psc1v1Time = timeMultipleCodelet(y, x, m, psc1v1Codelets);
+                auto psc1v2Codelets = convert_PSC2_PSC1v2(c);
+                auto psc1v2Time = timeMultipleCodelet(y, x, m, psc1v2Codelets);
+                auto psc2Time = timeSingleCodelet(y, x, m, c);
+
+                // Clean up memory
+                cleanPointerVectors(fscCodelets, psc1v1Codelets, psc1v2Codelets);
+
+                return std::vector<double>{fscTime, psc1v1Time, psc1v2Time,
+                                           psc2Time};
+            }
+            default:
+                throw std::runtime_error("Error: codelet type not recognized...");
+        }
+        delete[] yCmp;
+    }
+
+    /**
+     * @brief Prints run-time evalulation of various codelet types for iteration space
+     *
+     * @param y
+     * @param x
+     * @param m
+     * @param cl
+     */
+    void printCodeletComparisonStats(double* y, double* x, Matrix& m, Codelet *cl) {
+        auto codeletRunTimes = timeCodeletComparison(y,x,m,cl);
+        auto sc = getSequentialComponents(cl);
+        std::cout
+        << getCodeletTypeString(cl) << ","
+        << cl->row_width  << ","
+        << cl->col_width  << ","
+        << sc << ",";
+        for (auto const& c : codeletRunTimes) {
+            std::cout << c << ",";
+        }
+        std::cout << "\n";
+    }
+
     /**
      * @brief Prints out information about codelets found in a sparsity pattern
      *
@@ -576,10 +1041,12 @@ namespace DDT {
         auto y = new double[m.r]();
         auto x = new double[m.c]();
 
-        printCodeletStatsHeader();
+//        printCodeletStatsHeader();
+        printCodeletComparisonStatsHeader();
         for (int i = 0; i < config.nThread; ++i) {
             for (auto const&  cl : cll[i]) {
-                printCodeletStats(y,x,m,cl);
+//                printCodeletStats(y,x,m,cl);
+                printCodeletComparisonStats(y,x,m,cl);
             }
         }
 

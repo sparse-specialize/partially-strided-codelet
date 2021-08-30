@@ -7,7 +7,6 @@
 
 #include "DDTDef.h"
 namespace DDT {
-
     struct Codelet {
         int size;
         int *offsets;
@@ -16,7 +15,7 @@ namespace DDT {
         int lbr, lbc, row_width, col_width, col_offset; //LBR, RW, CW
         int first_nnz_loc, row_offset; //FNL, RO
         bool multi_stmt; //FIXME: we should remove this, each codelet has only one
-        // statemet (operation)
+        // statement (operation)
         Codelet(int br, int bc, int rw, int cw, int fnl, int ro, int co, int *offs) : lbr(br), row_width(rw),
                                                                                       lbc(bc),col_width(cw),first_nnz_loc(fnl),row_offset(ro), col_offset(co),
                                                                                       offsets(offs), multi_stmt(false){}
@@ -66,7 +65,7 @@ namespace DDT {
     };
 
 
-    struct PSCT1V1:public Codelet{
+    struct PSCT1V1 : public Codelet{
         /**
          * y[lbr:lbr+row_width] = Ax[RO[lbr]:RO[lbr]+CW, ...,
          * RO[lbr]:RO+CW]*x[lbc:lbc+CW];
@@ -81,6 +80,10 @@ namespace DDT {
 
         CodeletType get_type() override{return CodeletType::TYPE_PSC1;}
         void print()override;
+
+        ~PSCT1V1() {
+            delete[] offsets;
+        }
     };
 
 
@@ -103,6 +106,10 @@ namespace DDT {
 
         CodeletType get_type() override{return CodeletType::TYPE_PSC2;}
         void print()override;
+
+        ~PSCT2V1() {
+            delete[] offsets;
+        }
     };
 
     struct PSCT3V1:public Codelet{
@@ -121,6 +128,10 @@ namespace DDT {
 
         CodeletType get_type() override{return CodeletType::TYPE_PSC3;}
         void print()override;
+
+        ~PSCT3V1() override {
+            delete[] offsets;
+        }
     };
 
     struct PSCT3V2:public Codelet{
