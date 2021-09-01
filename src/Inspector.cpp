@@ -129,6 +129,24 @@ namespace DDT {
         }
     }
 
+
+    /**
+     * @brief Determines if two FSC codelets are better executors than one PSC
+     *
+     * @description Determines if two FSC codelets which have number of rows equal
+     * to nRows and number of columns dim0 and dim1, are more performant
+     * than grouping all the columns into one PSC type codelet.
+     *
+     * @param nRows
+     * @param dim0
+     * @param dim1
+     *
+     * @return True if it is profitable to split PSC codelet into FSC codelet
+     */
+    bool determineFSCProfit(int nRows, int dim0, int dim1) {
+        return (dim0 > 8 && dim1 > 8) && nRows > 3;
+    }
+
  /**
   * @brief Generates run-time codelet object based on type in DDT::PatternDAG
   *
