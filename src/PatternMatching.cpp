@@ -168,7 +168,7 @@ namespace DDT {
  */
     void mineDifferences(int **ip, DDT::PatternDAG *c, int *d, int nThreads,
                          const int *tBound) {
-#pragma omp parallel for num_threads(nThreads)
+//#pragma omp parallel for num_threads(nThreads)
         for (int ii = 0; ii < nThreads; ++ii) {
             int nc = 0;
             for (int i = tBound[ii]; i < tBound[ii + 1] - 1; i++) {
@@ -182,10 +182,15 @@ namespace DDT {
         }
     }
 
+    /**
+     * @brief Returns true if all 32bit elements in vector are 0/1
+     *
+     * @param dv Vector to check unit-ness
+     * @return true if all elements in vector are unit (0 or 1)
+     */
     inline bool isUnit(__m128i dv) {
         uint16_t unitMask =
                 _mm_movemask_epi8(_mm_cmplt_epi32(dv, unitThresholds));
-
         return (unitMask | 0xF000) == 0xFFFF;
     }
 
@@ -241,7 +246,7 @@ namespace DDT {
 
 
                 __m128i odv = lhsdv;// originalDifferenceVector
-                bool hsad = true;   // hasSameAdjacentDifferences
+                bool hsad = true, tmpHsad = true;   // hasSameAdjacentDifferences
                 bool iu = isUnit(lhsdv);
 
                 int iStart = i;
@@ -251,7 +256,8 @@ namespace DDT {
                 while ((i < lhstps - 1 && j < rhstps - 1) &&
                        ZERO_MASK == (imm & ZERO_MASK) &&
                        !isInCodelet(lhscp+i+1) &&
-                       (DDT::prefer_fsc && (i-iStart > clt_width ) ? hsad : true)) {
+                       (DDT::prefer_fsc ? hsad && iu : true)) {
+                    hsad = tmpHsad;
                     lhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(
                             lhstpd + ++i * tpd));
                     rhsdv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(
@@ -262,8 +268,8 @@ namespace DDT {
                     // Compare FOD across iteration
                     uint16_t MASK =
                             _mm_movemask_epi8(_mm_cmpeq_epi32(odv, lhsdv));
-                    hsad = hsad && ZERO_MASK == (MASK & ZERO_MASK);
-                iu = isUnit(lhsdv);
+                    tmpHsad = tmpHsad && (ZERO_MASK == (MASK & ZERO_MASK));
+                    iu = isUnit(lhsdv);
                 }
 
                 // Adjust pointers to form codelet
