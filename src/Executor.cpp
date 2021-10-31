@@ -20,6 +20,7 @@
 #include "Executor.h"
 #include "Inspector.h"
 #include "SpMVGenericCode.h"
+#include "SpMMGenericCode.h"
 #include "GenericCodeletsSpTRSV.h"
 #include "ParseMatrixMarket.h"
 
@@ -61,6 +62,20 @@ void executeSPMVCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config
   // Clean up memory
   delete[] x;
   delete[] y;
+}
+
+void executeSPMMCodelets(const std::vector<DDT::Codelet*>* cl, const
+DDT::Config& cfg, const int r, const int* Lp, const int *Li, const double*Ax,
+const double* Bx, double* Cx, int cbb, int cbd) {
+    // Execute SpMV
+    DDT::spmm_generic(r, Lp, Li, Ax, Bx, Cx, cbb, cbd, cl, cfg);
+}
+
+void executeSPSPMMCodelets(const std::vector<DDT::Codelet*>* cl, const
+DDT::Config& cfg, const int r, const int* Lp, const int *Li, const double*Lx,
+const double* x, double* y) {
+    // Execute SpMV
+//    spspmm_generic(r, Lp, Li, Lx, x, y, cl, cfg);
 }
 
 
@@ -116,6 +131,10 @@ void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& cf
        executeSPTRSVCodelets(cl, cfg, args.r, args.Lp, args.Li, args.Lx, args.x, args.y);
    default:
     break;
+   case DDT::OP_SPMM:
+       executeSPMMCodelets(cl, cfg, args.r, args.Lp, args.Li, args.Ax, args.Bx, args
+       .Cx, args.cbb, args.cbd);
+       break;
   }
  }
 

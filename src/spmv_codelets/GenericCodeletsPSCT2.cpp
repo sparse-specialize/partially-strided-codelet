@@ -27,6 +27,7 @@ namespace DDT {
 #else
 #define loadvx(of, x, ind, xv, msk) \
   xv = _mm256_set_pd(x[of[ind+3]], x[of[ind+2]], x[of[ind+1]], x[of[ind]]);
+
 #endif
 
     const __m256i MASK_3 = _mm256_set_epi64x(0, -1, -1, -1);
@@ -132,7 +133,6 @@ namespace DDT {
       y[ub - 1] += tail + hsum_double_avx(r0);
   }
  }
-
 
 /**
  * Computes y[lb:ub] += Lx[axo+axi:axo+axi*4] * x[offset[0:4]]

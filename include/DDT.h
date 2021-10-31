@@ -30,7 +30,8 @@
 namespace DDT {
   enum NumericalOperation {
     OP_SPMV,
-    OP_SPTRS
+    OP_SPTRS,
+    OP_SPMM
   };
  
   enum StorageFormat {
@@ -136,6 +137,8 @@ namespace DDT {
   /// Used for testing executor
   struct Args {
   double *x, *y;
+  double *Ax,*Bx,*Cx;
+  int cbb, cbd;
   int r; int* Lp; int* Li; double* Lx;
  };
 

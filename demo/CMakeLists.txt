@@ -6,13 +6,15 @@ add_executable(spmv_demo
         SerialSpMVExecutor.cpp
         SPMV_CVR.cpp
         ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
-        ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC}
+        ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
         )
 
 set(SPMV_DEMO_LIBS ${Sympiler_Libs})
+set(SPMM_DEMO_LIBS ${Sympiler_Libs})
 
 if (MKL_FOUND)
     set(SPMV_DEMO_LIBS ${SPMV_DEMO_LIBS} ${MKL_LIBRARIES})
+    set(SPMM_DEMO_LIBS ${SPMM_DEMO_LIBS} ${MKL_LIBRARIES})
     if(UNIX AND APPLE)
         set(IOMP_DIR_MAC ${INTEL_COMPILER_DIR}/compilers_and_libraries/mac/lib/)
     endif()
@@ -24,8 +26,7 @@ endif()
 link_directories(${METIS_LIBRARY}
         ${IOMP_DIR_MAC}
         )
-target_link_libraries(spmv_demo
-        ${SPMV_DEMO_LIBS})
+
 
 add_executable(sptrsv_demo
         FusionDemo.cpp
@@ -38,6 +39,18 @@ add_executable(sptrsv_demo
         ${Sympiler_SRC}
         ${METIS_SOURCE_FILES} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC}
         )
+
+add_executable(spmm_demo
+        FusionDemo.cpp
+        SPMM_demo.cpp
+        SPMV_CVR.cpp
+        ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
+        ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
+        )
+
+target_link_libraries(spmm_demo
+        ${SPMM_DEMO_LIBS})
+
 
 
 set(DEMO_LIBS lbc)
@@ -53,6 +66,7 @@ endif()
 if (PAPI_FOUND)
     set(DEMO_LIBS ${DEMO_LIBS} ${PAPI_LIBRARIES})
 endif()
+
 
 target_link_libraries(sptrsv_demo
         ${DEMO_LIBS}

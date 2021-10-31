@@ -126,7 +126,7 @@ namespace DDT {
 
     // Allocate memory
     auto mem = new int[nTuples*2+m.nz];
-    auto* codelets = new DDT::PatternDAG[m.nz];
+    auto* codelets = new DDT::PatternDAG[m.nz]();
     int** dp = new int*[m.r+1];
     auto tuples = mem;
     auto df = mem+nTuples;

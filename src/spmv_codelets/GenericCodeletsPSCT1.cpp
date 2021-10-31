@@ -134,19 +134,12 @@ namespace DDT{
    int ti = (ubc-lbc)%4;
    for (int j = lbc, k=offset[ii], k1=offset[ii+1], k2=offset[ii+2],
           k3=offset[ii+3]; j < ubc-ti; j+=4, k+=4, k1+=4, k2+=4, k3+=4) {
-    //y[i] += Ax[k] * x[j];
-    //_mm256_mask_i32gather_pd()
-    // x_reg.d[0] = x[*aij]; /// TODO replaced with gather
-    // x_reg.d[1] = x[*(aij+1)];
-    // x_reg.d[2] = x[*(aij+2)];
-    // x_reg.d[3] = x[*(aij+3)];
-    //x_reg.v = _mm256_set_pd(x[j], x[j+1], x[j+2], x[j+3]);
     x_reg.v = _mm256_loadu_pd((double *) (x+j));
     Lx_reg.v = _mm256_loadu_pd((double *) (Ax + k)); // Skylake	7	0.5
     Lx_reg2.v = _mm256_loadu_pd((double *) (Ax + k1)); // Skylake	7
     Lx_reg3.v = _mm256_loadu_pd((double *) (Ax + k2)); // Skylake	7
     Lx_reg4.v = _mm256_loadu_pd((double *) (Ax +k3)); // Skylake	7
-    // 	0.5
+
     result.v = _mm256_fmadd_pd(Lx_reg.v,x_reg.v,result.v);//Skylake	4	0.5
     result2.v = _mm256_fmadd_pd(Lx_reg2.v,x_reg.v,result2.v);//Skylake	4	0.5
     result3.v = _mm256_fmadd_pd(Lx_reg3.v,x_reg.v,result3.v);//Skylake	4	0.5
@@ -187,7 +180,6 @@ namespace DDT{
    y[i] += h0 + t0;
   }
  }
-
 
  void psc_t1_2D4Rt(double *y, const double *Ax, const double *x,
                   const int *offset, int lb, int ub, int lbc, int ubc){

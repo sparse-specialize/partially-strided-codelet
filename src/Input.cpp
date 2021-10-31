@@ -101,9 +101,11 @@ namespace DDT {
     if (operation == "SPMV") {
       op = OP_SPMV;
     } else if (operation == "SPTRS") {
-      op = OP_SPTRS;
-    } else {
-      std::cout << "'numerical_operation' must be passed in as one of: ['SPMV', 'SPTRS']" << std::endl;
+        op = OP_SPTRS;
+    } else if (operation == "SPMM") {
+        op = OP_SPMM;
+      } else {
+      std::cout << "'numerical_operation' must be passed in as one of: ['SPMV', 'SPTRS', 'SPMM']" << std::endl;
       exit(0);
     }
 

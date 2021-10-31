@@ -80,12 +80,13 @@ set(Sympiler_SRC
 
 aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src" SRC)
 aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src/spmv_codelets/" SPMV_CODELETS_SRC)
+aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src/spmm_codelets/" SPMM_CODELETS_SRC)
 aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src/sptrsv_codelets/" SPTRSV_CODELETS_SRC)
 aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src/trace_gen" TRCGEN)
 aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src/code_gen" CODE_GEN)
 
 add_executable(DDT main.cpp ${SRC} ${TRCGEN} ${CODE_GEN} ${MATRIX_PARSING_SRC}
-        ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC})
+        ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC})
 target_link_libraries(DDT
         ${Sympiler_Libs})
 

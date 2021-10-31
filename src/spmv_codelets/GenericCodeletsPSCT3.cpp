@@ -52,7 +52,6 @@ namespace DDT {
 
  void psc_t3_1D1R(double *y, const double *Ax, const int *Ai,  const double
  *x, const int *offset, int lb, int fnl, int cw) {
-
   v4df_t Lx_reg, Lx_reg2, result, result2, x_reg, x_reg2;
   int i = lb;
   result.v = _mm256_setzero_pd();
@@ -72,5 +71,4 @@ namespace DDT {
   auto h0 = hsum_double_avx(result.v);
   y[i] += h0 + tail;
  }
-
 }
