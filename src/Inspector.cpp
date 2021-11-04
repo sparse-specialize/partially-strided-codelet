@@ -668,7 +668,7 @@ namespace DDT {
   void inspectSerialTrace(DDT::GlobalObject& d, std::vector<Codelet*>* cl, const DDT::Config& cfg) {
       // Calculate overlap for each iteration
       // DDT::pruneIterations(d, d.mt.ip, d.mt.ips, cfg.lim);
-      if (cfg.op == DDT::OP_SPMV) {
+      if (cfg.op == DDT::OP_SPMV || cfg.op == DDT::OP_SPMM) {
           // Compute first order differences
           DDT::computeThreadBoundParallelizedFOD(d.tb, d.mt.ip, d.mt.ips, d.d, cfg.nThread);
 

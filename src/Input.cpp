@@ -49,6 +49,9 @@ namespace DDT {
       ("prefer_fsc", "Keep current codelet as FSC when greater than clt_width", cxxopts::value<bool>()->default_value("false"))
       ("col_th", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("8"))
       ("clt_width", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("4"))
+      ("m_tile_size", "Row tile size for SpMM", cxxopts::value<int>()->default_value("64"))
+      ("n_tile_size", "Column tile size for SpMM", cxxopts::value<int>()->default_value("64"))
+      ("b_matrix_columns", "Number of columns in dense matrix for SpMM", cxxopts::value<int>()->default_value("256"))
       ("hint", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("0"))
       ("prefetch_distance", "Max length of periodic iteration space to find", cxxopts::value<int>()->default_value("0"))
       ("analyze", "Return analysis information instead of computing numerical method", cxxopts::value<bool>()->default_value("false"))
@@ -86,6 +89,9 @@ namespace DDT {
     auto prefer_fsc = result["prefer_fsc"].as<bool>();
     auto col_th = result["col_th"].as<int>();
     auto clt_width = result["clt_width"].as<int>();
+    auto mTileSize = result["m_tile_size"].as<int>();
+    auto nTileSize = result["n_tile_size"].as<int>();
+    auto bMatrixCols = result["b_matrix_columns"].as<int>();
     auto hint = result["hint"].as<int>();
     auto prefetch_distance = result["prefetch_distance"].as<int>();
     auto analyze = result["analyze"].as<bool>();
@@ -125,6 +131,6 @@ namespace DDT {
 
    return Config{ matrixPath, op, header, nThreads, sf, coarsening, bpacking,
     tuning_en, lim,
-    static_cast<_mm_hint>(hint), prefetch_distance, analyze, analyzeCodelets };
+    static_cast<_mm_hint>(hint), prefetch_distance, analyze, analyzeCodelets, mTileSize, nTileSize, bMatrixCols };
   }
 }

@@ -66,9 +66,9 @@ void executeSPMVCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config
 
 void executeSPMMCodelets(const std::vector<DDT::Codelet*>* cl, const
 DDT::Config& cfg, const int r, const int* Lp, const int *Li, const double*Ax,
-const double* Bx, double* Cx, int cbb, int cbd) {
+const double* Bx, double* Cx, int bRows, int bCols) {
     // Execute SpMV
-    DDT::spmm_generic(r, Lp, Li, Ax, Bx, Cx, cbb, cbd, cl, cfg);
+    DDT::spmm_generic(r, Lp, Li, Ax, Bx, Cx, bRows, bCols, cl, cfg);
 }
 
 void executeSPSPMMCodelets(const std::vector<DDT::Codelet*>* cl, const
@@ -133,7 +133,7 @@ void executeCodelets(const std::vector<DDT::Codelet*>* cl, const DDT::Config& cf
     break;
    case DDT::OP_SPMM:
        executeSPMMCodelets(cl, cfg, args.r, args.Lp, args.Li, args.Ax, args.Bx, args
-       .Cx, args.cbb, args.cbd);
+       .Cx, args.bRows, args.bCols);
        break;
   }
  }
