@@ -58,6 +58,9 @@ namespace DDT {
    int prefetch_distance;
    bool analyze;
    bool analyzeCodelets;
+   int mTileSize;
+   int nTileSize;
+   int bMatrixCols;
   };
 
   struct GlobalObject {
@@ -106,7 +109,7 @@ namespace DDT {
 
         // Allocate memory and generate trace
         DDT::GlobalObject d;
-        if (cfg.op == OP_SPMV) {
+        if (cfg.op == OP_SPMV || cfg.op == OP_SPMM) {
             d = DDT::allocateSpMVMemoryTrace(m, cfg.nThread);
         } else if (cfg.op == OP_SPTRS) {
             d = DDT::allocateSpTRSVMemoryTrace(m, cfg.nThread);
@@ -138,7 +141,7 @@ namespace DDT {
   struct Args {
   double *x, *y;
   double *Ax,*Bx,*Cx;
-  int cbb, cbd;
+  int bRows, bCols;
   int r; int* Lp; int* Li; double* Lx;
  };
 
