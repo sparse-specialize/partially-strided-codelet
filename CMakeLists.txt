@@ -26,11 +26,12 @@ if(NOT ortools_FOUND)
     message(STATUS  "ortools not detected" )
 else()
     add_definitions(-DORTOOLS)
+    include_directories(
+            ${ORTOOLS_INCLUDE_DIRS}
+    )
 endif()
 
-include_directories(
-        ${ORTOOLS_INCLUDE_DIRS}
-)
+
 add_definitions(-DUSE_GLOP)
 
 
