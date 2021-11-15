@@ -24,7 +24,7 @@ namespace DDT {
                       const DDT::Config &cfg) {
         // Perform SpMV
         auto a = std::chrono::steady_clock::now();
-#pragma omp parallel for num_threads(cfg.nThread)
+#pragma omp parallel for schedule(dynamic,1) num_threads(cfg.nThread)
         for (int i = 0; i < cfg.nThread; i++) {
             for (const auto &c : lst[i]) {
                 switch (c->get_type()) {
@@ -76,71 +76,50 @@ namespace DDT {
                          const int axi, const int axo, const int lb,
                          const int ub, const int cbl, const int cbu,
                          const int co, const int bRows, const int bCols) {
-        auto ax0 = Ax + axo + axi * 0;
-        auto ax1 = Ax + axo + axi * 1;
-        auto x0 = Bx + cbl;
-        auto x1 = x0 + co;
-
-        int cr = (ub - lb) % 2;
-        for (int i = lb; i < ub - 1; i += 2) {
-            for (int k = 0; k < bCols; k++) {
-                auto r0 = _mm256_setzero_pd();
-                auto r1 = _mm256_setzero_pd();
-
+        auto ax0 = Ax+axo;
+        auto bx0 = Bx+cbl*bCols;
+        auto cx0 = Cx + lb*bCols;
+        for (int i = 0; i < (ub-lb); ++i) {
                 int j = 0;
-                for (; j < (cbu - cbl) - 3; j += 4) {
-                    auto xv0 = _mm256_loadu_pd(x0 + bRows * k + j);
-                    auto xv1 = _mm256_loadu_pd(x1 + bRows * k + j);
+                for (; j < (cbu - cbl) - 3; j+=4) {
+                    // Load Ax
+                    auto a = _mm256_loadu_pd(ax0+j+i*axi);
+                    auto av0 = _mm256_permute4x64_pd(a,0b00000000);
+                    auto av1 = _mm256_permute4x64_pd(a,0b01010101);
+                    auto av2 = _mm256_permute4x64_pd(a,0b10101010);
+                    auto av3 = _mm256_permute4x64_pd(a,0b11111111);
+                    int k = 0;
+                    for (; k < bCols-3; k+=4) {
+                        // Load Cx
+                        auto cv0 = _mm256_loadu_pd(cx0+i*bCols+k);
 
-                    auto axv0 = _mm256_loadu_pd(ax0 + j);
-                    auto axv1 = _mm256_loadu_pd(ax1 + j);
+                        // Load Bx
+                        auto bv0 = _mm256_loadu_pd(bx0+bCols*j+k);
+                        auto bv1 = _mm256_loadu_pd(bx0+bCols*(j+1)+k);
+                        auto bv2 = _mm256_loadu_pd(bx0+bCols*(j+2)+k);
+                        auto bv3 = _mm256_loadu_pd(bx0+bCols*(j+3)+k);
 
-                    r0 = _mm256_fmadd_pd(axv0, xv0, r0);
-                    r1 = _mm256_fmadd_pd(axv1, xv1, r1);
-                }
+                        // Multiply
+                        cv0 = _mm256_fmadd_pd(av0,bv0,cv0);
+                        cv0 = _mm256_fmadd_pd(av1,bv1,cv0);
+                        cv0 = _mm256_fmadd_pd(av2,bv2,cv0);
+                        cv0 = _mm256_fmadd_pd(av3,bv3,cv0);
 
-                // Compute tail
-                __m128d tail = _mm_loadu_pd(Cx + i + bRows * k);
-                for (; j < (cbu - cbl); j++) {
-                    tail[0] += ax0[j] * x0[j + bRows * k];
-                    tail[1] += ax1[j] * x1[j + bRows * k];
-                }
-
-                // H-Sum
-                auto h0 = _mm256_hadd_pd(r0, r1);
-                __m128d vlow = _mm256_castpd256_pd128(h0);
-                __m128d vhigh = _mm256_extractf128_pd(h0, 1);// high 128
-                vlow = _mm_add_pd(vlow, vhigh);// reduce down to 128
-                vlow = _mm_add_pd(vlow, tail);
-                // Store
-                _mm_storeu_pd(Cx + i + bRows * k, vlow);
+                        // Store Cx
+                        _mm256_storeu_pd(cx0+i*bCols+k,cv0);
+                    }
+                    for (; k < bCols; ++k) {
+                        // Create mask
+                        cx0[i*bCols+k] += ax0[j+i*axi] * bx0[bCols*(j+0)+k];
+                        cx0[i*bCols+k] += ax0[j+i*axi+1] * bx0[bCols*(j+1)+k];
+                        cx0[i*bCols+k] += ax0[j+i*axi+2]* bx0[bCols*(j+2)+k];
+                        cx0[i*bCols+k] += ax0[j+i*axi+3] * bx0[bCols*(j+3)+k];
+                    }
             }
-            // Load new addresses
-            ax0 += axi * 2;
-            ax1 += axi * 2;
-            x0 += co * 2;
-            x1 += co * 2;
-        }
-
-        // Compute last iteration
-        if (cr) {
-            for (int k = 0; k < bCols; k++) {
-                auto r0 = _mm256_setzero_pd();
-                int j = 0;
-                for (; j < (cbu - cbl) - 3; j += 4) {
-                    auto xv = _mm256_loadu_pd(x0 + j + bRows * k);
-                    auto axv0 = _mm256_loadu_pd(ax0 + j);
-                    r0 = _mm256_fmadd_pd(axv0, xv, r0);
+            for (; j < (cbu - cbl); ++j) {
+                for (int k = 0; k < bCols; ++k) {
+                    cx0[i*bCols+k] += ax0[j+i*axi] * bx0[bCols*j+k];
                 }
-
-                // Compute tail
-                double tail = 0.;
-                for (; j < cbu - cbl; j++) {
-                    tail += *(ax0 + j) * x0[j + bRows * k];
-                }
-
-                // H-Sum
-                Cx[ub - 1 + bRows * k] += tail + hsum_double_avx(r0);
             }
         }
     }
@@ -246,102 +225,67 @@ namespace DDT {
                          const int *offset, const int axi, const int axo,
                          const int lb, const int ub, const int cb,
                          const int cof, const int bRows, const int bCols) {
-        auto ax0 = Ax + axo + axi * 0;
-        auto ax1 = Ax + axo + axi * 1;
+
         auto x0 = Bx;
-        auto x1 = x0 + cof;
-
-        int co = (ub - lb) % 2;
-        for (int i = lb; i < ub - co; i += 2) {
-            for (int k = 0; k < bCols; k++) {
-                auto r0 = _mm256_setzero_pd();
-                auto r1 = _mm256_setzero_pd();
-
-                int j = 0;
-                for (; j < cb - 3; j += 4) {
-                    __m256d xv0, xv1;
-                    loadbx(offset, x0, j, xv0, msk0, bRows * k);
-                    loadbx(offset, x1, j, xv1, msk1, bRows * k);
-
-                    auto axv0 = _mm256_loadu_pd(ax0 + j);
-                    auto axv1 = _mm256_loadu_pd(ax1 + j);
-
-                    r0 = _mm256_fmadd_pd(axv0, xv0, r0);
-                    r1 = _mm256_fmadd_pd(axv1, xv1, r1);
+        auto cx = lb*bCols+Cx;
+        for (int i = 0; i < (ub-lb); ++i) {
+            auto ax0 = Ax + axo + axi * i;
+            int j = 0;
+            for (; j < cb-3; j+=4) {
+                auto a = _mm256_loadu_pd(ax0+j);
+                auto av0 = _mm256_permute4x64_pd(a,0b00000000);
+                auto av1 = _mm256_permute4x64_pd(a,0b01010101);
+                auto av2 = _mm256_permute4x64_pd(a,0b10101010);
+                auto av3 = _mm256_permute4x64_pd(a,0b11111111);
+                auto bv0 = x0+offset[j]*bCols;
+                auto bv1 = x0+offset[j+1]*bCols;
+                auto bv2 = x0+offset[j+2]*bCols;
+                auto bv3 = x0+offset[j+3]*bCols;
+                int k = 0;
+                for (; k < bCols-3; k+=4) {
+                    auto cx0 = _mm256_loadu_pd(cx+i*bCols+k);
+                    cx0 = _mm256_fmadd_pd(_mm256_loadu_pd(bv0+k),av0,cx0);
+                    cx0 = _mm256_fmadd_pd(_mm256_loadu_pd(bv1+k),av1,cx0);
+                    cx0 = _mm256_fmadd_pd(_mm256_loadu_pd(bv2+k),av2,cx0);
+                    cx0 = _mm256_fmadd_pd(_mm256_loadu_pd(bv3+k),av3,cx0);
+                    _mm256_storeu_pd(cx+i*bCols+k,cx0);
                 }
-
-                // Compute tail
-                __m128d tail = _mm_loadu_pd(Cx + i + bRows * k);
-
-                for (; j < cb; j++) {
-                    tail[0] += ax0[j] * x0[offset[j] + bRows * k];
-                    tail[1] += ax1[j] * x1[offset[j] + bRows * k];
+                for (; k < bCols; ++k) {
+                    cx[i*bCols+k] += ax0[j] * bv0[k];
+                    cx[i*bCols+k] += ax0[j+1] * bv1[k];
+                    cx[i*bCols+k] += ax0[j+2] * bv2[k];
+                    cx[i*bCols+k] += ax0[j+3] * bv3[k];
                 }
-
-                // H-Sum
-                auto h0 = _mm256_hadd_pd(r0, r1);
-                __m128d vlow = _mm256_castpd256_pd128(h0);
-                __m128d vhigh = _mm256_extractf128_pd(h0, 1);
-                vlow = _mm_add_pd(vlow, vhigh);
-                vlow = _mm_add_pd(vlow, tail);
-
-                // Store
-                _mm_storeu_pd(Cx + i + k * bRows, vlow);
             }
-
-            // Load new addresses
-            ax0 += axi * 2;
-            ax1 += axi * 2;
-            x0 += cof * 2;
-            x1 += cof * 2;
-        }
-
-        if (co) {
-            for (int k = 0; k < bCols; k++) {
-                // Compute last iteration
-                auto r0 = _mm256_setzero_pd();
-                __m256d xv;
-                int j = 0;
-                for (; j < cb - 3; j += 4) {
-                    loadbx(offset, x0, j, xv, msk, bRows * k);
-                    auto axv0 = _mm256_loadu_pd(ax0 + j);
-                    r0 = _mm256_fmadd_pd(axv0, xv, r0);
+            for (; j < cb; ++j) {
+                auto bv0 = x0+offset[j]*bCols;
+                for (int k = 0; k < bCols; ++k) {
+                    cx[i*bCols+k] += ax0[j] * bv0[k];
                 }
-
-                // Compute tail
-                double tail = 0.;
-                for (; j < cb; j++) {
-                    tail += *(ax0 + j) * x0[offset[j] + bRows * k];
-                }
-
-                // H-Sum
-                Cx[ub - 1 + bRows * k] += tail + hsum_double_avx(r0);
             }
         }
     }
 
+
     void psc_t3_1D1R_gemm(double *Cx, const double *Ax, const int *Ai,
                           const double *Bx, const int *offset, int lb, int fnl,
                           int cw, const int bRows, const int bCols) {
-        v4df_t Lx_reg, result, x_reg;
         int i = lb;
-        for (int kk = 0; kk < bCols; kk++) {
-            int j = 0, k = fnl;
-            result.v = _mm256_setzero_pd();
-            for (; j < cw - 3; j += 4, k += 4) {
-                x_reg.v = _mm256_set_pd(Bx[offset[j + 3] + kk * bRows],
-                                        Bx[offset[j + 2] + kk * bRows],
-                                        Bx[offset[j + 1] + kk * bRows],
-                                        Bx[offset[j] + kk * bRows]);
-                Lx_reg.v = _mm256_loadu_pd((double *) (Ax + k));
-                result.v = _mm256_fmadd_pd(Lx_reg.v, x_reg.v, result.v);
+        int k = fnl;
+        auto cx = Cx+(i*bCols);
+        for (; k < fnl+cw; ++k) {
+            auto ax0 = _mm256_set1_pd(Ax[k]);
+            int kk = 0;
+            auto bc0 = Bx+Ai[k]*bCols;
+            for (; kk < bCols-3; kk+=4) {
+                auto cx0 = _mm256_loadu_pd(cx+kk);
+                auto bx0 = _mm256_loadu_pd(bc0 + kk);
+                cx0 = _mm256_fmadd_pd(ax0, bx0, cx0);
+                _mm256_storeu_pd(cx+kk,cx0);
             }
-            double tail = 0;
-            for (; j < cw; ++j, ++k) {
-                tail += (Ax[k] * Bx[offset[j] + kk * bRows]);
+            for (; kk < bCols; ++kk) {
+                cx[kk] += Ax[k] * bc0[kk];
             }
-            auto h0 = hsum_double_avx(result.v);
-            Cx[i + kk * bRows] += h0 + tail;
         }
     }
 }

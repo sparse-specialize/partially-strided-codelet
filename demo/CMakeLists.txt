@@ -11,10 +11,12 @@ add_executable(spmv_demo
 
 set(SPMV_DEMO_LIBS ${Sympiler_Libs})
 set(SPMM_DEMO_LIBS ${Sympiler_Libs})
+set(SPSPMM_DEMO_LIBS ${Sympiler_Libs})
 
 if (MKL_FOUND)
     set(SPMV_DEMO_LIBS ${SPMV_DEMO_LIBS} ${MKL_LIBRARIES})
     set(SPMM_DEMO_LIBS ${SPMM_DEMO_LIBS} ${MKL_LIBRARIES})
+    set(SPSPMM_DEMO_LIBS ${SPSPMM_DEMO_LIBS} ${MKL_LIBRARIES})
     if(UNIX AND APPLE)
         set(IOMP_DIR_MAC ${INTEL_COMPILER_DIR}/compilers_and_libraries/mac/lib/)
     endif()
@@ -22,10 +24,16 @@ endif()
 
 if (PAPI_FOUND)
     set(SPMV_DEMO_LIBS ${SPMV_DEMO_LIBS} ${PAPI_LIBRARIES})
+    set(SPMM_DEMO_LIBS ${SPMM_DEMO_LIBS} ${PAPI_LIBRARIES})
 endif()
+
+
 link_directories(${METIS_LIBRARY}
         ${IOMP_DIR_MAC}
+
         )
+
+
 
 
 add_executable(sptrsv_demo
@@ -48,8 +56,19 @@ add_executable(spmm_demo
         ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
         )
 
+add_executable(spspmm_demo
+        FusionDemo.cpp
+        SPSPMM_demo.cpp
+        ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
+        ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
+        )
+target_link_libraries(spspmm_demo
+        ${SPSPMM_DEMO_LIBS})
+
 target_link_libraries(spmm_demo
-        ${SPMM_DEMO_LIBS})
+        ${SPMM_DEMO_LIBS}
+        ${ORTOOLS_LIBRARIES}
+        )
 
 
 

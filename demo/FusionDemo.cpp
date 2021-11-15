@@ -54,8 +54,9 @@ namespace sym_lib {
   FusionDemo::FusionDemo(int n, std::string name):FusionDemo() {
   n_ = n;
   name_ = name;
-  x_in_ = new double[n]();
-  x_ = new double[n]();
+
+  x_in_ = static_cast<double *>(std::aligned_alloc(32, sizeof(double) * n));
+  x_ = static_cast<double *>(std::aligned_alloc(32, sizeof(double) * n));
 #ifdef PROFILE
   pw_ = nullptr;
 #endif

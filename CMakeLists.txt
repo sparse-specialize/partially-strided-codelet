@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.14.7)
 project(DDT)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -6,6 +6,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -march=native -fopenmp")
 
 set(SYMPILER_LBC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/")
@@ -15,9 +16,23 @@ set(SYMPILER_UTIL_INC "${SYMPILER_UTIL}/includes/")
 set(MIS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/")
 set(CSR5_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/CSR5_LOCAL/CSR5_avx2/" "${CMAKE_CURRENT_SOURCE_DIR}/lib/CSR5_LOCAL/CSR5_avx2/detail" "${CMAKE_CURRENT_SOURCE_DIR}/lib/CSR5_LOCAL/CSR5_avx2/detail/avx2")
 
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${ORTOOLS_ROOT})
 find_package(METIS OPTIONAL_COMPONENTS)
 find_package(MKL OPTIONAL_COMPONENTS)
 find_package(PAPI OPTIONAL_COMPONENTS)
+find_package(ortools OPTIONAL_COMPONENTS)
+
+if(NOT ortools_FOUND)
+    message(STATUS  "ortools not detected" )
+else()
+    add_definitions(-DORTOOLS)
+endif()
+
+include_directories(
+        ${ORTOOLS_INCLUDE_DIRS}
+)
+add_definitions(-DUSE_GLOP)
+
 
 if(NOT METIS_FOUND)
     message(STATUS  "METIS not detected, downloading it..." )
@@ -51,7 +66,7 @@ if ($ENV{PROFILE})
     )
 endif()
 
-
+include_directories("${CMAKE_CURRENT_LIST_DIR}/lib/or-tools/include")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/include")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/src/trace_gen")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/lib/cxxopts/include")
@@ -76,7 +91,6 @@ set(Sympiler_SRC
         "${SYMPILER_UTIL}/metis_interface.cpp"
         "${SYMPILER_UTIL}/external/mmio.cpp"
         "${MIS_DIR}/lbc_csc_dag.cpp")
-
 
 aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src" SRC)
 aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src/spmv_codelets/" SPMV_CODELETS_SRC)
