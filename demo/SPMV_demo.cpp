@@ -16,8 +16,8 @@ using namespace sparse_avx;
 int main(int argc, char *argv[]) {
     auto config = DDT::parseInput(argc, argv);
     auto A = sym_lib::read_mtx(config.matrixPath);
-    sym_lib::CSC *A_full = NULLPNTR;
-    sym_lib::CSR *B = NULLPNTR, *L_csr = NULLPNTR;
+    sym_lib::CSC *A_full = nullptr;
+    sym_lib::CSR *B = nullptr, *L_csr = nullptr;
     if (A->stype < 0) {
         A_full = sym_lib::make_full(A);
         B = sym_lib::csc_to_csr(A_full);
@@ -37,37 +37,47 @@ int main(int argc, char *argv[]) {
     double *sol_spmv = sps->solution();
 
 #ifndef PROFILE
-    auto spspre = new SpMVSerialPrefetch(B,A, sol_spmv, "Prefetched SpMV", config.hint, config.prefetch_distance);
-    auto sol_spmv_pre = spspre->evaluate();
+//    auto spspre = new SpMVSerialPrefetch(B,A, sol_spmv, "Prefetched SpMV", config.hint, config.prefetch_distance);
+//    auto sol_spmv_pre = spspre->evaluate();
 
     auto *spsp = new SpMVParallel(B, A, sol_spmv, "SpMV Parallel");
     spsp->set_num_threads(config.nThread);
     auto spmv_p = spsp->evaluate();
+    delete spsp;
 
     auto spmvp = new SpMVVec1Parallel(B,A,sol_spmv, "SpMVVec1_Parallel");
     spmvp->set_num_threads(config.nThread);
     auto spmv1pe = spmvp->evaluate();
+    delete spmvp;
 
     auto *spmv1 = new SpMVVec1(B, A, sol_spmv, "SpMVVec1_4");
     auto spmv1e = spmv1->evaluate();
+    delete spmv1;
 
     auto *spmv1_8 = new SpMVVec1_8(B, A, sol_spmv, "SpMVVec1_8");
     auto spmv1_8e = spmv1_8->evaluate();
+    delete spmv1_8;
 
     auto *spmv1_16 = new SpMVVec1_16(B, A, sol_spmv, "SpMVVec1_16");
     auto spmv1_16e = spmv1_16->evaluate();
+    delete spmv1_16;
 
     auto *spmv2 = new SpMVVec2(B, A, sol_spmv, "SpMVVec2");
     auto spmv2e = spmv2->evaluate();
+    delete spmv2;
 
 #ifdef MKL
     auto mklspmvst = new SpMVMKL(1, B, A, sol_spmv, "MKL SPMV ST");
     auto mkl_exec_st = mklspmvst->evaluate();
+    delete mklspmvst;
 
     auto mklspmvmt = new SpMVMKL(config.nThread, B, A, sol_spmv, "MKL SPMV MT");
     mklspmvmt->set_num_threads(config.nThread);
     auto mkl_exec_mt = mklspmvmt->evaluate();
     auto mkl_analysis_bw = mklspmvmt->get_analysis_bw();
+    delete mklspmvmt;
+
+
 #endif
 #endif
 
@@ -119,10 +129,10 @@ int main(int argc, char *argv[]) {
     auto cvr_execmt = cvrspmv->evaluate();
 #endif
 
-    auto ellpackspmv = new SpMVELL(B, A, sol_spmv, "SpMV ELLPACK");
-    ellpackspmv->set_num_threads(config.nThread);
-    auto ellpackspmv_exec = ellpackspmv->evaluate();
-    auto ellpackspmv_analysis = ellpackspmv->get_analysis_bw();
+//    auto ellpackspmv = new SpMVELL(B, A, sol_spmv, "SpMV ELLPACK");
+//    ellpackspmv->set_num_threads(config.nThread);
+//    auto ellpackspmv_exec = ellpackspmv->evaluate();
+//    auto ellpackspmv_analysis = ellpackspmv->get_analysis_bw();
 
 #ifdef DIA
     auto diaspmv = new SpMVDIA(B, A, sol_spmv, "SpMV DIA");
@@ -131,43 +141,53 @@ int main(int argc, char *argv[]) {
     auto diaspmv_analysis = diaspmv->get_analysis_bw();
 #endif
 
-    auto csr5spmv = new SpMVCSR5(B, A, sol_spmv, "SpMV CSR5 MT");
-    csr5spmv->set_num_threads(config.nThread);
-    auto csr5spmv_execmt = csr5spmv->evaluate();
-    auto csr5spmv_analysis = csr5spmv->get_analysis_bw();
+    sym_lib::timing_measurement csr5spmv_execmt;
+    sym_lib::timing_measurement csr5spmv_analysis;
+    if (L_csr->m == L_csr->n) {
+            auto csr5spmv = new SpMVCSR5(B, A, sol_spmv, "SpMV CSR5 MT");
+            csr5spmv->set_num_threads(config.nThread);
+            csr5spmv_execmt = csr5spmv->evaluate();
+            csr5spmv_analysis = csr5spmv->get_analysis_bw();
+            delete csr5spmv;
+    }
 
     auto nThread = config.nThread;
     config.nThread = 1;
     auto *ddtspmvst = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT ST");
     auto ddt_execst = ddtspmvst->evaluate();
+    delete ddtspmvst;
 
     config.nThread = nThread;
     auto *ddtspmvmt = new SpMVDDT(B, A, sol_spmv, config, "SpMV DDT MT");
     ddtspmvmt->set_num_threads(config.nThread);
     auto ddt_execmt = ddtspmvmt->evaluate();
     auto ddt_analysis = ddtspmvmt->get_analysis_bw();
+    delete ddtspmvmt;
 
 
     if (config.header) {
         std::cout << "Matrix,Threads, prefer_fsc, size_cutoff, col_threshold,";
-        std::cout << "SpMV Base, SpMV Prefetched, SpMV Parallel Base, SpMV Vec 1_4 Parallel, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2,";
+        std::cout << "SpMV Base, SpMV Parallel Base, SpMV Vec 1_4 Parallel, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2,";
 #ifdef MKL
         std::cout << "SpMV MKL Serial Executor, SpMV MKL Parallel Executor,";
 #endif
 #ifdef __AVX512__
         std::cout << "SpMV CVR Parallel Executor,";
 #endif
-        std::cout <<
-        "SpMVCSR5 Parallel Executor, ELLPACK Parallel Executor,";
+        if (L_csr->m == L_csr->n) {
+            std::cout << "SpMVCSR5 Parallel Executor,";
+        }
 #ifdef DIA
         "DIA Parallel Executor,"
 #endif
-        std::cout << "SpMVDDT Serial Executor,SpMV DDT Parallel Executor, ELLPack Analysis, DIA Analysis, MKL Analysis, CSR5 Analysis, SPMV Analysis";
+        std::cout << "SpMVDDT Serial Executor,SpMV DDT Parallel Executor, MKL Analysis";
+        if (L_csr->m == L_csr->n) { std::cout << ",CSR5 Analysis"; }
+        std::cout << ", SPMV Analysis";
         std::cout << "\n";
     }
 
     std::cout << config.matrixPath << "," << config.nThread << "," << DDT::prefer_fsc << "," << DDT::clt_width << "," << DDT::col_th << ","
-    << spmv_baseline.elapsed_time << "," << sol_spmv_pre.elapsed_time << "," << spmv_p.elapsed_time << ",";
+    << spmv_baseline.elapsed_time << "," << spmv_p.elapsed_time << ",";
      std::cout << spmv1pe.elapsed_time << ",";
      std::cout << spmv1e.elapsed_time << "," << spmv2e.elapsed_time << ",";
      std::cout << spmv1_8e.elapsed_time << "," << spmv1_16e.elapsed_time << ",";
@@ -177,19 +197,23 @@ int main(int argc, char *argv[]) {
 #ifdef __AVX512__
      std::cout << cvr_execmt.elapsed_time << ",";
 #endif
-    std::cout << csr5spmv_execmt.elapsed_time << ",";
-    std::cout << ellpackspmv_exec.elapsed_time << ",";
+     if (L_csr->m == L_csr->n) {
+         std::cout << csr5spmv_execmt.elapsed_time << ",";
+     }
 #ifdef DIA
     std::cout << diaspmv_exec.elapsed_time << ",";
 #endif
     std::cout
               << ddt_execst.elapsed_time << ",";
                     std::cout << ddt_execmt.elapsed_time << ",";
-                    std::cout << ellpackspmv_analysis.elapsed_time << ",";
 #ifdef DIA
                 std::cout << diaspmv_analysis.elapsed_time << ",";
 #endif
-                    std::cout << mkl_analysis_bw.elapsed_time << "," << csr5spmv_analysis.elapsed_time << "," << ddt_analysis.elapsed_time << ",";
+                    std::cout << mkl_analysis_bw.elapsed_time << ",";
+                    if (L_csr->m == L_csr->n) {
+                        std::cout << csr5spmv_analysis.elapsed_time << ",";
+                    }
+                    std::cout << ddt_analysis.elapsed_time << ",";
     std::cout << "\n";
 
     delete A;

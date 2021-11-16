@@ -13,6 +13,7 @@ namespace sym_lib{
  class FusionDemo {
 
  protected:
+  int m_{};
   int n_{};
   double *correct_x_{};
   double *x_{}, *x_in_{};
@@ -39,6 +40,7 @@ namespace sym_lib{
  public:
   FusionDemo();
   explicit  FusionDemo(int, std::string);
+  FusionDemo(int m, int n, std::string name);
   virtual ~FusionDemo();
 
 #ifdef PAPI

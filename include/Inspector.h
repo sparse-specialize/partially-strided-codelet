@@ -16,7 +16,7 @@
 
 #include <cassert>
 
-#define ENABLE_COST_MODEL
+//#define ENABLE_COST_MODEL
 
 namespace DDT {
     inline bool hasAdacentIteration(int i, int** ip);

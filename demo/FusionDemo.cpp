@@ -52,13 +52,26 @@ namespace sym_lib {
   }
 
   FusionDemo::FusionDemo(int n, std::string name):FusionDemo() {
-  n_ = n;
+      m_ = n;
+      n_ = n;
   name_ = name;
 
   x_in_ = static_cast<double *>(std::aligned_alloc(32, sizeof(double) * n));
   x_ = static_cast<double *>(std::aligned_alloc(32, sizeof(double) * n));
 #ifdef PROFILE
   pw_ = nullptr;
+#endif
+ }
+
+ FusionDemo::FusionDemo(int m, int n, std::string name):FusionDemo() {
+     m_ = m;
+     n_ = n;
+     name_ = name;
+
+     x_in_ = static_cast<double *>(std::aligned_alloc(32, sizeof(double) * n));
+     x_ = static_cast<double *>(std::aligned_alloc(32, sizeof(double) * m));
+#ifdef PROFILE
+     pw_ = nullptr;
 #endif
  }
 
@@ -87,12 +100,12 @@ namespace sym_lib {
      for (int i = 0; i < this->n_; ++i) {
          x_in_[i] = 1;
      }
-    std::fill_n(x_,n_,0.0);
+    std::fill_n(x_,m_,0.0);
  }
 
  void FusionDemo::testing() {
   if(correct_x_)
-   if (!is_equal(0, n_, correct_x_, x_,1e-6))
+   if (!is_equal(0, m_, correct_x_, x_,1e-6))
     PRINT_LOG(name_ + " code != reference solution.\n");
  }
 

@@ -493,7 +493,7 @@ namespace sparse_avx {
     public:
         SpMVSerial(sym_lib::CSR *L, sym_lib::CSC *L_csc, double *correct_x,
                    std::string name)
-            : FusionDemo(L_csc->n, name) {
+                   : FusionDemo(L_csc->m,L_csc->n, name) {
             L1_csr_ = L;
             L1_csc_ = L_csc;
             correct_x_ = correct_x;
@@ -536,7 +536,7 @@ namespace sparse_avx {
         sym_lib::timing_measurement fused_code() override {
             sym_lib::timing_measurement t1;
             t1.start_timer();
-            spmv_csr_parallel(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
+            spmv_csr_parallel(m_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
                               num_threads_);
             t1.measure_elapsed_time();
             //copy_vector(0,n_,x_in_,x_);
@@ -558,7 +558,7 @@ namespace sparse_avx {
         sym_lib::timing_measurement fused_code() override {
             sym_lib::timing_measurement t1;
             t1.start_timer();
-            spmv_vec1_parallel(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_,
+            spmv_vec1_parallel(m_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_,
                                x_, num_threads_);
             t1.measure_elapsed_time();
             //copy_vector(0,n_,x_in_,x_);
@@ -581,7 +581,7 @@ namespace sparse_avx {
         sym_lib::timing_measurement fused_code() override {
             sym_lib::timing_measurement t1;
             t1.start_timer();
-            spmv_vec1(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
+            spmv_vec1(m_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
                       num_threads_);
             t1.measure_elapsed_time();
             //copy_vector(0,n_,x_in_,x_);
@@ -603,7 +603,7 @@ namespace sparse_avx {
         sym_lib::timing_measurement fused_code() override {
             sym_lib::timing_measurement t1;
             t1.start_timer();
-            spmv_vec1_8(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
+            spmv_vec1_8(m_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
                         num_threads_);
             t1.measure_elapsed_time();
             //copy_vector(0,n_,x_in_,x_);
@@ -625,7 +625,7 @@ namespace sparse_avx {
         sym_lib::timing_measurement fused_code() override {
             sym_lib::timing_measurement t1;
             t1.start_timer();
-            spmv_vec1_16(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
+            spmv_vec1_16(m_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
                          num_threads_);
             t1.measure_elapsed_time();
             //copy_vector(0,n_,x_in_,x_);
@@ -647,7 +647,7 @@ namespace sparse_avx {
         sym_lib::timing_measurement fused_code() override {
             sym_lib::timing_measurement t1;
             t1.start_timer();
-            spmv_vec2(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
+            spmv_vec2(m_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
                       num_threads_);
             t1.measure_elapsed_time();
             //copy_vector(0,n_,x_in_,x_);
@@ -669,7 +669,7 @@ namespace sparse_avx {
         sym_lib::timing_measurement fused_code() override {
             sym_lib::timing_measurement t1;
             t1.start_timer();
-            spmv_wathen_clean(n_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
+            spmv_wathen_clean(m_, L1_csr_->p, L1_csr_->i, L1_csr_->x, x_in_, x_,
                               num_threads_);
             t1.measure_elapsed_time();
             //copy_vector(0,n_,x_in_,x_);
