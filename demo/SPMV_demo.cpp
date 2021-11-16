@@ -16,15 +16,7 @@ using namespace sparse_avx;
 int main(int argc, char *argv[]) {
     auto config = DDT::parseInput(argc, argv);
     auto A = sym_lib::read_mtx(config.matrixPath);
-    sym_lib::CSC *A_full = nullptr;
-    sym_lib::CSR *B = nullptr, *L_csr = nullptr;
-    if (A->stype < 0) {
-        A_full = sym_lib::make_full(A);
-        B = sym_lib::csc_to_csr(A_full);
-    } else {
-        B = sym_lib::csc_to_csr(A);
-    }
-    L_csr = sym_lib::csc_to_csr(A);
+    sym_lib::CSR *B = sym_lib::csc_to_csr(A);
 
 #ifdef PROFILE
     /// Profiling
@@ -44,6 +36,7 @@ int main(int argc, char *argv[]) {
     spsp->set_num_threads(config.nThread);
     auto spmv_p = spsp->evaluate();
     delete spsp;
+
 
     auto spmvp = new SpMVVec1Parallel(B,A,sol_spmv, "SpMVVec1_Parallel");
     spmvp->set_num_threads(config.nThread);
@@ -143,7 +136,7 @@ int main(int argc, char *argv[]) {
 
     sym_lib::timing_measurement csr5spmv_execmt;
     sym_lib::timing_measurement csr5spmv_analysis;
-    if (L_csr->m == L_csr->n) {
+    if (B->m == B->n) {
             auto csr5spmv = new SpMVCSR5(B, A, sol_spmv, "SpMV CSR5 MT");
             csr5spmv->set_num_threads(config.nThread);
             csr5spmv_execmt = csr5spmv->evaluate();
@@ -174,14 +167,14 @@ int main(int argc, char *argv[]) {
 #ifdef __AVX512__
         std::cout << "SpMV CVR Parallel Executor,";
 #endif
-        if (L_csr->m == L_csr->n) {
+        if (B->m == B->n) {
             std::cout << "SpMVCSR5 Parallel Executor,";
         }
 #ifdef DIA
         "DIA Parallel Executor,"
 #endif
         std::cout << "SpMVDDT Serial Executor,SpMV DDT Parallel Executor, MKL Analysis";
-        if (L_csr->m == L_csr->n) { std::cout << ",CSR5 Analysis"; }
+        if (B->m == B->n) { std::cout << ",CSR5 Analysis"; }
         std::cout << ", SPMV Analysis";
         std::cout << "\n";
     }
@@ -197,7 +190,7 @@ int main(int argc, char *argv[]) {
 #ifdef __AVX512__
      std::cout << cvr_execmt.elapsed_time << ",";
 #endif
-     if (L_csr->m == L_csr->n) {
+     if (B->m == B->n) {
          std::cout << csr5spmv_execmt.elapsed_time << ",";
      }
 #ifdef DIA
@@ -210,7 +203,7 @@ int main(int argc, char *argv[]) {
                 std::cout << diaspmv_analysis.elapsed_time << ",";
 #endif
                     std::cout << mkl_analysis_bw.elapsed_time << ",";
-                    if (L_csr->m == L_csr->n) {
+                    if (B->m == B->n) {
                         std::cout << csr5spmv_analysis.elapsed_time << ",";
                     }
                     std::cout << ddt_analysis.elapsed_time << ",";
@@ -218,8 +211,6 @@ int main(int argc, char *argv[]) {
 
     delete A;
     delete B;
-    delete A_full;
-    delete L_csr;
     delete sps;
 #endif
 

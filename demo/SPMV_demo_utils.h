@@ -224,8 +224,8 @@ namespace sparse_avx {
             for (; j < Ap[i + 1] - 7; j += 8) {
                 auto xv0 = _mm256_set_pd(x[Ai[j + 3]], x[Ai[j + 2]],
                                          x[Ai[j + 1]], x[Ai[j]]);
-                auto xv1 = _mm256_set_pd(x[Ai[j + 8]], x[Ai[j + 7]],
-                                         x[Ai[j + 6]], x[Ai[j + 5]]);
+                auto xv1 = _mm256_set_pd(x[Ai[j + 7]], x[Ai[j + 6]],
+                                         x[Ai[j + 5]], x[Ai[j + 4]]);
 
                 auto axv0 = _mm256_loadu_pd(Ax + j);
                 auto axv1 = _mm256_loadu_pd(Ax + j + 4);
