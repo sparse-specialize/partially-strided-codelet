@@ -15,15 +15,7 @@
 int main(int argc, char *argv[]) {
     auto config = DDT::parseInput(argc, argv);
     auto A = sym_lib::read_mtx(config.matrixPath);
-    sym_lib::CSC *A_full = NULLPNTR;
-    sym_lib::CSR *B = NULLPNTR, *L_csr = NULLPNTR;
-    if (A->stype < 0) {
-        A_full = sym_lib::make_full(A);
-        B = sym_lib::csc_to_csr(A_full);
-    } else {
-        A_full = A;
-        B = sym_lib::csc_to_csr(A);
-    }
+    sym_lib::CSR *B = sym_lib::csc_to_csr(A);
 
 #ifdef PROFILE
     /// Profiling
@@ -34,7 +26,7 @@ int main(int argc, char *argv[]) {
     int bRows = B->n;
     int bCols = config.bMatrixCols;
 
-    auto final_solution = new double[A_full->m*bCols]();
+    auto final_solution = new double[A->m*bCols]();
 
 #ifdef PROFILE
     auto *sps = new sparse_avx::SpMMSerial(B, A_full, bRows, bCols, "SpMM Serial");
@@ -54,13 +46,13 @@ int main(int argc, char *argv[]) {
     std::cout << "\n";
 #else
 
-    auto *sps = new sparse_avx::SpMMSerial(B, A_full, bRows, bCols, "SpMM Serial");
+    auto *sps = new sparse_avx::SpMMSerial(B, A, bRows, bCols, "SpMM Serial");
     auto spmm_baseline = sps->evaluate();
     double *sol_spmm = sps->solution();
-    std::copy(sol_spmm,sol_spmm+A_full->m*bCols,final_solution);
+    std::copy(sol_spmm,sol_spmm+A->m*bCols,final_solution);
     delete sps;
 
-    auto *spsp = new sparse_avx::SpMMParallel(B, A_full, final_solution, bRows, bCols, "SpMM Parallel");
+    auto *spsp = new sparse_avx::SpMMParallel(B, A, final_solution, bRows, bCols, "SpMM Parallel");
     spsp->set_num_threads(config.nThread);
     auto spmm_parallel_baseline = spsp->evaluate();
     auto spmm_parallel_baseline_elapsed = spmm_parallel_baseline.elapsed_time;
@@ -74,19 +66,19 @@ int main(int argc, char *argv[]) {
     delete spPermuted;
 #endif
 
-    auto *sp_tiled = new sparse_avx::SpMMTiledParallel(B, A_full, final_solution, bRows, bCols,config.mTileSize,config.nTileSize,"SpMM Tiled Parallel");
+    auto *sp_tiled = new sparse_avx::SpMMTiledParallel(B, A, final_solution, bRows, bCols,config.mTileSize,config.nTileSize,"SpMM Tiled Parallel");
     sp_tiled->set_num_threads(config.nThread);
     auto spmm_tiled_parallel_baseline = sp_tiled->evaluate();
     auto spmm_tiled_parallel_baseline_elapsed = spmm_tiled_parallel_baseline.elapsed_time;
     delete sp_tiled;
 
-    auto *spmkl = new sparse_avx::SpMMMKL(B, A_full, final_solution, bRows, bCols, "SpMM MKL");
+    auto *spmkl = new sparse_avx::SpMMMKL(B, A, final_solution, bRows, bCols, "SpMM MKL");
     spmkl->set_num_threads(config.nThread);
     auto spmm_mkl_eval = spmkl->evaluate();
     auto spmm_mkl_eval_elapsed = spmm_mkl_eval.elapsed_time;
     delete spmkl;
 
-    auto *spddt = new sparse_avx::SpMMDDT(B, A_full, final_solution, config, bRows, bCols, "SpMM DDT");
+    auto *spddt = new sparse_avx::SpMMDDT(B, A, final_solution, config, bRows, bCols, "SpMM DDT");
     spddt->set_num_threads(config.nThread);
     auto spmm_ddt_eval = spddt->evaluate();
     auto spmm_ddt_eval_elapsed = spmm_ddt_eval.elapsed_time;
@@ -112,7 +104,6 @@ int main(int argc, char *argv[]) {
 #endif
 
     delete A;
-    delete A_full;
     delete B;
     delete[] final_solution;
 }
