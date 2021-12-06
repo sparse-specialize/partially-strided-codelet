@@ -20,7 +20,7 @@
 
 #include "DDT.h"
 #include "DDTDef.h"
-#include "ParseMatrixMarket.h"
+#include "SparseMatrixIO.h"
 #include "SpTRSVModel.h"
 
 #include <DDTUtils.h>
@@ -186,9 +186,9 @@ namespace DDT {
     // Parse matrix file
     Matrix m;
     if (cfg.sf == CSR_SF) {
-       m = readSparseMatrix<DDT::CSR>(cfg.matrixPath);
+       m = DDT::readSparseMatrix<DDT::CSR>(cfg.matrixPath);
     } else if (cfg.sf == CSC_SF) {
-      m = readSparseMatrix<DDT::CSC>(cfg.matrixPath);
+      m = DDT::readSparseMatrix<DDT::CSC>(cfg.matrixPath);
     }
 
     // Allocate memory and generate trace

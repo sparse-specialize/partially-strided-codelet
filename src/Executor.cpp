@@ -22,7 +22,7 @@
 #include "SpMVGenericCode.h"
 #include "SpMMGenericCode.h"
 #include "GenericCodeletsSpTRSV.h"
-#include "ParseMatrixMarket.h"
+#include "SparseMatrixIO.h"
 
 #include <chrono>
 #include <vector>

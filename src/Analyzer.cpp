@@ -6,73 +6,29 @@
 #include "DDT.h"
 #include "DDTDef.h"
 #include "DDTUtils.h"
-#include "ParseMatrixMarket.h"
+#include "SparseMatrixIO.h"
 #include "GenericCodelets.h"
 
 #include <numeric>
 #include <valarray>
+#include <strstream>
+
+#define CSV_INIT() \
+
+typedef struct {
+    std::strstream header;
+    std::strstream values;
+} csv_row_t;
+
+
+#define CSV_ENTRY(row, var)      \
+    row.header << #var << ",";   \
+    row.values << var << ",";
+
+
+
 
 namespace DDT {
-    const std::string ANALYSIS_HEADER =
-            "MATRIX_NAME,"
-            "THREADS,"
-            "codelet_min_width,"
-            "codelet_max_distance,"
-            "only_fsc_codelets,"
-            "rows,"
-            "cols,"
-            "nnz,"
-            "average_row_length,"
-            "average_row_length_std_deviation,"
-            "average_row_sequential_component,"
-            "average_row_sequential_component_std_deviation,"
-            "average_length_row_sequential_component,"
-            "average_length_row_sequential_component_std_deviation,"
-            "average_row_overlap,"
-            "average_row_overlap_std_deviation,"
-            "average_row_skew,"
-            "average_row_skew_std_deviation,"
-            "average_col_distance,"
-            "average_col_distance_std_deviation,"
-            "unique_row_patterns," // FOD hash
-            "average_num_unique_row_patterns,"
-            "average_num_unique_row_patterns_std_deviation,"
-            "percent_vectorizable,"
-            "num_fsc,"
-            "average_fsc_width,"
-            "average_fsc_width_std_deviation,"
-            "average_fsc_height,"
-            "average_fsc_height_std_deviation,"
-            "average_fsc_points,"
-            "average_fsc_points_std_deviation,"
-            "total_loads_fsc,"
-            "num_psc1,"
-            "average_psc1_width,"
-            "average_psc1_width_std_deviation,"
-            "average_psc1_height,"
-            "average_psc1_height_std_deviation,"
-            "average_psc1_points,"
-            "average_psc1_points_std_deviation,"
-            "total_loads_psc1,"
-            "num_psc2,"
-            "average_psc2_width,"
-            "average_psc2_width_std_deviation,"
-            "average_psc2_height,"
-            "average_psc2_height_std_deviation,"
-            "average_psc2_points,"
-            "average_psc2_points_std_deviation,"
-            "total_loads_psc2,"
-            "num_psc3,"
-            "average_psc3_width,"
-            "average_psc3_width_std_deviation"
-            "num_psc3_v1,"
-            "average_psc3_v1_width,"
-            "average_psc3_v1_width_std_deviation"
-            "num_psc3_v2,"
-            "average_psc3_v2_width,"
-            "average_psc3_v2_width_std_deviation,"
-            "total_loads_psc3,"
-            "total_loads";
     void analyzeData(const DDT::GlobalObject& d, std::vector<DDT::Codelet*>** cll, const DDT::Config& config) {
         auto cl = new std::vector<DDT::Codelet*>[config.nThread]();
 
@@ -217,12 +173,6 @@ namespace DDT {
                             return acc + std::pow(entry.second-average_num_unique_row_patterns,2);
                         }) / unique_row_patterns_hash.size());
 
-        int num_fsc  = 0,
-            num_psc1 = 0,
-            num_psc2 = 0,
-            num_psc3 = 0,
-            num_psc3_v1 = 0,
-            num_psc3_v2 = 0;
         float average_fsc_width = 0,
               average_fsc_width_std_deviation = 0.,
               average_fsc_height = 0.,
@@ -251,8 +201,20 @@ namespace DDT {
               average_psc3_v2_width = 0.,
               average_psc3_v2_width_std_deviation = 0.,
               total_loads_psc3 = 0.;
+      int num_fsc  = 0,
+              num_fsc_points  = 0,
+              num_psc1 = 0,
+              num_psc1_points = 0,
+              num_psc2 = 0,
+              num_psc2_points = 0,
+              num_psc3 = 0,
+              num_psc3_points = 0,
+              num_psc3_v1 = 0,
+              num_psc3_v1_points = 0,
+              num_psc3_v2 = 0,
+              num_psc3_v2_points = 0;
 
-        // Calculate Codelet Means/Stdev
+      // Calculate Codelet Means/Stdev
         for (int i = 0; i < 2; i++) {
             for (auto const &c : cl) {
                 switch (c->get_type()) {
@@ -262,6 +224,7 @@ namespace DDT {
                             average_fsc_width += c->col_width;
                             average_fsc_height += c->row_width;
                             average_fsc_points += c->row_width*c->col_width;
+                            num_fsc_points += c->row_width*c->col_width;
                             total_loads_fsc += 6;
                         } else {
                             average_fsc_width_std_deviation += std::pow(c->col_width - average_fsc_width,2);
@@ -275,6 +238,7 @@ namespace DDT {
                             average_psc1_width += c->col_width;
                             average_psc1_height += c->row_width;
                             average_psc1_points += c->col_width * c->row_width;
+                            num_psc1_points += c->col_width * c->row_width;
                             total_loads_psc1 += 4 + c->row_width;
                         } else {
                             average_psc1_width_std_deviation += std::pow(c->col_width - average_psc1_width,2);
@@ -288,6 +252,7 @@ namespace DDT {
                             average_psc2_width  += c->col_width;
                             average_psc2_height += c->row_width;
                             average_psc2_points += c->col_width*c->row_width;
+                            num_psc2_points += c->col_width*c->row_width;
                             total_loads_psc2    += 5 + c->col_width;
                         } else {
                             average_psc2_width_std_deviation += std::pow(c->col_width - average_psc2_width,2);
@@ -300,6 +265,7 @@ namespace DDT {
                             num_psc3++;
                             average_psc3_width += c->col_width;
                             total_loads_psc3   += 5 + c->col_width;
+                            num_psc3_points += c->col_width * c->row_width;
                         } else {
                             average_psc3_width_std_deviation += std::pow(c->col_width - average_psc3_width,2);
                         }
@@ -308,6 +274,7 @@ namespace DDT {
                         if (i == 0) {
                             num_psc3_v1++;
                             average_psc3_v1_width += c->col_width;
+                            num_psc3_v1_points += c->col_width * c->row_width;
                         } else {
                             average_psc3_v1_width_std_deviation += std::pow(c->col_width - average_psc3_v1_width,2);
                         }
@@ -316,6 +283,7 @@ namespace DDT {
                         if (i == 0) {
                             num_psc3_v2++;
                             average_psc3_v2_width += c->col_width;
+                            num_psc3_v2_points += c->col_width * c->row_width;
                         } else {
                             average_psc3_v2_width_std_deviation += std::pow(c->col_width - average_psc3_v2_width,2);
                         }
@@ -355,73 +323,85 @@ namespace DDT {
             }
         }
 
+        csv_row_t row;
+        CSV_ENTRY(row, config.matrixPath);
+        CSV_ENTRY(row, config.nThread);
+        CSV_ENTRY(row, DDT::clt_width);
+        CSV_ENTRY(row, DDT::col_th);
+        CSV_ENTRY(row, DDT::prefer_fsc);
+        CSV_ENTRY(row, rows);
+        CSV_ENTRY(row, cols);
+
+        CSV_ENTRY(row, nnz);
+        CSV_ENTRY(row, num_fsc);
+        CSV_ENTRY(row, num_fsc_points);
+        CSV_ENTRY(row, num_psc1);
+        CSV_ENTRY(row, num_psc1_points);
+        CSV_ENTRY(row, num_psc2);
+        CSV_ENTRY(row, num_psc2_points);
+        CSV_ENTRY(row, num_psc3);
+        CSV_ENTRY(row, num_psc3_points);
+        CSV_ENTRY(row, num_psc3_v1);
+        CSV_ENTRY(row, num_psc3_v1_points);
+        CSV_ENTRY(row, num_psc3_v2);
+        CSV_ENTRY(row, num_psc3_v2_points);
+
+        CSV_ENTRY(row, average_row_length);
+        CSV_ENTRY(row, average_row_length_std_deviation);
+        CSV_ENTRY(row, average_row_sequential_component);
+        CSV_ENTRY(row, average_row_sequential_component_std_deviation);
+        CSV_ENTRY(row, average_length_row_sequential_component);
+        CSV_ENTRY(row, average_length_row_sequential_component_std_deviation);
+        CSV_ENTRY(row, average_row_overlap);
+        CSV_ENTRY(row, average_row_overlap_std_deviation);
+        CSV_ENTRY(row, average_row_skew);
+        CSV_ENTRY(row, average_row_skew_std_deviation);
+        CSV_ENTRY(row, average_col_distance);
+        CSV_ENTRY(row, average_col_distance_std_deviation);
+        CSV_ENTRY(row, unique_row_patterns);
+        CSV_ENTRY(row, average_num_unique_row_patterns);
+        CSV_ENTRY(row, average_num_unique_row_patterns_std_deviation);
+        CSV_ENTRY(row, (numSeqPoints / nnz));
+
+        CSV_ENTRY(row, average_fsc_width);
+        CSV_ENTRY(row, average_fsc_width_std_deviation);
+        CSV_ENTRY(row, average_fsc_height);
+        CSV_ENTRY(row, average_fsc_height_std_deviation);
+        CSV_ENTRY(row, average_fsc_points);
+        CSV_ENTRY(row, average_fsc_points_std_deviation);
+        CSV_ENTRY(row, total_loads_fsc);
+
+        CSV_ENTRY(row, average_psc1_width);
+        CSV_ENTRY(row, average_psc1_width_std_deviation);
+        CSV_ENTRY(row, average_psc1_height);
+        CSV_ENTRY(row, average_psc1_height_std_deviation);
+        CSV_ENTRY(row, average_psc1_points);
+        CSV_ENTRY(row, average_psc1_points_std_deviation);
+        CSV_ENTRY(row, total_loads_psc1);
+
+        CSV_ENTRY(row, average_psc2_width);
+        CSV_ENTRY(row, average_psc2_width_std_deviation);
+        CSV_ENTRY(row, average_psc2_height);
+        CSV_ENTRY(row, average_psc2_height_std_deviation);
+        CSV_ENTRY(row, average_psc2_points);
+        CSV_ENTRY(row, average_psc2_points_std_deviation);
+        CSV_ENTRY(row, total_loads_psc2);
+
+        CSV_ENTRY(row, average_psc3_width);
+        CSV_ENTRY(row, average_psc3_width_std_deviation);
+
+        CSV_ENTRY(row, average_psc3_v1_width);
+        CSV_ENTRY(row, average_psc3_v1_width_std_deviation);
+
+        CSV_ENTRY(row, average_psc3_v2_width);
+        CSV_ENTRY(row, average_psc3_v2_width_std_deviation);
+        CSV_ENTRY(row, total_loads_psc3);
+
         if (config.header) {
-            std::cout << ANALYSIS_HEADER << std::endl;
+          std::cout << row.header.rdbuf() << std::endl;
         }
 
-        std::cout <<
-                config.matrixPath << "," <<
-                config.nThread << "," <<
-                DDT::clt_width << "," <<
-                DDT::col_th << "," <<
-                DDT::prefer_fsc << "," <<
-                rows << "," <<
-                cols << "," <<
-                nnz  << "," <<
-                average_row_length << "," <<
-                average_row_length_std_deviation << "," <<
-                average_row_sequential_component << "," <<
-                average_row_sequential_component_std_deviation << "," <<
-                average_length_row_sequential_component << "," <<
-                average_length_row_sequential_component_std_deviation << "," <<
-                average_row_overlap << "," <<
-                average_row_overlap_std_deviation << "," <<
-                average_row_skew << "," <<
-                average_row_skew_std_deviation << "," <<
-                average_col_distance << "," <<
-                average_col_distance_std_deviation << "," <<
-                unique_row_patterns << "," <<
-                average_num_unique_row_patterns << "," <<
-                average_num_unique_row_patterns_std_deviation << "," <<
-                (numSeqPoints / nnz) << ",";
-        std::cout <<
-            num_fsc << "," <<
-            average_fsc_width << "," <<
-            average_fsc_width_std_deviation << "," <<
-            average_fsc_height << "," <<
-            average_fsc_height_std_deviation << "," <<
-            average_fsc_points << "," <<
-            average_fsc_points_std_deviation << "," <<
-            total_loads_fsc << "," <<
-            num_psc1 << "," <<
-            average_psc1_width << "," <<
-            average_psc1_width_std_deviation << "," <<
-            average_psc1_height << "," <<
-            average_psc1_height_std_deviation << "," <<
-            average_psc1_points << "," <<
-            average_psc1_points_std_deviation << "," <<
-            total_loads_psc1 << "," <<
-            num_psc2 << "," <<
-            average_psc2_width << "," <<
-            average_psc2_width_std_deviation << "," <<
-            average_psc2_height << "," <<
-            average_psc2_height_std_deviation << "," <<
-            average_psc2_points << "," <<
-            average_psc2_points_std_deviation << "," <<
-            total_loads_psc2 << "," <<
-            num_psc3 << "," <<
-            average_psc3_width << "," <<
-            average_psc3_width_std_deviation << "," <<
-            num_psc3_v1 << "," <<
-            average_psc3_v1_width << "," <<
-            average_psc3_v1_width_std_deviation << "," <<
-            num_psc3_v2 << "," <<
-            average_psc3_v2_width << "," <<
-            average_psc3_v2_width_std_deviation << "," <<
-            total_loads_psc3 << "," <<
-            (total_loads_fsc + total_loads_psc1 + total_loads_psc2 + total_loads_psc3) << "," <<
-                std::endl;
-
+        std::cout << row.values.rdbuf() << std::endl;
         exit(0);
     }
 
