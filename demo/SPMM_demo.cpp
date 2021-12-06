@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     auto event_list = sym_lib::get_available_counter_codes();
 #endif
 
-    int bRows = B->m;
+    int bRows = B->n;
     int bCols = config.bMatrixCols;
 
     auto final_solution = new double[B->m*bCols]();
