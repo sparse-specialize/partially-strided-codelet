@@ -105,7 +105,7 @@ namespace DDT {
   DDT::GlobalObject init(const M0* m0, const DDT::Config& cfg) {
         // Convert matrix into regular form
         Matrix m{};
-        copySymLibMatrix(m, m0);
+        DDT::MatrixMarket::copySymLibMatrix(m, m0);
 
         // Allocate memory and generate trace
         DDT::GlobalObject d;
