@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -march=native -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -march=native -fopenmp -std=c++17 ")
 
 set(SYMPILER_LBC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/")
 set(SYMPILER_UTIL "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/utils/")
@@ -22,14 +22,14 @@ find_package(MKL OPTIONAL_COMPONENTS)
 find_package(PAPI OPTIONAL_COMPONENTS)
 find_package(ortools OPTIONAL_COMPONENTS)
 
-if(NOT ortools_FOUND)
-    message(STATUS  "ortools not detected" )
-else()
-    add_definitions(-DORTOOLS)
-    include_directories(
-            ${ORTOOLS_INCLUDE_DIRS}
-    )
-endif()
+#if(NOT ortools_FOUND)
+#    message(STATUS  "ortools not detected" )
+#else()
+#    add_definitions(-DORTOOLS)
+#    include_directories(
+#            ${ORTOOLS_INCLUDE_DIRS}
+#    )
+#endif()
 
 
 add_definitions(-DUSE_GLOP)
@@ -102,8 +102,8 @@ aux_source_directory("${CMAKE_CURRENT_LIST_DIR}/src/code_gen" CODE_GEN)
 
 add_executable(DDT main.cpp ${SRC} ${TRCGEN} ${CODE_GEN} ${MATRIX_PARSING_SRC}
         ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC})
-add_executable(TSP-SIM ./tsp-tools/TSP-Simulation.cpp)
-target_link_libraries(TSP-SIM ${ORTOOLS_LIBRARIES})
+#add_executable(TSP-SIM ./tsp-tools/TSP-Simulation.cpp)
+#target_link_libraries(TSP-SIM ${ORTOOLS_LIBRARIES})
 
 target_link_libraries(DDT
         ${Sympiler_Libs})

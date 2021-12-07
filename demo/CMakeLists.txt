@@ -65,9 +65,9 @@ add_executable(spspmm_demo
 target_link_libraries(spspmm_demo
         ${SPSPMM_DEMO_LIBS})
 
-if (ortools_FOUND)
-    set(SPMM_DEMO_LIBS ${SPMM_DEMO_LIBS} ${ORTOOLS_LIBRARIES})
-endif()
+#if (ortools_FOUND)
+#    set(SPMM_DEMO_LIBS ${SPMM_DEMO_LIBS} ${ORTOOLS_LIBRARIES})
+#endif()
 
 target_link_libraries(spmm_demo
         ${SPMM_DEMO_LIBS}

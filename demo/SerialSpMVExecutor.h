@@ -5,7 +5,7 @@
 #ifndef DDT_SERIALSPMVEXECUTOR_H
 #define DDT_SERIALSPMVEXECUTOR_H
 
-#include <c++/10/iostream>
+#include <iostream>
 #include <cassert>
 #include <immintrin.h>
 #include <tuple>

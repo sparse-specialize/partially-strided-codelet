@@ -40,6 +40,8 @@
 #include "Profiler.h"
 #endif
 
+#include <climits>
+
 namespace sparse_avx {
 
     ///// SPMV

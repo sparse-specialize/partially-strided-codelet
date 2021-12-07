@@ -9,6 +9,7 @@
 #include "SparseMatrixIO.h"
 #include "GenericCodelets.h"
 
+#include <unordered_map>
 #include <numeric>
 #include <valarray>
 #include <strstream>
