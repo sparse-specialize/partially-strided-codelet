@@ -30,7 +30,6 @@ endif()
 
 link_directories(${METIS_LIBRARY}
         ${IOMP_DIR_MAC}
-
         )
 
 
@@ -62,6 +61,10 @@ add_executable(spspmm_demo
         ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
         ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
         )
+
+add_executable(running_example
+        running_example.cpp)
+
 target_link_libraries(spspmm_demo
         ${SPSPMM_DEMO_LIBS})
 
