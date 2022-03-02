@@ -21,6 +21,20 @@ def compute_FOPD(ff, dim):
     return di0, di1
 
 
+def opno_to_access_func(grp, op2i0, op2i1, f, g, h):
+    i0_array = []
+    i1_array = []
+    ff = []
+    gg = []
+    hh = []
+    for n in grp:
+        first_i0 = op2i0[n]
+        while op2i0[n] == first_i0:
+            ff.append( 1)
+            i0_array.append(op2i0[n])
+            i1_array.append(op2i1[n])
+
+
 class codelet:
     def __init__(self, i0, i1, f, g, h):
         # f, g, and h are large functions
@@ -53,7 +67,6 @@ class codelet:
             if self.dfdi0[i][:] == self.dfdi0[0][0] or self.dfdi1[i][:] == self.dfdi1[0][0]: # or g or h
                 # check whether dfdi0 is strided
                 self.num_strided += 1  # PSC I
-
 
 
         # then check FOPDs on f

@@ -23,6 +23,8 @@ def create_functions_spmv_csr(A):
     n = A.shape[0]
     [I, J, V] = scipy.sparse.find(A)
     nnz = len(I)
+    opno_to_i0 = []
+    opno_to_i1 = []
     prev = 0
     inner_iter = 0
     row_len = np.zeros(n, dtype=int)
@@ -52,6 +54,8 @@ def create_functions_spmv_csr(A):
         ff[i0][i1] = J[k]
         gg[i0][i1] = k
         hh[i0][i1] = I[k]
+        opno_to_i0.append(i0)
+        opno_to_i1.append(i1)
         if k == nnz-1:
             break
         if prev == J[k+1]:
@@ -61,10 +65,7 @@ def create_functions_spmv_csr(A):
             inner_iter = 0
 
         #print (k, ": ", i0, ", ", i1, ", ", I[i1], " \n")
-    return ff, gg, hh
-
-
-
+    return ff, gg, hh, opno_to_i0, opno_to_i1
 
 
 def find_blas(di0f, di1f, di0g, di1g, di0h, di1h):
@@ -153,7 +154,7 @@ def main(argv):
     plot_matrix(A.nnz, Im, Jm, [], os.path.join(out_dir, mat_name+".png"))
     A.tocsr()
 
-    [f, g, h] = create_functions_spmv_csr(A)
+    [f, g, h, op_i0, op_i1] = create_functions_spmv_csr(A)
     di0f, di1f = compute_FOPD(f, 2)
     di0g, di1g = compute_FOPD(g, 2)
     di0h, di1h = compute_FOPD(h, 2)
@@ -162,7 +163,7 @@ def main(argv):
     sol, dim = psc_mining(I, J, V)
     #sol, dim = TSP(I, J, V)
     groups = list_to_groups(dim, sol)
-    print groups
+    print(groups)
     plot_matrix(A.nnz, Im, Jm, groups, os.path.join(out_dir, mat_name+'psc.png'))
 
 
