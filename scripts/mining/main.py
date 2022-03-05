@@ -20,7 +20,7 @@ def create_functions_spmv_csr(A):
     ff = []
     gg = []
     hh = []
-    n = A.shape[0]
+    n = A.shape[1]
     [I, J, V] = scipy.sparse.find(A)
     nnz = len(I)
     opno_to_i0 = []
@@ -29,40 +29,24 @@ def create_functions_spmv_csr(A):
     inner_iter = 0
     row_len = np.zeros(n, dtype=int)
     for k in range(nnz):
-        if k == nnz-1:
-            inner_iter += 1
-            row_len[prev] = inner_iter
-            ff.append(np.zeros(inner_iter, dtype=int))
-            gg.append(np.zeros(inner_iter, dtype=int))
-            hh.append(np.zeros(inner_iter, dtype=int))
-            inner_iter = 0
-            break
-        if prev == J[k+1]:
-            inner_iter += 1
-        else:
-            inner_iter += 1
-            row_len[prev] = inner_iter
-            prev = J[k+1]
-            ff.append(np.zeros(inner_iter, dtype=int))
-            gg.append(np.zeros(inner_iter, dtype=int))
-            hh.append(np.zeros(inner_iter, dtype=int))
-            inner_iter = 0
-    prev = inner_iter = 0
-    for k in range(nnz):
-        i0 = J[k]
-        i1 = inner_iter
-        ff[i0][i1] = J[k]
-        gg[i0][i1] = k
-        hh[i0][i1] = I[k]
-        opno_to_i0.append(i0)
-        opno_to_i1.append(i1)
-        if k == nnz-1:
-            break
-        if prev == J[k+1]:
-            inner_iter += 1
-        else:
-            prev = J[k+1]
-            inner_iter = 0
+        row_len[J[k]] += 1
+    for k in range(n):
+        inner_iter = row_len[k]
+        ff.append(np.zeros(inner_iter, dtype=int))
+        gg.append(np.zeros(inner_iter, dtype=int))
+        hh.append(np.zeros(inner_iter, dtype=int))
+
+    cnz = inner_iter = 0
+    for k in range(n):
+        for l in range(row_len[k]):
+            i0 = k
+            i1 = l
+            ff[i0][i1] = i0
+            gg[i0][i1] = cnz
+            hh[i0][i1] = I[cnz]
+            opno_to_i0.append(i0)
+            opno_to_i1.append(i1)
+            cnz += 1
 
         #print (k, ": ", i0, ", ", i1, ", ", I[i1], " \n")
     return ff, gg, hh, opno_to_i0, opno_to_i1
@@ -103,8 +87,8 @@ def compute_cost(dfdi0, dfdi1, dgdi0, dgdi1, dhdi0, dhdi1):
         num_unstrided -= 1
     if abs(dfdi0) > 1:
         dfdi0 = 2
-    if abs(dgdi0) > 1:
-        dgdi0 = 2
+    if abs(dgdi0) >= 1:
+        dgdi0 = 4
     if abs(dhdi0) > 1:
         dhdi0 = 2
     g_dist = abs(dfdi0) + abs(dfdi1) + abs(dgdi0) + abs(dgdi1) + abs(dhdi0) + abs(dhdi1)
@@ -139,12 +123,13 @@ def build_strided_graph(n, f, g, h, ns_thr, out_path):
             strided_graph.append(tmp_op)
             cost.append(tmp_cost)
     I, J, V = list_to_triplet(strided_graph, cost)
-    plot_graph(strided_graph, cost, out_path)
+    #plot_graph(strided_graph, cost, out_path)
     return I, J, V
 
 # /Users/kazem/UFDB/mesh1e1/mesh1e1.mtx
 # /Users/kazem/UFDB/ex5/ex5.mtx
 # /Users/kazem/UFDB/LFAT5/LFAT5.mtx
+# /Users/kazem/UFDB/bottleneck_3_block_group1_2_1.mtx
 def main(argv):
     matrix_path = argv[0]
     mat_name = os.path.basename(matrix_path).split(".")[0]
@@ -158,8 +143,7 @@ def main(argv):
     di0f, di1f = compute_FOPD(f, 2)
     di0g, di1g = compute_FOPD(g, 2)
     di0h, di1h = compute_FOPD(h, 2)
-    I, J, V = build_strided_graph(A.shape[0], f, g, h, 2, os.path.join(out_dir, mat_name+'sg.png'))
-
+    I, J, V = build_strided_graph(A.shape[1], f, g, h, 1, os.path.join(out_dir, mat_name+'sg.png'))
     sol, dim = psc_mining(I, J, V)
     #sol, dim = TSP(I, J, V)
     groups = list_to_groups(dim, sol)
