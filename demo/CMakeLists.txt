@@ -44,7 +44,7 @@ add_executable(sptrsv_demo
         ${TRCGEN}
         ${MATRIX_PARSING_SRC}
         ${Sympiler_SRC}
-        ${METIS_SOURCE_FILES} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC}
+        ${METIS_SOURCE_FILES} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
         )
 
 add_executable(spmm_demo
