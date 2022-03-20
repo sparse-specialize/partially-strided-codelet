@@ -58,7 +58,7 @@ if __name__ == '__main__':
     font = {'family' : 'normal',
         'size'   : 16}
     matplotlib.rc('font', **font)
-    df = pd.read_csv("output/spmm_1647421920.csv")
+    df = pd.read_csv("output/spmm_few.csv")
     names = df.Matrix.unique()
     bCols = [4,16,64,256,1024]
     for name in names:
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     print(df_scatter_256.speedup.max())
     ax.scatter(df_scatter_256["NNZ"],df_scatter_256["speedup"],color="black")
     ax.set_xscale('log')
-    ax.set_yscale('segmented', points=np.array([0,1,1.5,2,4,10,20]))
+#    ax.set_yscale('segmented', points=np.array([0,1,1.5,2,4,10,20]))
     # ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(3))
     # ax.set_yticks([1,2,16])
     ax.set_xlabel("NNZ")

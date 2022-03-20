@@ -73,7 +73,7 @@ fi
 
 M_TILE_SIZES=( 4 8 16 32 )
 N_TILE_SIZES=( 4 8 16 32 )
-B_MAT_COL=( 4 16 64 128 )
+B_MAT_COL=( 256 )
 ### SPMM
 if [ "$TUNED" == 4 ]; then
   for mat in "${MATS[@]}"; do
