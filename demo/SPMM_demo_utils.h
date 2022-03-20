@@ -1069,6 +1069,10 @@ namespace sparse_avx {
             this->cfg = cfg;
           };
 
+        sym_lib::timing_measurement get_analysis_bw() {
+         return analysis_breakdown;
+        }
+
         ~SpMMDDT() override = default;
     };
 
@@ -1122,7 +1126,13 @@ namespace sparse_avx {
             L1_csc_ = L_csc;
             correct_x_ = correct_cx;
           };
-        ~SpMMMKL() override {
+
+
+         sym_lib::timing_measurement get_analysis_bw() {
+          return analysis_breakdown;
+         }
+
+     ~SpMMMKL() override {
           //            mkl_free(LLI);
         };
     };
