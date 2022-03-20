@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
 
 
     if (config.header) {
-        std::cout << "Matrix,Threads, prefer_fsc, size_cutoff, col_threshold,";
+        std::cout << "Matrix,nRows,nCols,NNZ,Threads, prefer_fsc, size_cutoff, col_threshold,";
         std::cout << "SpMV Base, SpMV Parallel Base, SpMV Vec 1_4 Parallel, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2,";
 #ifdef MKL
         std::cout << "SpMV MKL Serial Executor, SpMV MKL Parallel Executor,";
@@ -179,7 +179,8 @@ int main(int argc, char *argv[]) {
         std::cout << "\n";
     }
 
-    std::cout << config.matrixPath << "," << config.nThread << "," << DDT::prefer_fsc << "," << DDT::clt_width << "," << DDT::col_th << ","
+    std::cout << config.matrixPath << "," << B->m << "," << B->n << "," << B->nnz << "," << config.nThread
+    << "," << DDT::prefer_fsc << "," << DDT::clt_width << "," << DDT::col_th << ","
     << spmv_baseline.elapsed_time << "," << spmv_p.elapsed_time << ",";
      std::cout << spmv1pe.elapsed_time << ",";
      std::cout << spmv1e.elapsed_time << "," << spmv2e.elapsed_time << ",";

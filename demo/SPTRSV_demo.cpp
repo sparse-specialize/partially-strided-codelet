@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     if (config.header) {
-        std::cout << "Matrix,Threads,Coarsening,Bin-packing,";
+        std::cout << "Matrix,nRows,nCols,NNZ,Threads,Coarsening,Bin-packing,";
         std::cout << "Tuning Mode,Dimension,NNZ,";
         std::cout << "SpTRSV Base,SpTRSV Vec1,SpTRSV Vec2,SpTRSV LS Vec, "
                      "SpTRSV LS "
@@ -208,7 +208,8 @@ int main(int argc, char *argv[]) {
         std::cout << "\n";
     }
 
-    std::cout << config.matrixPath << "," << config.nThread << ",";
+    std::cout << config.matrixPath << "," << L1_ord_csr->m << "," << L1_ord_csr->n << "," << L1_ord_csr->nnz <<
+    "," << config.nThread << ",";
     if (tuning > 0)
         std::cout << config.coarsening << "," << config.bin_packing << ",";
     else

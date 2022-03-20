@@ -58,7 +58,7 @@ if __name__ == '__main__':
     font = {'family' : 'normal',
         'size'   : 16}
     matplotlib.rc('font', **font)
-    df = pd.read_csv("final_spmm_pldi.csv")
+    df = pd.read_csv("output/spmm_1647421920.csv")
     names = df.Matrix.unique()
     bCols = [4,16,64,256,1024]
     for name in names:

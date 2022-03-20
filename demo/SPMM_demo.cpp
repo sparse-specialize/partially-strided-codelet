@@ -100,16 +100,16 @@ int main(int argc, char *argv[]) {
 
 
     if (config.header) {
-      std::cout << "Matrix,mTileSize,nTileSize,Matrix B Columns,SpMM "
-        "Baseline,SpMM Parallel Baseline,SpMM Tiled Parallel "
-        "Baseline,SpMM MKL,SpMM DDT";
+      std::cout << "Matrix,nRows,nCols,NNZ,mTileSize,nTileSize,bCols,SpMM "
+        "Baseline,SpMM Parallel,SpMM Tiled Parallel,SpMM MKL,SpMM DDT";
 
 #ifdef PERMUTED
       std::cout << ",SpMM Permuted Parallel"
 #endif
         std::cout << "\n";
     }
-    std::cout << config.matrixPath << "," << config.mTileSize << "," << config.nTileSize << "," << config.bMatrixCols << "," <<spmm_baseline.elapsed_time << "," << spmm_parallel_baseline_elapsed << "," << spmm_tiled_parallel_baseline_elapsed << "," << spmm_mkl_eval_elapsed << "," << spmm_ddt_eval_elapsed;
+    std::cout << config.matrixPath << "," << B->m << "," << B->n << "," << B->nnz << "," << config.mTileSize
+    << "," << config.nTileSize << "," << config.bMatrixCols << "," <<spmm_baseline.elapsed_time << "," << spmm_parallel_baseline_elapsed << "," << spmm_tiled_parallel_baseline_elapsed << "," << spmm_mkl_eval_elapsed << "," << spmm_ddt_eval_elapsed;
 
 #ifdef PERMUTED
     std::cout << "," << spmm_permuted_parallel_baseline_elapsed;

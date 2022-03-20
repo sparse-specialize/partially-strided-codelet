@@ -67,7 +67,7 @@ if __name__ == '__main__':
     fig, (ax,ax1) = plt.subplots(1,2)
     # df = df[df["CSR5 Speedup"].notnull()]
     df = df[( df[" size_cutoff"] == 1 ) & ( df[" col_threshold"] == 1 )]
-    ax.scatter(df["NNZ_y"],df["MKL Speedup"],color="black")
+    ax.scatter(df["NNZ"],df["MKL Speedup"],color="black")
     ax.set_xscale('log')
     ax.set_yscale('segmented', points=np.array([0.9,1,1.25,1.5,2,10,20]))
     # ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(3))
@@ -79,7 +79,7 @@ if __name__ == '__main__':
             fontsize='medium', va='bottom',fontweight="bold")
 
     ax.axhline(y=1.0,color='r',linestyle='-')
-    ax1.scatter(df["NNZ_y"],df["CSR5 Speedup"],color="black")
+    ax1.scatter(df["NNZ"],df["CSR5 Speedup"],color="black")
     ax1.set_xscale('log')
     ax1.set_yscale('segmented', points=np.array([0.2,0.5,1,1.25,1.5,2,4,5]))
     # ax.yaxis.set_major_locator(matplotlib.ticker.LinearLocator(3))
