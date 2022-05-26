@@ -8,9 +8,13 @@
 #include <sparse_io.h>
 #include <sparse_utilities.h>
 
-#ifdef PAPI
-#include "Profiler.h"
-#endif
+// #define PROFILE
+
+// #ifdef PAPI
+// #include "Profiler.h"
+// #endif
+
+#define ELLPACK
 
 using namespace sparse_avx;
 int main(int argc, char *argv[]) {
@@ -79,8 +83,8 @@ int main(int argc, char *argv[]) {
     auto *ddt_profiler = new sym_lib::ProfilerWrapper<SpMVDDT>(event_list, event_limit, 1,B,A, sol_spmv, config, "SpMV DDT ST");
     ddt_profiler->profile(config.nThread);
     matrixName.erase(std::remove(matrixName.begin(), matrixName.end(), '\n'), matrixName.end());
-    if (config.header) { std::cout << "MATRIX_NAME, THREADS, KERNEL_TYPE, codelet_min_width, codelet_max_distance, only_fsc_codelets,"; ddt_profiler->print_headers(); }
-    std::cout << matrixName << "," << config.nThread << "," << "DDT,";
+    if (config.header) { std::cout << "Matrix,nRows,nCols,NNZ,Threads,KERNEL_TYPE,codelet_min_width, codelet_max_distance, only_fsc_codelets,"; ddt_profiler->print_headers(); std::cout << "\n"; }
+    std::cout << matrixName << "," <<  B->m << "," << B->n << ","  << B->nnz << "," << config.nThread << "," << "DDT,";
     std::cout << DDT::clt_width << "," << DDT::col_th << "," << DDT::prefer_fsc << ",";
     ddt_profiler->print_counters();
     std::cout << "\n";
@@ -88,14 +92,14 @@ int main(int argc, char *argv[]) {
     auto *spmv_profiler = new sym_lib::ProfilerWrapper<SpMVParallel>(event_list, event_limit, 1,B,A, sol_spmv, "CSR SPMV BASELINE");
     spmv_profiler->d->set_num_threads(config.nThread);
     spmv_profiler->profile(config.nThread);
-    std::cout << matrixName << "," << config.nThread << "," << "BASELINE,";
+    std::cout << matrixName << "," <<  B->m << "," << B->n << ","  << B->nnz << "," << config.nThread << "," << "BASELINE,";
     std::cout << 0 << "," << 0 << "," << 0 << ",";
     spmv_profiler->print_counters();
     std::cout << "\n";
 
     auto *mkl_spmv_profiler = new sym_lib::ProfilerWrapper<SpMVMKL>(event_list, event_limit, 1, config.nThread,B,A, sol_spmv, "MKL");
     mkl_spmv_profiler->profile(config.nThread);
-    std::cout << matrixName << "," << config.nThread <<  "," << "MKL,";
+    std::cout << matrixName << "," <<  B->m << "," << B->n << ","  << B->nnz << "," << config.nThread << "," << "MKL,";
     std::cout << 0 << "," << 0 << "," << 0 << ",";
     mkl_spmv_profiler->print_counters();
     std::cout << "\n";
@@ -103,7 +107,7 @@ int main(int argc, char *argv[]) {
     auto *spmvp_profiler = new sym_lib::ProfilerWrapper<SpMVVec1Parallel>(event_list, event_limit, 1, B,A,sol_spmv, "SpMVVec1_Parallel");
     spmvp_profiler->d->set_num_threads(config.nThread);
     spmvp_profiler->profile(config.nThread);
-    std::cout << matrixName << "," << config.nThread <<  "," << "GENERIC_VEC_SPMV,";
+    std::cout << matrixName << "," <<  B->m << "," << B->n << ","  << B->nnz << "," << config.nThread << "," << "GENERIC_VEC_SPMV,";
     std::cout << 0 << "," << 0 << "," << 0 << ",";
     spmvp_profiler->print_counters();
     std::cout << "\n";
@@ -122,10 +126,17 @@ int main(int argc, char *argv[]) {
     auto cvr_execmt = cvrspmv->evaluate();
 #endif
 
-//    auto ellpackspmv = new SpMVELL(B, A, sol_spmv, "SpMV ELLPACK");
-//    ellpackspmv->set_num_threads(config.nThread);
-//    auto ellpackspmv_exec = ellpackspmv->evaluate();
-//    auto ellpackspmv_analysis = ellpackspmv->get_analysis_bw();
+#ifdef ELLPACK
+    auto ellpackspmv = new SpMVELL(B, A, sol_spmv, "SpMV ELLPACK Serial");
+    ellpackspmv->set_num_threads(1);
+    auto ellpackspmv_exec = ellpackspmv->evaluate();
+    auto ellpackspmv_analysis = ellpackspmv->get_analysis_bw();
+
+    auto ellpackspmv_parallel = new SpMVELL(B, A, sol_spmv, "SpMV ELLPACK Parallel");
+    ellpackspmv_parallel->set_num_threads(config.nThread);
+    auto ellpackspmv_exec_parallel = ellpackspmv_parallel->evaluate();
+    auto ellpackspmv_analysis_parallel = ellpackspmv_parallel->get_analysis_bw();
+#endif
 
 #ifdef DIA
     auto diaspmv = new SpMVDIA(B, A, sol_spmv, "SpMV DIA");
@@ -161,6 +172,7 @@ int main(int argc, char *argv[]) {
     if (config.header) {
         std::cout << "Matrix,nRows,nCols,NNZ,Threads, prefer_fsc, size_cutoff, col_threshold,";
         std::cout << "SpMV Base, SpMV Parallel Base, SpMV Vec 1_4 Parallel, SpMV Vec 1_4, SpMV Vec 1_8, SpMV Vec 1_16, SpMV Vec 2,";
+
 #ifdef MKL
         std::cout << "SpMV MKL Serial Executor, SpMV MKL Parallel Executor,";
 #endif
@@ -172,6 +184,9 @@ int main(int argc, char *argv[]) {
         }
 #ifdef DIA
         "DIA Parallel Executor,"
+#endif
+#ifdef ELLPACK
+    std::cout << "ELLPACK Analysis Time,ELLPack Serial,ELLPack Parallel,"; 
 #endif
         std::cout << "SpMVDDT Serial Executor,SpMV DDT Parallel Executor, MKL Analysis";
         if (B->m == B->n) { std::cout << ",CSR5 Analysis"; }
@@ -188,6 +203,8 @@ int main(int argc, char *argv[]) {
 #ifdef MKL
      std::cout << mkl_exec_st.elapsed_time << "," << mkl_exec_mt.elapsed_time << ",";
 #endif
+
+
 #ifdef __AVX512__
      std::cout << cvr_execmt.elapsed_time << ",";
 #endif
@@ -208,7 +225,12 @@ int main(int argc, char *argv[]) {
                         std::cout << csr5spmv_analysis.elapsed_time << ",";
                     }
                     std::cout << ddt_analysis.elapsed_time << ",";
+#ifdef ELLPACK
+    std::cout << ellpackspmv_exec.elapsed_time << "," << ellpackspmv_analysis.elapsed_time << "," 
+              << ellpackspmv_exec_parallel.elapsed_time; 
+#endif
     std::cout << "\n";
+
 
     delete A;
     delete B;

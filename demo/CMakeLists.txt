@@ -25,14 +25,13 @@ endif()
 if (PAPI_FOUND)
     set(SPMV_DEMO_LIBS ${SPMV_DEMO_LIBS} ${PAPI_LIBRARIES})
     set(SPMM_DEMO_LIBS ${SPMM_DEMO_LIBS} ${PAPI_LIBRARIES})
+    message(STATUS "PAPI Libraries added to SPMV Codes")
 endif()
 
 
 link_directories(${METIS_LIBRARY}
         ${IOMP_DIR_MAC}
         )
-
-
 
 
 add_executable(sptrsv_demo

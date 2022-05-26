@@ -19,7 +19,7 @@ set(CSR5_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/CSR5_LOCAL/CSR5_avx2/" "${
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${ORTOOLS_ROOT})
 find_package(METIS OPTIONAL_COMPONENTS)
 find_package(MKL OPTIONAL_COMPONENTS)
-find_package(PAPI OPTIONAL_COMPONENTS)
+# find_package(PAPI OPTIONAL_COMPONENTS)
 find_package(ortools OPTIONAL_COMPONENTS)
 
 #if(NOT ortools_FOUND)
@@ -56,8 +56,10 @@ if (MKL_FOUND)
 endif()
 
 if (PAPI_FOUND)
-    message('nice')
+    message(STATUS "Found Papi!!!")
     add_definitions(-DPAPI)
+else()
+    message(STATUS "Failed to locate PAPI Profiling Tools!")
 endif()
 
 if ($ENV{PROFILE})
@@ -78,7 +80,7 @@ include_directories(
         ${METIS_INCLUDE_DIRS}
         ${METIS_INCLUDES}
         ${MKL_INCLUDE_DIR}
- #       ${PAPI_INCLUDE_DIRS}
+        #${PAPI_INCLUDE_DIRS}
         ${MIS_DIR}
         )
 

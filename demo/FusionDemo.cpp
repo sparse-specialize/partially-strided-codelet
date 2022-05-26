@@ -11,6 +11,9 @@
 #include <metis_interface.h>
 #endif
 
+#undef PROFILE
+// #define PROFILE
+
 namespace sym_lib {
  template<class type>
  bool is_float_equal(const type x, const type y, double absTol, double relTol) {

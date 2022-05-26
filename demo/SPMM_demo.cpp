@@ -92,14 +92,14 @@ int main(int argc, char *argv[]) {
     auto spmm_mkl_eval_elapsed = spmm_mkl_eval.elapsed_time;
     auto spmm_mkl_analysis_elapsed = spmkl->get_analysis_bw();
     delete spmkl;
-
+/*
     auto *spddtser = new sparse_avx::SpMMDDT(B, A, final_solution, config, bRows, bCols, "SpMM DDT");
     spddtser->set_num_threads(1);
     auto spmm_ddt_eval_ser = spddtser->evaluate();
     auto spmm_ddt_eval_elapsed_ser = spmm_ddt_eval_ser.elapsed_time;
     auto spmm_ddt_analysis_elapsed = spddtser->get_analysis_bw();
     delete spddtser;
-
+*/
     auto *spddt = new sparse_avx::SpMMDDT(B, A, final_solution, config, bRows, bCols, "SpMM DDT");
     spddt->set_num_threads(config.nThread);
     auto spmm_ddt_eval = spddt->evaluate();
@@ -120,7 +120,8 @@ int main(int argc, char *argv[]) {
     std::cout << config.matrixPath << "," << B->m << "," << B->n << "," << B->nnz << "," << config.mTileSize
     << "," << config.nTileSize << "," << config.bMatrixCols << "," <<spmm_baseline.elapsed_time << ","
     << spmm_parallel_baseline_elapsed << "," << spmm_tiled_parallel_baseline_elapsed << ","
-    << spmm_mkl_eval_elapsed << "," << spmm_ddt_eval_elapsed_ser<< "," << spmm_ddt_eval_elapsed <<","
+    << spmm_mkl_eval_elapsed << "," //<< spmm_ddt_eval_elapsed_ser<< "," 
+    << spmm_ddt_eval_elapsed <<","
     << spmm_ddtp_analysis_elapsed.elapsed_time;
 
 #ifdef PERMUTED

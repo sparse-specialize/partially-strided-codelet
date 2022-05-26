@@ -6,8 +6,10 @@
 #define PROJECT_FUSIONDEMO_H
 #include "def.h"
 #ifdef PAPI
-#include "PAPIWrapper.h"
+// #include "PAPIWrapper.h"
 #endif
+
+#undef PROFILE
 
 namespace sym_lib{
  class FusionDemo {
