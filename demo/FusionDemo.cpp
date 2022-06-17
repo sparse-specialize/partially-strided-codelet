@@ -15,32 +15,6 @@
 // #define PROFILE
 
 namespace sym_lib {
- template<class type>
- bool is_float_equal(const type x, const type y, double absTol, double relTol) {
-     return std::abs(x - y) <= std::max(absTol, relTol * std::max(std::abs(x), std::abs(y)));
- }
-
- template<class type>
- bool is_generic_equal(const type x, const type y, double eps) {
-     return std::abs(x - y) > eps;
- }
-
- template<class type>
- bool is_equal(int beg_idx, int end_idx, const type* vec1, const type* vec2,
-               double eps=1e-8){
-  for (int i = beg_idx; i < end_idx; ++i) {
-   if (std::isnan(vec1[i]) || std::isnan(vec2[i]))
-    return false;
-   if constexpr (std::is_same_v<type, double> || std::is_same_v<type, float>) {
-        if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { std::cout << i << ":" << vec1[i] << "," << vec2[i] << std::endl; return false; }
-   } else {
-       if (!is_generic_equal(vec1[i],vec2[i], eps))
-           return false;
-   }
-  }
-  return true;
- }
-
 
  FusionDemo::FusionDemo():L1_csr_(NULLPNTR), L1_csc_(NULLPNTR),
                           L2_csr_(NULLPNTR), L2_csc_(NULLPNTR),

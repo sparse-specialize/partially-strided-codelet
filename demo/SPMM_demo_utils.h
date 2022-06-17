@@ -294,7 +294,6 @@ namespace sparse_avx {
       int nTile = bCols / nTileSize;
       int mTileRemainder = m % mTileSize;
       int nTileRemainder = bCols % nTileSize;
-
 #pragma omp parallel for schedule(dynamic,1) num_threads(nThreads)
       for (int ii = 0; ii < mTile; ++ii) {
         auto iOffset = ii*mTileSize;
@@ -317,7 +316,6 @@ namespace sparse_avx {
                   auto bxp1 = Bx + Ai[j+1]*bCols;
                   auto bxp2 = Bx + Ai[j+2]*bCols;
                   auto bxp3 = Bx + Ai[j+3]*bCols;
-
 
                   // Load vectors
                   auto bxv0 = _mm256_loadu_pd(bxp0);

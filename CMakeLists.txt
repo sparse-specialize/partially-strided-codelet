@@ -9,10 +9,10 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -march=native -fopenmp -std=c++17 ")
 
-set(SYMPILER_LBC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/")
-set(SYMPILER_UTIL "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/utils/")
-set(SPARSE_UTIL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/lib/lbc/utils/")
-set(SYMPILER_UTIL_INC "${SYMPILER_UTIL}/includes/")
+set(SYMPILER_LBC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lib/aggregation/")
+set(SYMPILER_UTIL "${CMAKE_CURRENT_SOURCE_DIR}/lib/aggregation/utils/")
+set(SPARSE_UTIL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/lib/aggregation/utils/")
+set(SYMPILER_UTIL_INC "${SYMPILER_LBC_ROOT}/include/")
 set(MIS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/")
 set(CSR5_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/CSR5_LOCAL/CSR5_avx2/" "${CMAKE_CURRENT_SOURCE_DIR}/lib/CSR5_LOCAL/CSR5_avx2/detail" "${CMAKE_CURRENT_SOURCE_DIR}/lib/CSR5_LOCAL/CSR5_avx2/detail/avx2")
 
@@ -75,7 +75,6 @@ include_directories("${CMAKE_CURRENT_LIST_DIR}/src/trace_gen")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/lib/cxxopts/include")
 include_directories(
         ${SYMPILER_LBC_ROOT}/src/includes/
-        ${SYMPILER_UTIL}/external/includes/
         ${SYMPILER_UTIL_INC}
         ${METIS_INCLUDE_DIRS}
         ${METIS_INCLUDES}
@@ -110,6 +109,6 @@ add_executable(DDT main.cpp ${SRC} ${TRCGEN} ${CODE_GEN} ${MATRIX_PARSING_SRC}
 target_link_libraries(DDT
         ${Sympiler_Libs})
 
-add_subdirectory(lib/lbc/)
+add_subdirectory(lib/aggregation/)
 add_subdirectory(demo)
 add_subdirectory(codelet_demo)
