@@ -90,6 +90,7 @@ public:
     int r;
     int c;
     int nz;
+    int stype;
 
     int *Lp;
     int *Li;

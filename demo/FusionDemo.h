@@ -31,7 +31,10 @@ namespace sym_lib{
    if (std::isnan(vec1[i]) || std::isnan(vec2[i]))
     return false;
    if constexpr (std::is_same_v<type, double> || std::is_same_v<type, float>) {
-    if (!is_float_equal(vec1[i],vec2[i], eps, eps)) { std::cout << i << ":" << vec1[i] << "," << vec2[i] << std::endl; return false; }
+    if (!is_float_equal(vec1[i],vec2[i], eps, eps)) {
+     std::cout << i << ":" << vec1[i] << "," << vec2[i] << std::endl;
+     return false;
+    }
    } else {
     if (!is_generic_equal(vec1[i],vec2[i], eps))
      return false;
