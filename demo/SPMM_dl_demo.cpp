@@ -43,14 +43,17 @@ int main(int argc, char *argv[]) {
  MKL_Set_Num_Threads(num_thread);
  MKL_Domain_Set_Num_Threads(num_thread, MKL_DOMAIN_BLAS);
 
- auto *sps = new GEMMSpMM(B, A, num_thread, bCols, NULLPNTR, "SpMM Serial");
+ spmm_config sc_in{}; //sc_in.m_tile = config.mTileSize;
+
+ auto *sps = new GEMMSpMM(B, A, num_thread, bCols, NULLPNTR, sc_in, "SpMM "
+                                                                    "Serial");
  auto mkl_gemm = sps->evaluate();
  auto *sol_gemm = sps->get_Cx();
  std::copy(sol_gemm,sol_gemm+B->n*bCols,final_solution);
  delete sps;
 
 
- auto *gemmt = new GEMMSpMMTuned(B, A, num_thread, bCols, final_solution,
+ auto *gemmt = new GEMMSpMMTuned(B, A, num_thread, bCols, final_solution, sc_in,
                                  "SpMM Serial");
  auto mkl_gemm_t1 = gemmt->evaluate();
  delete gemmt;
