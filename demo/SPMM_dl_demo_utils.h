@@ -295,7 +295,7 @@ public:
 };
 
 class SpMMPadded : public GEMMSpMM{
-
+protected:
  matrix_descr d;
  sparse_matrix_t m;
  MKL_INT *LLI;
@@ -305,7 +305,7 @@ class SpMMPadded : public GEMMSpMM{
   auto B = convert_dcsr_scsr<DDT::Matrix>(As);
   d_A = new float[208*512]();
   L1_csr_ = B;
-  if (LLI == nullptr) {
+  //if (LLI == nullptr) {
    d.type = SPARSE_MATRIX_TYPE_GENERAL;
    //         d.diag = SPARSE_DIAG_NON_UNIT;
    //         d.mode = SPARSE_FILL_MODE_FULL;
@@ -320,11 +320,26 @@ class SpMMPadded : public GEMMSpMM{
     Ax[i] = (float)L1_csr_->x[i];
    }
 
-   mkl_sparse_s_create_csr(&m, SPARSE_INDEX_BASE_ZERO,
+   auto status = mkl_sparse_s_create_csr(&m, SPARSE_INDEX_BASE_ZERO,
                            this->L1_csr_->m, this->L1_csr_->n, LLI,
                            LLI + 1, this->L1_csr_->i, Ax);
+
+   std::cout<<mkl_error_string(status)<<"\n";
    //         mkl_sparse_set_mv_hint(m, SPARSE_OPERATION_NON_TRANSPOSE, d, expected_calls);
    //         mkl_sparse_set_memory_hint(m, SPARSE_MEMORY_AGGRESSIVE);
+ // }
+ }
+
+ inline constexpr const char *mkl_error_string(sparse_status_t status) {
+  switch (status) {
+   case SPARSE_STATUS_SUCCESS: return "SPARSE_STATUS_SUCCESS";
+   case SPARSE_STATUS_NOT_INITIALIZED: return "SPARSE_STATUS_NOT_INITIALIZED";
+   case SPARSE_STATUS_ALLOC_FAILED: return "SPARSE_STATUS_ALLOC_FAILED";
+   case SPARSE_STATUS_INVALID_VALUE: return "SPARSE_STATUS_INVALID_VALUE";
+   case SPARSE_STATUS_EXECUTION_FAILED: return "SPARSE_STATUS_EXECUTION_FAILED";
+   case SPARSE_STATUS_INTERNAL_ERROR: return "SPARSE_STATUS_INTERNAL_ERROR";
+   case SPARSE_STATUS_NOT_SUPPORTED: return "SPARSE_STATUS_NOT_SUPPORTED";
+   default: return "Unknown";
   }
  }
  sym_lib::timing_measurement fused_code() override {
@@ -334,9 +349,10 @@ class SpMMPadded : public GEMMSpMM{
   std::fill_n(Cx, aRows*bCols, 0);
   tt.start_timer();
   t1.start_timer();
-  mkl_sparse_s_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1, m, this->d,
+  auto status = mkl_sparse_s_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1, m, this->d,
                   SPARSE_LAYOUT_ROW_MAJOR, Bx, bCols,
                   bCols, 0, Cx, bCols);
+  std::cout<<"--> : "<<mkl_error_string(status)<<"\n";
   tt.start_timer();
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
               aRows,  bCols, 207,
