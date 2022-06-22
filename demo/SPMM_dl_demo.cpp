@@ -13,18 +13,6 @@
 #include "Profiler.h"
 #endif
 
-template<class type>
-sym_lib::CSR *convert_dcsr_scsr(type A){
- int r = A.r;
- int c = A.c;
- int nnz = A.nz;
- sym_lib::CSR *scsr = new sym_lib::CSR(r,c,nnz);
- sym_lib::copy_vector(0,r, A.Lp, scsr->p);
- sym_lib::copy_vector(0, nnz, A.Li, scsr->i);
- sym_lib::copy_vector(0, nnz, A.Lx, scsr->x);
- scsr->stype = A.stype;
- return scsr;
-}
 
 int main(int argc, char *argv[]) {
  auto config = DDT::parseInput(argc, argv);
@@ -43,7 +31,9 @@ int main(int argc, char *argv[]) {
  MKL_Set_Num_Threads(num_thread);
  MKL_Domain_Set_Num_Threads(num_thread, MKL_DOMAIN_BLAS);
 
- spmm_config sc_in{}; //sc_in.m_tile = config.mTileSize;
+ spmm_config sc_in{};
+ sc_in.m_tile = config.mTileSize;
+ sc_in.n_tile = config.nTileSize;
 
  auto *sps = new GEMMSpMM(B, A, num_thread, bCols, NULLPNTR, sc_in, "SpMM "
                                                                     "Serial");
@@ -58,18 +48,28 @@ int main(int argc, char *argv[]) {
  auto mkl_gemm_t1 = gemmt->evaluate();
  delete gemmt;
 
+ auto *spmmt = new SpMMMKL(B, A, num_thread, bCols, final_solution, sc_in,
+                                 "SpMM MKL Serial");
+ auto mkl_spmm = spmmt->evaluate();
+ delete spmmt;
 
+ auto *spmm_hybrid = new SpMMPadded(B, A, num_thread, bCols, final_solution, sc_in,
+                           "SpMM MKL Hybrid");
+ auto mkl_spmm_hybrid = spmm_hybrid->evaluate();
+ delete spmm_hybrid;
 
  if (config.header) {
   std::cout << "Matrix,nRows,nCols,NNZ,mTileSize,nTileSize,"
-               "Number of Threads,B Cols,MKL GEMM,GEMM Tuned1,";
+               "Number of Threads,B Cols,MKL GEMM,GEMM Tuned1,"
+               "MKL SpMM,";
   std::cout << "\n";
  }
  std::cout << config.matrixPath << "," << B->m << "," << B->n
            << "," << B->nnz << "," << config.mTileSize
            << "," << config.nTileSize << "," <<config.nThread  << "," << config
            .bMatrixCols << "," <<mkl_gemm.elapsed_time << ","<<
-           mkl_gemm_t1.elapsed_time<<",";
+           mkl_gemm_t1.elapsed_time<<","<<mkl_spmm.elapsed_time<<","<<
+           mkl_spmm_hybrid.elapsed_time<<",";
  std::cout << "\n";
 
  delete A;
