@@ -226,6 +226,18 @@ public:
                                               correct, sc, name){}
 };
 
+inline constexpr const char *mkl_error_string(sparse_status_t status) {
+ switch (status) {
+  case SPARSE_STATUS_SUCCESS: return "SPARSE_STATUS_SUCCESS";
+  case SPARSE_STATUS_NOT_INITIALIZED: return "SPARSE_STATUS_NOT_INITIALIZED";
+  case SPARSE_STATUS_ALLOC_FAILED: return "SPARSE_STATUS_ALLOC_FAILED";
+  case SPARSE_STATUS_INVALID_VALUE: return "SPARSE_STATUS_INVALID_VALUE";
+  case SPARSE_STATUS_EXECUTION_FAILED: return "SPARSE_STATUS_EXECUTION_FAILED";
+  case SPARSE_STATUS_INTERNAL_ERROR: return "SPARSE_STATUS_INTERNAL_ERROR";
+  case SPARSE_STATUS_NOT_SUPPORTED: return "SPARSE_STATUS_NOT_SUPPORTED";
+  default: return "Unknown";
+ }
+}
 
 class SpMMMKL : public GEMMSpMM {
 protected:
@@ -236,7 +248,7 @@ protected:
  float *Ax;
 
  void build_set() override {
-  if (LLI == nullptr) {
+  //if (LLI == nullptr) {
    analysis_breakdown.start_timer();
    d.type = SPARSE_MATRIX_TYPE_GENERAL;
    //         d.diag = SPARSE_DIAG_NON_UNIT;
@@ -252,13 +264,13 @@ protected:
     Ax[i] = (float)L1_csr_->x[i];
    }
 
-   mkl_sparse_s_create_csr(&m, SPARSE_INDEX_BASE_ZERO,
+   auto stat = mkl_sparse_s_create_csr(&m, SPARSE_INDEX_BASE_ZERO,
                            this->L1_csr_->m, this->L1_csr_->n, LLI,
                            LLI + 1, this->L1_csr_->i, Ax);
    //         mkl_sparse_set_mv_hint(m, SPARSE_OPERATION_NON_TRANSPOSE, d, expected_calls);
    //         mkl_sparse_set_memory_hint(m, SPARSE_MEMORY_AGGRESSIVE);
    analysis_breakdown.measure_elapsed_time();
-  }
+//  }
  }
 
  sym_lib::timing_measurement fused_code() override {
@@ -267,10 +279,12 @@ protected:
   mkl_set_num_threads_local(num_threads_);
   std::fill_n(Cx, aRows*bCols, 0);
   t1.start_timer();
-  mkl_sparse_s_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1, m, this->d,
+  auto stat = mkl_sparse_s_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1, m, this->d,
                   SPARSE_LAYOUT_ROW_MAJOR, Bx, bCols,
                   bCols, 0, Cx, bCols);
   t1.measure_elapsed_time();
+
+  std::cout<<"SPMM MKL : "<<mkl_error_string(stat)<<"\n";
   return t1;
  }
 
@@ -324,24 +338,13 @@ protected:
                            this->L1_csr_->m, this->L1_csr_->n, LLI,
                            LLI + 1, this->L1_csr_->i, Ax);
 
-   std::cout<<mkl_error_string(status)<<"\n";
+  // std::cout<<mkl_error_string(status)<<"\n";
    //         mkl_sparse_set_mv_hint(m, SPARSE_OPERATION_NON_TRANSPOSE, d, expected_calls);
    //         mkl_sparse_set_memory_hint(m, SPARSE_MEMORY_AGGRESSIVE);
  // }
  }
 
- inline constexpr const char *mkl_error_string(sparse_status_t status) {
-  switch (status) {
-   case SPARSE_STATUS_SUCCESS: return "SPARSE_STATUS_SUCCESS";
-   case SPARSE_STATUS_NOT_INITIALIZED: return "SPARSE_STATUS_NOT_INITIALIZED";
-   case SPARSE_STATUS_ALLOC_FAILED: return "SPARSE_STATUS_ALLOC_FAILED";
-   case SPARSE_STATUS_INVALID_VALUE: return "SPARSE_STATUS_INVALID_VALUE";
-   case SPARSE_STATUS_EXECUTION_FAILED: return "SPARSE_STATUS_EXECUTION_FAILED";
-   case SPARSE_STATUS_INTERNAL_ERROR: return "SPARSE_STATUS_INTERNAL_ERROR";
-   case SPARSE_STATUS_NOT_SUPPORTED: return "SPARSE_STATUS_NOT_SUPPORTED";
-   default: return "Unknown";
-  }
- }
+
  sym_lib::timing_measurement fused_code() override {
   sym_lib::timing_measurement t1, tt;
   mkl_set_num_threads(num_threads_);
@@ -352,7 +355,6 @@ protected:
   auto status = mkl_sparse_s_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1, m, this->d,
                   SPARSE_LAYOUT_ROW_MAJOR, Bx, bCols,
                   bCols, 0, Cx, bCols);
-  std::cout<<"--> : "<<mkl_error_string(status)<<"\n";
   tt.start_timer();
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
               aRows,  bCols, 207,
@@ -365,6 +367,7 @@ protected:
   t1.measure_elapsed_time();
   tt.measure_elapsed_time();
   tt.print_t_array();
+  std::cout<<"--> : "<<mkl_error_string(status)<<"\n";
   return t1;
  }
 
