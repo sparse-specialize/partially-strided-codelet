@@ -176,8 +176,9 @@ void gemm_tuned_C(const int m, const int bcol, const int n, const float *a,
                1.,              // beta
                c_tile,bcol   // ldc = t.n()
    );
-
   }
+
+
  }
 
  /// Tile remainder rows
