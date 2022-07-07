@@ -53,21 +53,21 @@ add_executable(spmm_demo
         ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
         ${Sympiler_SRC} ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
         )
-add_executable(spmm_dl_demo
-        FusionDemo.cpp
-        SPMM_dl_demo.cpp
-        ${Sympiler_SRC}
-        ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
-         ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
-        )
+#add_executable(spmm_dl_demo
+#        FusionDemo.cpp
+#        SPMM_dl_demo.cpp
+#        ${Sympiler_SRC}
+#        ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
+#         ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
+#        )
 
-add_executable(gemm_demo
-        FusionDemo.cpp
-        GEMM_demo.cpp
-        ${Sympiler_SRC}
-        ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
-        ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
-        )
+#add_executable(gemm_demo
+#        FusionDemo.cpp
+#        GEMM_demo.cpp
+#        ${Sympiler_SRC}
+#        ${SRC} ${TRCGEN} ${MATRIX_PARSING_SRC}
+#        ${SPMV_CODELETS_SRC} ${SPTRSV_CODELETS_SRC} ${SPMM_CODELETS_SRC}
+#        )
 add_executable(spspmm_demo
         FusionDemo.cpp
         SPSPMM_demo.cpp
@@ -89,14 +89,14 @@ target_link_libraries(spmm_demo
         ${SPMM_DEMO_LIBS}
         )
 
-target_link_libraries(spmm_dl_demo
-        ${SPMM_DEMO_LIBS}
-        ${Sympiler_Libs}
-        )
-target_link_libraries(gemm_demo
-        ${SPMM_DEMO_LIBS}
-        ${Sympiler_Libs}
-        )
+#target_link_libraries(spmm_dl_demo
+#        ${SPMM_DEMO_LIBS}
+#        ${Sympiler_Libs}
+#        )
+#target_link_libraries(gemm_demo
+#        ${SPMM_DEMO_LIBS}
+#        ${Sympiler_Libs}
+#        )
 
 target_link_libraries(spmv_demo
         ${SPMV_DEMO_LIBS}
