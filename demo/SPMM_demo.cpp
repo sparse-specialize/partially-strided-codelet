@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 
     if (config.header) {
       std::cout << "Matrix,nRows,nCols,NNZ,mTileSize,nTileSize,bCols,SpMM "
-        "Baseline,SpMM Parallel,SpMM Tiled Parallel,SpMM MKL,SpMM DDT Serial,SpMM DDT,SpMM DDT Analysis";
+        "Baseline,SpMM Parallel,SpMM Tiled Parallel,SpMM MKL,SpMM DDT,SpMM DDT Analysis";
 
 #ifdef PERMUTED
       std::cout << ",SpMM Permuted Parallel"
