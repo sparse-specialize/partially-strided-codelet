@@ -10,8 +10,8 @@ You will need a C++ compiler (tested for GCC) and CMake to build this repository
 
 To build the repository from source:
 ```
-git clone --recursive https://github.com/sympiler/codelet_mining.git
-cd codelet_mining
+git clone --recursive https://github.com/sparse-specialize/partially-strided-codelet.git
+cd partially-strided-codelet
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="/opt/intel/oneapi/mkl/2021.2.0/lib/intel64/;/opt/intel/oneapi/mkl/2021.2.0/include/" ..
